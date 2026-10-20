@@ -1,0 +1,25 @@
+{
+ "name": "ECS System",
+ "short_name": "ECS",
+ "id": "./ECS_System_Connected.html",
+ "start_url": "./ECS_System_Connected.html",
+ "scope": "./",
+ "display": "standalone",
+ "orientation": "portrait",
+ "background_color": "#141f33",
+ "theme_color": "#d24a36",
+ "icons": [
+  {
+   "src": "icon-ecs-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any maskable"
+  },
+  {
+   "src": "icon-ecs-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any maskable"
+  }
+ ]
+}
