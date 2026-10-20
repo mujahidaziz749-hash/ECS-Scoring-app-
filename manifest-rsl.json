@@ -3,7 +3,7 @@
  "short_name": "RSL",
  "id": "./RSL_Scoring_App_Connected.html",
  "start_url": "./RSL_Scoring_App_Connected.html",
- "scope": "./",
+ "scope": "./RSL_Scoring_App_Connected.html",
  "display": "standalone",
  "orientation": "portrait",
  "background_color": "#0b0f2a",

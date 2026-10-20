@@ -3,7 +3,7 @@
  "short_name": "ECS",
  "id": "./ECS_System_Connected.html",
  "start_url": "./ECS_System_Connected.html",
- "scope": "./",
+ "scope": "./ECS_System_Connected.html",
  "display": "standalone",
  "orientation": "portrait",
  "background_color": "#141f33",

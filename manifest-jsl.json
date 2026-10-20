@@ -3,7 +3,7 @@
  "short_name": "JSL",
  "id": "./JSL_Scoring_App_Connected.html",
  "start_url": "./JSL_Scoring_App_Connected.html",
- "scope": "./",
+ "scope": "./JSL_Scoring_App_Connected.html",
  "display": "standalone",
  "orientation": "portrait",
  "background_color": "#0b0f2a",
