@@ -1,7 +1,7 @@
 {
  "name": "RSL Scoring App",
  "short_name": "RSL",
- "id": "./RSL_Scoring_App_Connected.html",
+ "id": "rsl-scoring-app",
  "start_url": "./RSL_Scoring_App_Connected.html",
  "scope": "./RSL_Scoring_App_Connected.html",
  "display": "standalone",

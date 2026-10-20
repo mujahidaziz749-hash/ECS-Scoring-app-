@@ -1,7 +1,7 @@
 {
  "name": "JSL Scoring System",
  "short_name": "JSL",
- "id": "./JSL_Scoring_App_Connected.html",
+ "id": "jsl-scoring-app",
  "start_url": "./JSL_Scoring_App_Connected.html",
  "scope": "./JSL_Scoring_App_Connected.html",
  "display": "standalone",
