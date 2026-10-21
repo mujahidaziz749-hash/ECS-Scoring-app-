@@ -1,11 +1,11 @@
 /* Cricket Apps - offline support (service worker).
    Pehli dafa net ke saath khulne par saari apps phone mein save ho jati hain;
    uske baad bina internet ke bhi khulti hain. Firebase/login ki requests ko ye chhoota nahi. */
-const V = 'cricket-v4';
+const V = 'cricket-v5';
 const CORE = [
   'index.html',
-  'rsl-app.html', 'jsl-app.html', 'ECS_System_Connected.html',
-  'manifest-home.json', 'manifest-rsl2.json', 'manifest-jsl2.json', 'manifest-ecs.json',
+  'RSL_Scoring_App_Connected.html', 'JSL_Scoring_App_Connected.html', 'ECS_System_Connected.html',
+  'manifest-home.json', 'manifest-rsl.json', 'manifest-jsl.json', 'manifest-ecs.json',
   'icon-home-192.png', 'icon-home-512.png', 'icon-rsl-192.png', 'icon-rsl-512.png',
   'icon-jsl-192.png', 'icon-jsl-512.png', 'icon-ecs-192.png', 'icon-ecs-512.png'
 ];
