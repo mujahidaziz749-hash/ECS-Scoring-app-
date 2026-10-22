@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ECS-System v102</title>
+<title>ECS-System v103</title>
 <script>/*embedded jsPDF 2.5.1 - offline PDF*/
 /** @license
  *
@@ -16067,13 +16067,13 @@ document.addEventListener('click', ev=>{
 
 /* ---- Entry Management viewer se chhupa hua ---- */
 (function(){
-  const rn=renderNav; renderNav=function(){ const g=rn.apply(this,arguments); if(VW()) g.querySelectorAll('.ecs-tile').forEach(b=>{ if(/Monthly Entry/.test(b.textContent)) b.remove(); }); return g; };
-  const ri=_renderInner; _renderInner=function(){ if(VW() && activeTab==='finance') activeTab=null; return ri.apply(this,arguments); };
-  const dn=duesNoteFor; duesNoteFor=function(){ return VW()?"":dn.apply(this,arguments); };
-  const dt=duesTagFor; duesTagFor=function(){ return VW()?"":dt.apply(this,arguments); };
-  const po=ecsPosterOpen; ecsPosterOpen=function(spec){ if(VW() && spec && /^(finance|financeAll|entrypay|entrypayall)$/.test(spec.kind||'')) return; return po.apply(this,arguments); };
+  const rn=renderNav; renderNav=function(){ const g=rn.apply(this,arguments); if(NOFIN()) g.querySelectorAll('.ecs-tile').forEach(b=>{ if(/Monthly Entry/.test(b.textContent)) b.remove(); }); return g; };
+  const ri=_renderInner; _renderInner=function(){ if(NOFIN() && activeTab==='finance') activeTab=null; return ri.apply(this,arguments); };
+  const dn=duesNoteFor; duesNoteFor=function(){ return NOFIN()?"":dn.apply(this,arguments); };
+  const dt=duesTagFor; duesTagFor=function(){ return NOFIN()?"":dt.apply(this,arguments); };
+  const po=ecsPosterOpen; ecsPosterOpen=function(spec){ if(NOFIN() && spec && /^(finance|financeAll|entrypay|entrypayall)$/.test(spec.kind||'')) return; return po.apply(this,arguments); };
   exportBackup=function(){
-    let r=root; if(VW()){ r=JSON.parse(JSON.stringify(root)); delete r.finance; delete r.editPassword; }
+    let r=root; if(NOFIN()){ r=JSON.parse(JSON.stringify(root)); delete r.finance; delete r.editPassword; }
     const blob=new Blob([JSON.stringify(r,null,2)],{type:"application/json"}); const url=URL.createObjectURL(blob);
     const a=document.createElement('a'); a.href=url; a.download='cricket_all_series_backup.json'; a.click(); URL.revokeObjectURL(url);
   };
@@ -16087,6 +16087,370 @@ document.addEventListener('click', ev=>{
 window.addEventListener('focus',()=>{ if(CL && !document.hidden) clPull(false); });
 document.addEventListener('visibilitychange',()=>{ if(CL && !document.hidden) clPull(false); });
 setInterval(()=>{ if(CL && VW() && !document.hidden) clPull(false); }, 45000);
+
+/* ===================== v103 — Admin roles (Owner/Manager/Scorer), Activity log, Cloud backups ===================== */
+const ECS_PERMS = [['score','🏏 Scoring (match khelna, series/tournament/individual match chalana)'],['teams','👥 Teams banana/badalna'],['players','🧢 Players List'],['newseries','📅 Naye series / tournament banana'],['edit','✏️ Khatam hue match ko edit/amend karna'],['settings','⚙️ Series settings + Rules & Regulations'],['money','💰 Monthly Entry (kharcha/fees)'],['data','💾 Import/Export, Backup file, Restore'],['del','🗑 Delete karna']];
+const ECS_PRESETS = { manager:{score:1,teams:1,players:1,newseries:1}, scorer:{score:1}, custom:{} };
+const ECS_ALLP = (()=>{ const o={}; ECS_PERMS.forEach(p=>o[p[0]]=1); return o; })();
+const RLK='ecs_role', DVK='ecs_dev', DGK='ecs_dig', LQK='ecs_logq', BKK='ecs_lastbk';
+let ROLE = null, _roleAt = 0, _digNow = null;
+try{ const r = JSON.parse(localStorage.getItem(RLK)||'null'); if(r && AD && r.email===AD.email) ROLE = r; }catch(x){}
+const lc = s => String(s||'').trim().toLowerCase();
+const ekey = e => lc(e).replace(/\./g,',');
+function can(p){
+  if(!CL || !isAdm()) return true;            /* local mode / viewer: viewer ka apna lock pehle se hai */
+  if(!ROLE) return true;                      /* role abhi load nahi hua (purana login / offline) */
+  return !!(ROLE.perms && ROLE.perms[p]);
+}
+const isOwner = ()=> !!(CL && isAdm() && (!ROLE || ROLE.owner));
+const NOFIN = ()=> VW() || !!(CL && isAdm() && !can('money'));
+function roleFrom(j, email){
+  const e = lc(email);
+  if(!j || !j.owner) return {email:e, legacy:true, owner:true, role:'owner', name:'Owner (roles setup baaqi)', perms:Object.assign({},ECS_ALLP)};
+  if(lc(j.owner)===e) return {email:e, owner:true, role:'owner', name:(j.ownerName||'Owner'), perms:Object.assign({},ECS_ALLP)};
+  const en = j.admins && j.admins[ekey(e)];
+  if(!en || en.off) return {email:e, none:true, role:en?'band':'unlisted', name:(en&&en.name)||e, perms:{}};
+  const perms = en.perms ? Object.assign({},en.perms) : Object.assign({},ECS_PRESETS[en.role]||{});
+  return {email:e, role:en.role||'custom', name:en.name||e, perms};
+}
+function saveRole(){ try{ if(ROLE) localStorage.setItem(RLK,JSON.stringify(ROLE)); else localStorage.removeItem(RLK); }catch(x){} }
+const metaUrl = (p,q)=> CL.url.replace(/\/+$/,'')+'/ecsmeta/'+encodeURIComponent(CL.club)+'/'+p+'.json'+(q||'');
+async function metaReq(method, p, body, q){
+  const t = await clToken();
+  return fetch(metaUrl(p, '?auth='+encodeURIComponent(t)+(q?'&'+q:'')), {method, body: body===undefined?undefined:JSON.stringify(body)});
+}
+async function ecsLoadRole(){
+  if(!CL || !isAdm()){ ROLE=null; return; }
+  try{
+    const r = await metaReq('GET','roles'); if(!r.ok) throw new Error(r.status);
+    const j = await r.json(); const nr = roleFrom(j, AD.email);
+    const changed = JSON.stringify(nr)!==JSON.stringify(ROLE); ROLE = nr; _roleAt = Date.now(); saveRole();
+    if(changed){ try{ render(); }catch(e){} }
+  }catch(x){ /* offline ya rules abhi update nahi: purana/cached role chalta rahega */ }
+}
+function ecsDeny(msg){ try{ showToast('🔒 '+(msg||'Is kaam ka haq aap ko nahi - Owner se baat karein.'), false); }catch(e){} }
+
+/* ---------- Device naam ---------- */
+function ecsDev(){ try{ return localStorage.getItem(DVK)||''; }catch(e){ return ''; } }
+function ecsAskDev(force){
+  let d = ecsDev(); if(d && !force) return d;
+  const v = (prompt('Is device ka naam likho (jaise "Ali ka phone"). Admin record mein ye naam dikhega:', d||'')||'').trim();
+  if(v){ try{ localStorage.setItem(DVK,v.slice(0,40)); }catch(e){} d=v.slice(0,40); }
+  return d;
+}
+function ecsUA(){ const u=navigator.userAgent||''; const os=/Android/.test(u)?'Android':/iPhone|iPad/.test(u)?'iOS':/Windows/.test(u)?'Windows':/Mac/.test(u)?'Mac':'Other'; const br=/Edg\//.test(u)?'Edge':/Chrome\//.test(u)?'Chrome':/Safari\//.test(u)?'Safari':/Firefox\//.test(u)?'Firefox':'Browser'; return os+' '+br; }
+
+/* ---------- Digest (kya badla - compact) ---------- */
+function _hs(s){ let h=5381; for(let i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))|0; return (h>>>0).toString(36)+'.'+s.length.toString(36); }
+function ecsDigest(){
+  const d={}; const put=(k,label,obj)=>{ d[k]=[_hs(JSON.stringify(obj)), String(label).replace(/\s+/g,' ').slice(0,110)]; };
+  (root.playersReg||[]).forEach(p=>put('p:'+(p.id||p.name),'Player: '+p.name,p));
+  (root.teamsLib||[]).forEach(t=>put('t:'+t.id,'Team: '+t.name+' ('+(t.players||[]).length+' players)',t));
+  (root.tours||[]).forEach(t=>put('tour:'+t.id,'Tournament: '+(t.name||t.id),t));
+  (root.seriesList||[]).forEach(s=>{
+    let blank=false; try{ blank = sBlank(s); }catch(e){}
+    if(blank) return;
+    const nm = sName(s), meta = Object.assign({},s); delete meta.matches;
+    put('s:'+s.id,'Series: '+nm+' (settings/squad/quota)',meta);
+    (s.matches||[]).forEach(m=>put('m:'+s.id+':'+m.number,'Match '+m.number+' - '+nm+' ['+m.status+']'+(m.resultText?(' '+m.resultText):''),m));
+  });
+  (root.rules||[]).forEach(r=>put('r:'+r.id,'Rule '+(r.number||'')+(r.deleted?' (deleted)':'')+': '+String(r.text||'').slice(0,50),r));
+  const f=root.finance;
+  if(f){
+    (f.members||[]).forEach(m=>put('fm:'+m.id,'Entry member: '+m.name+(m.active===false?' (inactive)':''),m));
+    (f.categories||[]).forEach(c=>put('fc:'+c.id,'Entry category: '+c.name+' fee '+c.fee,c));
+    put('fo','Entry: opening balance/monthly fee',[f.openingBalance,f.monthlyFee]);
+    (f.months||[]).forEach(mo=>{ put('fp:'+mo.key,'Entry: fees/payments '+mo.key,[mo.paid,mo.fee]); (mo.expenses||[]).forEach((e,i)=>put('fx:'+mo.key+':'+(e.id||i),'Kharcha '+mo.key+': '+(e.item||'')+' '+(e.amount||''),e)); });
+  }
+  const skip = /^(activeSeriesId|poster.*|prof.*|photo.*|sTheme|sBg|_ts|seriesList|playersReg|teamsLib|tours|rules|finance|knownPlayers|ecsSeeded|dedupeV\d+)$/;
+  Object.keys(root).forEach(k=>{ if(!skip.test(k)) put('cfg:'+k,'Setting: '+k,root[k]); });
+  put('kp','Known players list',root.knownPlayers||[]);
+  return d;
+}
+function ecsDiff(a,b){
+  const out=[];
+  Object.keys(b).forEach(k=>{ if(!a[k]) out.push([k,'+',b[k][1]]); else if(a[k][0]!==b[k][0]) out.push([k,'~',b[k][1]]); });
+  Object.keys(a).forEach(k=>{ if(!b[k]) out.push([k,'-',a[k][1]]); });
+  return out;
+}
+const loadDig = ()=>{ try{ return JSON.parse(localStorage.getItem(DGK)||'null'); }catch(e){ return null; } };
+const saveDig = d=>{ try{ localStorage.setItem(DGK,JSON.stringify(d)); }catch(e){} };
+
+/* ---------- Log queue (ek-ek ball par alag entry nahi - 5 min mein ek jama entry) ---------- */
+let LQ = {t0:0, lines:{}};
+try{ const q=JSON.parse(localStorage.getItem(LQK)||'null'); if(q&&q.lines) LQ=q; }catch(x){}
+const saveLQ = ()=>{ try{ localStorage.setItem(LQK,JSON.stringify(LQ)); }catch(e){} };
+function lqAdd(diff){
+  diff.forEach(([k,t,label])=>{
+    const o = LQ.lines[k];
+    if(!o){ LQ.lines[k]={t,l:label}; }
+    else if(o.t==='+' && t==='-'){ LQ.lines[k]={t:'-',l:label+' (abhi hi add hua tha)'}; }
+    else if(o.t==='+' && t==='~'){ o.l=label; }
+    else if(o.t==='~' && t==='-'){ LQ.lines[k]={t:'-',l:label}; }
+    else if(o.t==='-' && t==='+'){ LQ.lines[k]={t:'~',l:label}; }
+    else { o.t = (o.t==='-'?'-':t); o.l=label; }
+  });
+  if(!LQ.t0 && Object.keys(LQ.lines).length) LQ.t0=Date.now();
+  saveLQ();
+}
+function lqNote(text){ LQ.lines['note:'+Date.now()+Math.random()]={t:'!',l:text}; if(!LQ.t0) LQ.t0=Date.now(); saveLQ(); }
+async function ecsFlushLog(force){
+  if(!CL || !isAdm()) return;
+  const ks=Object.keys(LQ.lines); if(!ks.length) return;
+  if(!force && Date.now()-LQ.t0 < 300000) return;
+  const ic={'+':'➕','-':'🗑','~':'✏️','!':'🔔'};
+  let lines = ks.map(k=>ic[LQ.lines[k].t]+' '+LQ.lines[k].l);
+  const n = lines.length; if(n>80) lines = lines.slice(0,80).concat(['… aur '+(n-80)+' changes']);
+  const e = {ts:Date.now(), from:LQ.t0, email:AD.email, name:(ROLE&&ROLE.name)||AD.email, role:(ROLE&&ROLE.role)||'?', dev:ecsDev()||'(naam nahi)', ua:ecsUA(), n, lines};
+  try{
+    const r = await metaReq('POST','log',e);
+    if(r.ok){ LQ={t0:0,lines:{}}; saveLQ(); }
+  }catch(x){}
+}
+
+/* ---------- Backups ---------- */
+async function ecsMakeBackup(reason){
+  try{
+    const r = await fetch(clUrl()); if(!r.ok) return false; const j = await r.json(); if(!j || !j.data) return false;
+    const id = String(Date.now());
+    const a = await metaReq('PUT','backupsData/'+id,{ts:j.ts||0,data:j.data}); if(!a.ok) return false;
+    await metaReq('PUT','backupsIdx/'+id,{t:Date.now(),cloudTs:j.ts||0,by:AD.email,name:(ROLE&&ROLE.name)||'',dev:ecsDev(),reason:reason||'auto',size:j.data.length});
+    try{ localStorage.setItem(BKK,String(Date.now())); }catch(e){}
+    return true;
+  }catch(x){ return false; }
+}
+async function ecsPrune(){
+  if(!isOwner()) return;
+  try{
+    const r = await metaReq('GET','backupsIdx'); if(!r.ok) return; const j = await r.json(); if(!j) return;
+    const ids = Object.keys(j).sort(); const cut = Date.now()-30*86400000; const del = {};
+    ids.forEach((id,i)=>{ if(j[id].t<cut || i<ids.length-60) del[id]=null; });
+    if(Object.keys(del).length){ await metaReq('PATCH','backupsIdx',del); await metaReq('PATCH','backupsData',del); }
+  }catch(x){}
+}
+async function ecsPrePush(){
+  const cur = ecsDigest(); _digNow = cur;
+  const base = loadDig();
+  if(!base){ saveDig(cur); return; }
+  const diff = ecsDiff(base,cur); if(!diff.length) return;
+  lqAdd(diff);
+  const removed = diff.some(d=>d[1]==='-');
+  const last = +localStorage.getItem(BKK)||0;
+  if(removed || Date.now()-last>6*3600000) await ecsMakeBackup(removed?'delete se pehle':'auto');
+}
+(function(){
+  const o = clPush;
+  clPush = async function(){
+    if(!isAdm()) return;
+    try{ await ecsPrePush(); }catch(e){}
+    await o.apply(this,arguments);
+    if(/^✅ Cloud par save/.test(clSt)){ if(_digNow) saveDig(_digNow); try{ await ecsFlushLog(SM==='manual'); }catch(e){} }
+  };
+  const oa = clApply;
+  clApply = function(j){ const r = oa.apply(this,arguments); try{ if(isAdm()) saveDig(ecsDigest()); }catch(e){} return r; };
+  const ol = clLogin;
+  clLogin = async function(){
+    await ol.apply(this,arguments);
+    if(isAdm()){
+      ecsAskDev(false);
+      await ecsLoadRole();
+      if(ROLE && ROLE.none) alert('Aap ka account Owner ne abhi kisi role mein add nahi kiya (ya band hai).\nAap sirf dekh sakte hain. Owner se kahein ke Import/Export → Admin Management mein aap ko add karein.');
+      render();
+    }
+  };
+  const op = clPull;
+  clPull = async function(manual){
+    await op.apply(this,arguments);
+    if(isAdm() && (manual || Date.now()-_roleAt>60000)) await ecsLoadRole();
+    if(isAdm()) ecsFlushLog(false);
+  };
+  const oo = clAdminLogout;
+  clAdminLogout = async function(){ if(!DIRTY){ try{ await ecsFlushLog(true); }catch(e){} } return oo.apply(this,arguments); };
+})();
+document.addEventListener('visibilitychange',()=>{ if(document.hidden && CL && isAdm()) ecsFlushLog(true); });
+setInterval(()=>{ if(CL && isAdm()) ecsFlushLog(false); }, 90000);
+
+/* ---------- Permission gates ---------- */
+const TABNEED = {series:'score',tours:'score',indiv:'score',play:'score',setup:'score',match:'score',stats:'score',history:'score',lb:'score',teams:'teams',players:'players',rules:'settings',finance:'money',editmatch:'edit'};
+const TILENEED = [[/Series Manager|Tournament Manager|Individual Match|Play Match/,'score'],[/Teams Manager/,'teams'],[/Players List/,'players'],[/Rules & Regulations/,'settings'],[/Monthly Entry/,'money']];
+const HUBSET = /Series Basics|Series Mode|Series Quota|Absent Player Penalty/;
+(function(){
+  const rn = renderNav;
+  renderNav = function(){ const g = rn.apply(this,arguments); if(CL && isAdm()) g.querySelectorAll('.ecs-tile').forEach(b=>{ const t=b.textContent; TILENEED.forEach(([re,p])=>{ if(re.test(t) && !can(p)) b.remove(); }); }); return g; };
+  const rs = renderSetup;
+  renderSetup = function(){ const w = rs.apply(this,arguments); if(CL && isAdm() && !can('settings')) w.querySelectorAll('.ecs-tile').forEach(b=>{ if(HUBSET.test(b.textContent)) b.remove(); }); return w; };
+  const oq = openQuotaSystemModal;
+  openQuotaSystemModal = function(){ if(CL && isAdm() && !can('settings')) return ecsDeny(); return oq.apply(this,arguments); };
+  const orr = render;
+  render = function(){
+    if(CL && isAdm()){
+      const need = TABNEED[activeTab]; if(need && !can(need)){ ecsDeny(); activeTab=null; ecsSub=null; }
+      if(ecsSub && /^(basics|mode|quota|penalty)$/.test(ecsSub) && !can('settings')){ ecsDeny(); ecsSub=null; }
+      if(ecsNewSeries && !can('newseries')){ ecsDeny('Naya series banane ka haq nahi.'); ecsNewSeries=null; }
+      if(ecsNewTour && !can('newseries')){ ecsDeny('Naya tournament banane ka haq nahi.'); ecsNewTour=null; }
+    }
+    return orr.apply(this,arguments);
+  };
+  const oc = window.confirm;
+  window.confirm = function(m){
+    if(CL && isAdm() && !can('del')){
+      const s = String(m||'');
+      if(/delete|permanently|saare .*hata|wipe|reset|saaf kar|hata dein|nayi shuru/i.test(s) && !/Admin logout|Cloud|sync|logout/i.test(s)){ ecsDeny('Delete/reset ka haq sirf Owner ke paas hai.'); return false; }
+    }
+    return oc.apply(this,arguments);
+  };
+  const DELRX = /🗑|🧹|🧨|delete|hatay|hatao|permanently|wipe|saaf|restore|nayi shuru|sirf current series|reset/i, DELOK = /background|photo|zoom|colour|theme|poster|✕ Close|^\s*✕\s*$/i;
+  document.addEventListener('click', ev=>{
+    if(!CL || !isAdm() || can('del')) return;
+    const b = ev.target.closest && ev.target.closest('button,label.btn,summary');
+    if(!b || b.hasAttribute('data-cl') || b.closest('#clcard') || b.closest('.ecs-ov')) return;
+    const mo = b.closest('.modal-overlay'); if(mo && mo.querySelector('#pthr')) return;
+    const t = (b.textContent||'')+' '+(b.getAttribute('title')||'');
+    if(b.matches('[data-act="del"],[data-d]') || (DELRX.test(t) && !DELOK.test(t))){ ev.stopPropagation(); ev.preventDefault(); ecsDeny('Delete/reset ka haq sirf Owner ke paas hai.'); }
+  }, true);
+  const dd = renderDataTab;
+  renderDataTab = function(){
+    const w = dd.apply(this,arguments);
+    if(CL && isAdm() && !can('data')) [...w.children].forEach(ch=>{ if(ch.id!=='clcard' && !ch.querySelector('h2')) ch.remove(); });
+    return w;
+  };
+})();
+
+/* ---------- Owner / admin UI ---------- */
+function ecsPanel(title, build){
+  const ov = el(`<div class="ecs-ov" style="position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.72);overflow:auto;padding:12px;"><div style="max-width:560px;margin:0 auto;background:var(--card,#12203a);border-radius:14px;padding:14px;"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px;"><h3 style="margin:0;">${ecsEsc(title)}</h3><button class="btn secondary small" data-cl="1" style="flex:0">✕ Band</button></div><div class="pbody"></div></div></div>`);
+  ov.querySelector('[data-cl]').onclick = ()=>ov.remove();
+  document.body.appendChild(ov); build(ov.querySelector('.pbody'), ov); return ov;
+}
+const fmtT = t=>{ try{ return new Date(t).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } };
+const fillRules = ()=>{ const o=AD&&AD.email||'OWNER@EMAIL.COM'; const own="auth != null && auth.token.email === '"+o+"'";
+  return JSON.stringify({rules:{
+    rsl:{'.read':true,'.write':'APNI_PURANI_RULES_WALI_EMAIL_CONDITION'},
+    jsl:{'.read':true,'.write':'APNI_PURANI_RULES_WALI_EMAIL_CONDITION'},
+    ecs:{'.read':true,'.write':"auth != null && (auth.token.email === '"+o+"' || root.child('ecsmeta/"+(CL?CL.club:'ECS')+"/roles/admins').child(auth.token.email.replace('.', ',')).exists())"},
+    ecsmeta:{'$club':{
+      roles:{'.read':'auth != null','.write':own},
+      log:{'.read':own,'.write':own,'$id':{'.write':'auth != null && (!data.exists() || auth.token.email === \''+o+'\')'}},
+      backupsIdx:{'.read':own,'.write':own,'$id':{'.write':'auth != null && (!data.exists() || auth.token.email === \''+o+'\')'}},
+      backupsData:{'.read':own,'.write':own,'$id':{'.write':'auth != null && (!data.exists() || auth.token.email === \''+o+'\')'}}
+    }}}},null,2); };
+function ecsRulesPanel(){
+  ecsPanel('🔐 Firebase Rules (ek dafa)', (b)=>{
+    b.appendChild(el(`<p class="muted" style="font-size:.8rem;">Firebase Console → Realtime Database → <b>Rules</b> tab mein ye poora text paste karein, phir <b>Publish</b>. Sirf <code>APNI_PURANI_RULES_WALI_EMAIL_CONDITION</code> (2 jagah) ko apni purani rules wali poori <code>auth != null && (auth.token.email === '...' || ...)</code> line se badal dein (RSL/JSL ke liye). Is se Admin Management, Record aur Backup asli tor par mehfooz ho jate hain.</p>`));
+    const ta=el(`<textarea readonly style="width:100%;height:240px;font-size:.7rem;"></textarea>`); ta.value=fillRules(); b.appendChild(ta);
+    const bt=el(`<button class="btn gold" data-cl="1" style="width:100%;margin-top:6px;">📋 Rules copy karo</button>`); bt.onclick=()=>{ ta.select(); let ok=false; try{ ok=document.execCommand('copy'); }catch(e){} if(!ok&&navigator.clipboard) navigator.clipboard.writeText(ta.value); showToast('📋 Rules copy ho gaye'); }; b.appendChild(bt);
+  });
+}
+function permBoxes(cur, onchg){
+  const w=el(`<div style="margin:6px 0;"></div>`);
+  ECS_PERMS.forEach(([k,lab])=>{ const r=el(`<label style="display:flex;gap:8px;align-items:flex-start;font-size:.8rem;margin:3px 0;"><input type="checkbox" ${cur[k]?'checked':''} style="width:auto;margin-top:2px;"><span>${ecsEsc(lab)}</span></label>`); r.querySelector('input').onchange=e=>{ if(e.target.checked) cur[k]=1; else delete cur[k]; if(onchg) onchg(); }; w.appendChild(r); });
+  return w;
+}
+async function ecsAdminPanel(){
+  ecsPanel('👥 Admin Management', async (b)=>{
+    b.textContent='Load ho raha hai…';
+    let j=null;
+    try{ const r=await metaReq('GET','roles'); if(!r.ok) throw new Error(r.status); j=await r.json(); }
+    catch(x){ b.innerHTML=''; b.appendChild(el(`<p>⚠ Roles load nahi ho sake. Ya internet nahi, ya Firebase Rules abhi update nahi hue.</p>`)); const rb=el(`<button class="btn gold" data-cl="1" style="width:100%">🔐 Rules dekho / copy karo</button>`); rb.onclick=ecsRulesPanel; b.appendChild(rb); return; }
+    const draw = ()=>{
+      b.innerHTML='';
+      if(!j || !j.owner){
+        b.appendChild(el(`<p style="font-size:.85rem;">Abhi roles system chalu nahi hai - sab admins ko poore haq hain. <b>Chalu karne par:</b> aap (${ecsEsc(AD.email)}) <b>Owner</b> ban jate hain, aur baaqi har admin ko aap ko khud Manager/Scorer banakar add karna hoga (warna wo sirf dekh sakenge).</p>`));
+        const sb=el(`<button class="btn gold" data-cl="1" style="width:100%">✅ Roles chalu karo - main Owner hoon</button>`);
+        sb.onclick=async()=>{ if(!confirm('Roles chalu karein? Baaqi admins ko aap ko add karna hoga.')) return;
+          try{ const r=await metaReq('PUT','roles',{owner:lc(AD.email),ownerName:'Owner',admins:{},created:Date.now()}); if(!r.ok) throw new Error(r.status); j={owner:lc(AD.email),ownerName:'Owner',admins:{}}; lqNote('Roles system chalu kiya (Owner: '+AD.email+')'); await ecsLoadRole(); draw(); }
+          catch(x){ alert('Ye sirf Owner kar sakta hai, ya Firebase Rules abhi update nahi hue ('+x.message+').'); } };
+        b.appendChild(sb); return;
+      }
+      b.appendChild(el(`<p class="muted" style="font-size:.8rem;">Owner: <b>${ecsEsc(j.owner)}</b> (poore haq). Baaqi admins ke haq neeche se tay karein.</p>`));
+      const admins=j.admins||{};
+      Object.keys(admins).forEach(k=>{
+        const en=admins[k]; const c=el(`<div class="card" style="margin:8px 0;"><b>${ecsEsc(en.name||en.email)}</b> <span class="muted" style="font-size:.75rem;">${ecsEsc(en.email)}</span>${en.off?' <span class="tag">BAND</span>':''}
+          <div class="row" style="margin-top:6px;gap:6px;flex-wrap:wrap;"><select class="rsel" style="flex:1"><option value="manager">Manager</option><option value="scorer">Scorer</option><option value="custom">Custom</option></select>
+          <button class="btn gold small" data-cl="1" data-sv>💾 Save</button><button class="btn secondary small" data-cl="1" data-off>${en.off?'▶ Chalu':'⏸ Band'}</button><button class="btn danger small" data-cl="1" data-rm>✕ Hatao</button></div><div class="pb"></div></div>`);
+        const sel=c.querySelector('.rsel'); sel.value=en.role||'custom'; let pr=Object.assign({},en.perms||ECS_PRESETS[en.role]||{});
+        const showP=()=>{ const pb=c.querySelector('.pb'); pb.innerHTML=''; pb.appendChild(permBoxes(pr,()=>{ sel.value='custom'; })); };
+        sel.onchange=()=>{ if(sel.value!=='custom') pr=Object.assign({},ECS_PRESETS[sel.value]); showP(); }; showP();
+        const wr=async(val,msg)=>{ try{ const r=await metaReq('PUT','roles/admins/'+k,val); if(!r.ok) throw new Error(r.status); if(val===null) delete admins[k]; else admins[k]=val; lqNote(msg); draw(); showToast('✅ Save ho gaya'); }catch(x){ alert('Save nahi hua ('+x.message+')'); } };
+        c.querySelector('[data-sv]').onclick=()=>wr(Object.assign({},en,{role:sel.value,perms:pr}),'Admin ke haq badle: '+en.email+' → '+sel.value);
+        c.querySelector('[data-off]').onclick=()=>wr(Object.assign({},en,{off:en.off?null:1}),(en.off?'Admin chalu kiya: ':'Admin band kiya: ')+en.email);
+        c.querySelector('[data-rm]').onclick=()=>{ if(confirm(en.email+' ko hata dein? Ye sirf is app ke haq hatata hai.')) wr(null,'Admin hataya: '+en.email); };
+        b.appendChild(c);
+      });
+      const nf=el(`<div class="card" style="margin-top:10px;"><h4 style="margin:0 0 6px;">➕ Naya admin</h4>
+        <input id="ne" type="email" placeholder="Email" style="width:100%;margin:3px 0;"><input id="nn" placeholder="Naam (jaise Ali)" style="width:100%;margin:3px 0;"><input id="np2" placeholder="Password (kam az kam 6)" style="width:100%;margin:3px 0;">
+        <select id="nr" style="width:100%;margin:3px 0;"><option value="scorer">Scorer (sirf scoring)</option><option value="manager">Manager (scoring + teams + players + naye series)</option></select>
+        <button class="btn gold" data-cl="1" id="nadd" style="width:100%;margin-top:4px;">Account banao aur add karo</button>
+        <p class="muted" style="font-size:.72rem;margin:6px 0 0;">Agar is email ka Firebase account pehle se hai to password khali chhod dein - sirf role add hoga.</p></div>`);
+      nf.querySelector('#nadd').onclick=async()=>{
+        const em=lc(nf.querySelector('#ne').value), nm=nf.querySelector('#nn').value.trim(), pw=nf.querySelector('#np2').value, rl=nf.querySelector('#nr').value;
+        if(!/^\S+@\S+\.\S+$/.test(em)){ alert('Email sahi likho.'); return; }
+        if(lc(j.owner)===em){ alert('Ye Owner ki email hai.'); return; }
+        if(pw){ if(pw.length<6){ alert('Password kam az kam 6 characters.'); return; }
+          try{ const r=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key='+encodeURIComponent(CL.key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:pw,returnSecureToken:false})}); const x=await r.json();
+            if(!r.ok){ const m=(x.error&&x.error.message)||''; if(!/EMAIL_EXISTS/.test(m)){ alert('Account nahi bana: '+m.replace(/_/g,' ')+(/OPERATION_NOT_ALLOWED/.test(m)?'\n\nFirebase Console → Authentication → Users mein ye account khud bana kar yahan password khali chhod kar add karein.':'')); return; } } }
+          catch(e){ alert('Internet ka masla.'); return; } }
+        const en={email:em,name:nm||em,role:rl,perms:Object.assign({},ECS_PRESETS[rl]),added:Date.now(),addedBy:AD.email};
+        try{ const r=await metaReq('PUT','roles/admins/'+ekey(em),en); if(!r.ok) throw new Error(r.status); j.admins=j.admins||{}; j.admins[ekey(em)]=en; lqNote('Naya admin add kiya: '+em+' ('+rl+')'); draw(); showToast('✅ Admin add ho gaya'+(pw?' - ab unhe email/password de dein':'')); }catch(x){ alert('Add nahi hua ('+x.message+'). Firebase Rules check karein.'); } };
+      b.appendChild(nf);
+    };
+    draw();
+  });
+}
+async function ecsLogPanel(){
+  ecsPanel('📜 Admin Activity Record', async (b)=>{
+    b.textContent='Load ho raha hai…';
+    try{
+      const r=await metaReq('GET','log',undefined,'orderBy=%22%24key%22&limitToLast=150'); if(!r.ok) throw new Error(r.status); const j=await r.json()||{};
+      let list=Object.keys(j).map(k=>Object.assign({_id:k},j[k])).sort((a,b)=>b.ts-a.ts);
+      const draw=(flt)=>{ b.innerHTML='';
+        const emails=[...new Set(list.map(x=>x.email))];
+        const sel=el(`<select style="width:100%;margin-bottom:8px;"><option value="">Sab admins</option>${emails.map(e=>`<option ${e===flt?'selected':''}>${ecsEsc(e)}</option>`).join('')}</select>`); sel.onchange=()=>draw(sel.value); b.appendChild(sel);
+        const rows=list.filter(x=>!flt||x.email===flt); if(!rows.length) b.appendChild(el(`<p class="muted">Abhi koi record nahi.</p>`));
+        rows.forEach(x=>{ const c=el(`<div class="card" style="margin:6px 0;"><div style="font-size:.78rem;"><b>${ecsEsc(x.name||x.email)}</b> · ${ecsEsc(x.role||'')} · 📱 ${ecsEsc(x.dev||'')} <span class="muted">(${ecsEsc(x.ua||'')})</span><br><span class="muted">${fmtT(x.from||x.ts)} → ${fmtT(x.ts)} · ${x.n||0} changes · ${ecsEsc(x.email)}</span></div><div style="font-size:.78rem;margin-top:4px;">${(x.lines||[]).map(l=>'<div>'+ecsEsc(l)+'</div>').join('')}</div></div>`); b.appendChild(c); });
+        const cl=el(`<button class="btn danger small" data-cl="1" style="width:100%;margin-top:8px;">🧹 60 din se purana record saaf karo</button>`);
+        cl.onclick=async()=>{ if(!confirm('60 din se purane records delete karein?')) return; const cut=Date.now()-60*86400000; const del={}; list.forEach(x=>{ if(x.ts<cut) del[x._id]=null; }); if(!Object.keys(del).length){ showToast('Purana record nahi mila'); return; } await metaReq('PATCH','log',del); list=list.filter(x=>!(x._id in del)); draw(flt); };
+        b.appendChild(cl); };
+      draw('');
+    }catch(x){ b.innerHTML=''; b.appendChild(el(`<p>⚠ Record load nahi hua (${ecsEsc(x.message)}). Internet ya Firebase Rules check karein.</p>`)); const rb=el(`<button class="btn gold" data-cl="1" style="width:100%">🔐 Rules dekho / copy karo</button>`); rb.onclick=ecsRulesPanel; b.appendChild(rb); }
+  });
+}
+async function ecsBackupPanel(){
+  ecsPanel('💾 Cloud Backups', async (b)=>{
+    const draw=async()=>{
+      b.textContent='Load ho raha hai…';
+      try{
+        const r=await metaReq('GET','backupsIdx'); if(!r.ok) throw new Error(r.status); const j=await r.json()||{}; b.innerHTML='';
+        b.appendChild(el(`<p class="muted" style="font-size:.78rem;">Har 6 ghante mein, aur kisi bhi delete se pehle cloud ka purana data yahan save hota hai (30 din tak). Restore se woh purana data wapas aa jata hai.</p>`));
+        const nb=el(`<button class="btn gold" data-cl="1" style="width:100%;margin-bottom:8px;">➕ Abhi backup banao</button>`); nb.onclick=async()=>{ nb.disabled=true; const ok=await ecsMakeBackup('manual'); showToast(ok?'✅ Backup ban gaya':'Backup nahi bana', ok); draw(); }; b.appendChild(nb);
+        const ids=Object.keys(j).sort().reverse(); if(!ids.length) b.appendChild(el(`<p class="muted">Abhi koi backup nahi.</p>`));
+        ids.forEach(id=>{ const x=j[id]; const c=el(`<div class="card" style="margin:6px 0;"><div style="font-size:.8rem;"><b>${fmtT(x.t)}</b> · ${ecsEsc(x.reason||'')}<br><span class="muted">${ecsEsc(x.name||x.by||'')} · ${ecsEsc(x.dev||'')} · ${Math.round((x.size||0)/1024)} KB</span></div><button class="btn secondary small" data-cl="1" style="margin-top:6px;">♻️ Restore</button></div>`);
+          c.querySelector('button').onclick=async()=>{
+            if(!confirm('Ye backup ('+fmtT(x.t)+') wapas laayein?\n\nAbhi ka data pehle backup ho jayega, phir ye purana data sab devices par aa jayega.')) return;
+            try{ await ecsMakeBackup('restore se pehle'); const rr=await metaReq('GET','backupsData/'+id); const d=await rr.json(); if(!d||!d.data) throw new Error('data nahi mila');
+              clApply({ts:Date.now(),data:d.data}); root._ts=Date.now(); try{ localStorage.setItem(STORAGE_KEY,JSON.stringify(root)); }catch(e){} setDirty(true); lqNote('Backup restore kiya: '+fmtT(x.t)); await clPush(); saveDig(ecsDigest()); render(); showToast('✅ Backup restore ho gaya'); draw(); }
+            catch(e){ alert('Restore nahi hua: '+e.message); } };
+          b.appendChild(c); });
+      }catch(x){ b.innerHTML=''; b.appendChild(el(`<p>⚠ Backups load nahi hue (${ecsEsc(x.message)}). Internet ya Firebase Rules check karein.</p>`)); const rb=el(`<button class="btn gold" data-cl="1" style="width:100%">🔐 Rules dekho / copy karo</button>`); rb.onclick=ecsRulesPanel; b.appendChild(rb); }
+    };
+    draw(); ecsPrune();
+  });
+}
+(function(){
+  const cc = clCard;
+  clCard = function(){
+    const c = cc.apply(this,arguments);
+    if(!CL || !isAdm()) return c;
+    const row = c.querySelector('.row'); const add=(t,cls,fn)=>{ const b=el(`<button class="btn ${cls}" data-cl="1">${t}</button>`); b.onclick=fn; row.appendChild(b); };
+    const rl = ROLE ? (ROLE.owner?'👑 Owner':ROLE.none?'⛔ Role nahi (sirf dekhna)':ROLE.role==='manager'?'🛠 Manager':ROLE.role==='scorer'?'🏏 Scorer':'🎛 '+ROLE.role) : '…';
+    const p = c.querySelector('p:nth-of-type(2)'); if(p) p.insertAdjacentHTML('beforeend','<br><b>Haq:</b> '+rl+'<br><b>Device:</b> '+ecsEsc(ecsDev()||'(naam nahi)'));
+    add('📱 Device ka naam','secondary',()=>{ ecsAskDev(true); render(); });
+    if(isOwner()){
+      add('👥 Admin Management','gold',ecsAdminPanel); add('📜 Admin Record','secondary',ecsLogPanel); add('💾 Cloud Backups','secondary',ecsBackupPanel); add('🔐 Firebase Rules','secondary',ecsRulesPanel);
+    }
+    return c;
+  };
+})();
 
 
 loadState();
