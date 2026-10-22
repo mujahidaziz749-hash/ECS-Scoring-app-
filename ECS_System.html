@@ -16303,7 +16303,7 @@ const HUBSET = /Series Basics|Series Mode|Series Quota|Absent Player Penalty/;
   document.addEventListener('click', ev=>{
     if(!CL || !isAdm() || can('del')) return;
     const b = ev.target.closest && ev.target.closest('button,label.btn,summary');
-    if(!b || b.hasAttribute('data-cl') || b.closest('#clcard') || b.closest('.ecs-ov')) return;
+    if(!b || b.hasAttribute('data-cl') || b.closest('#clcard') || b.closest('.ecs-ov') || b.classList.contains('ecs-tile') || b.id==='backHomeBtn' || b.id==='backSerBtn') return;
     const mo = b.closest('.modal-overlay'); if(mo && mo.querySelector('#pthr')) return;
     const t = (b.textContent||'')+' '+(b.getAttribute('title')||'');
     if(b.matches('[data-act="del"],[data-d]') || (DELRX.test(t) && !DELOK.test(t))){ ev.stopPropagation(); ev.preventDefault(); ecsDeny('Delete/reset ka haq sirf Owner ke paas hai.'); }
