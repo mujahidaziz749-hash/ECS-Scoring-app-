@@ -4435,5 +4435,136 @@ A.efs=v=>{const[c,f]=v.split('|'),fx=findc(c).c.fx.find(z=>z.id===f),x=fxPd();_e
 
 fixTeams();fixRules();regSync();R();
 clBadge();clPull();
+
+/* ===================== v104 SAFETY (Claude patch) — rsl =====================
+   🛟 Vault: har match ki alag copy phone mein (IndexedDB) | 🔀 Auto-merge: do phones ke matches jud jate hain
+   🔒 Delete sirf Owner | ⚠ gayab-match badge + wapas jodo | 📤 match ke baad file | 📴 offline nishan */
+(function(){
+  const APP='rsl', OWNERS=['mujahidaziz749@gmail.com'];   /* <- Owner ki email(s): sirf ye delete kar sakte hain */
+  const hsh=s=>{ let h=5381; for(let i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))|0; return (h>>>0).toString(36); };
+  const deep=o=>JSON.parse(JSON.stringify(o));
+  const isOwn=()=>!(CL&&isAdm())||(AD&&OWNERS.indexOf(String(AD.email||'').toLowerCase())>=0);
+  const tnm=id=>{ try{ return T(id).name; }catch(x){ return '?'; } };
+  const mlabel=m=>tnm(m.a)+' vs '+tnm(m.b)+' · '+(m.no?'Match '+m.no+' · ':'')+(m.result||m.status);
+  const ft=t=>{ try{ return new Date(t).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }catch(x){ return ''; } };
+  /* ---- IndexedDB ---- */
+  let _db=null;
+  const idb=()=>_db||(_db=new Promise((res,rej)=>{ try{ const q=indexedDB.open(APP+'_vault',1); q.onupgradeneeded=()=>{ q.result.createObjectStore('m',{keyPath:'id'}); q.result.createObjectStore('s',{keyPath:'id'}); }; q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }catch(x){ rej(x); } }));
+  const tx=(st,mode,fn)=>idb().then(d=>new Promise((res,rej)=>{ const t=d.transaction(st,mode); const r=fn(t.objectStore(st)); t.oncomplete=()=>res(r&&r.result!==undefined?r.result:undefined); t.onerror=()=>rej(t.error); })).catch(()=>null);
+  const vAll=()=>tx('m','readonly',s=>s.getAll()).then(x=>x||[]), vPut=e=>tx('m','readwrite',s=>s.put(e));
+  const sAll=()=>tx('s','readonly',s=>s.getAll()).then(x=>x||[]), sPut=e=>tx('s','readwrite',s=>s.put(e)), sDel=k=>tx('s','readwrite',s=>s.delete(k));
+  /* ---- vault ---- */
+  const dels=()=>(db.del=db.del||{});
+  async function vFrom(d,src){
+    const old={}; (await vAll()).forEach(e=>old[e.id]=e); const done=[];
+    for(const m of (d.matches||[])){
+      const fp=hsh(JSON.stringify(m)), o=old[m.id];
+      if(o&&(src==='cloud'||o.fp===fp)) continue;
+      const e={id:m.id,fp,status:m.status,label:mlabel(m),date:m.date,savedAt:Date.now(),src,dismissed:!!(o&&o.dismissed),
+        doneAt:o?(o.doneAt||((o.status!=='completed'&&m.status==='completed')?Date.now():0)):0,
+        ta:deep((d.teams||[]).find(t=>t.id===m.a)||{}),tb:deep((d.teams||[]).find(t=>t.id===m.b)||{}),match:deep(m)};
+      await vPut(e); if(o&&o.status!=='completed'&&m.status==='completed') done.push(e);
+    }
+    return done;
+  }
+  const present=e=>db.matches.some(m=>m.id===e.id);
+  const gone=e=>!!(e.dismissed||(db.del&&db.del[e.id]));
+  let _VC=[],_lost=[];
+  async function refresh(){ try{ _VC=await vAll(); _lost=_VC.filter(e=>e.status==='completed'&&!gone(e)&&!present(e)); }catch(x){ _VC=[];_lost=[]; } lostUI(); try{ clBadge(); }catch(x){} }
+  const unsynced=()=>{ try{ return _VC.filter(e=>e.status==='completed'&&e.doneAt>(BASE||0)&&present(e)).length; }catch(x){ return 0; } };
+  function putBack(e){
+    if(present(e)) return 'pehle se maujood';
+    [[e.ta,e.match.a],[e.tb,e.match.b]].forEach(([t,id])=>{ if(t&&t.id&&!db.teams.some(x=>x.id===id)) db.teams.push(deep(t)); });
+    db.matches.push(deep(e.match)); return 'ok';
+  }
+  /* ---- safe full copies ---- */
+  let _ls='';
+  async function keepSnap(why,str){ try{ const h=hsh(str); if(h===_ls) return; _ls=h; const p=JSON.parse(str); await vFrom(p,'safe'); await sPut({id:Date.now(),t:Date.now(),reason:why,mc:(p.matches||[]).length,data:str}); const a=(await sAll()).sort((x,y)=>y.id-x.id); for(let i=15;i<a.length;i++) await sDel(a[i].id); }catch(x){} }
+  /* ---- files ---- */
+  const dl=(n,o)=>{ const b=new Blob([typeof o==='string'?o:JSON.stringify(o)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=n; document.body.appendChild(a); a.click(); setTimeout(()=>{ try{URL.revokeObjectURL(a.href);a.remove();}catch(x){} },4000); };
+  const entFile=e=>({rjMatch:1,app:APP,id:e.id,label:e.label,date:e.date,status:e.status,ta:e.ta,tb:e.tb,match:e.match});
+  async function share(e){ try{ const f=new File([JSON.stringify(entFile(e))],APP+'_match_'+(e.date||'')+'.json',{type:'application/json'}); if(navigator.canShare&&navigator.canShare({files:[f]})){ await navigator.share({files:[f],title:e.label}); return; } }catch(x){ if(x&&x.name==='AbortError') return; } dl(APP+'_match_'+(e.date||'')+'.json',entFile(e)); }
+  function offer(e){ try{ const o=document.getElementById('rjOffer'); if(o) o.remove(); const d=document.createElement('div'); d.id='rjOffer'; d.style.cssText='position:fixed;left:10px;right:10px;bottom:10px;z-index:99998;background:#0a3d6b;border:2px solid #5aa9ff;border-radius:14px;padding:10px 12px;color:#fff;font-size:.82rem;box-shadow:0 6px 24px rgba(0,0,0,.5)';
+    d.innerHTML='<b>✅ Match poora hua — file ki copy rakh lo</b><div style="opacity:.85;margin:3px 0 8px"></div><div style="display:flex;gap:8px"><button class="b g" style="flex:1">📤 Share / Save file</button><button class="b s" style="flex:0">✕</button></div>';
+    d.children[1].textContent=e.label; d.querySelectorAll('button')[0].onclick=()=>{ share(e); d.remove(); }; d.querySelectorAll('button')[1].onclick=()=>d.remove(); document.body.appendChild(d); setTimeout(()=>{ try{d.remove();}catch(x){} },90000); }catch(x){} }
+  function lostUI(){ let b=document.getElementById('rjLost'); const n=_lost.length; if(!isAdm()||!n){ if(b) b.remove(); return; } if(!b){ b=document.createElement('div'); b.id='rjLost'; b.style.cssText='position:fixed;top:34px;right:6px;z-index:61;font-size:11px;font-weight:800;padding:4px 10px;border-radius:12px;background:#b00020;color:#fff;cursor:pointer'; b.onclick=()=>panel(); document.body.appendChild(b); } b.textContent='⚠ '+n+' match gayab — recover karo'; }
+  /* ---- scan (har 4s agar data badla ho) ---- */
+  let _lt=-1;
+  async function scan(){ if(!isAdm()) return; try{ const done=await vFrom({matches:db.matches,teams:db.teams},'local'); await refresh(); if(done.length) offer(done[done.length-1]); }catch(x){} }
+  setInterval(()=>{ try{ if(isAdm()&&db&&db._ts!==_lt){ _lt=db._ts; scan(); } }catch(x){} },4000);
+  /* ---- delete tombstones: koi cheez gayab ho to id 'db.del' mein likh do taake merge use wapas na laye ---- */
+  let _ids=null; const allIds=()=>{ const s=new Set(); ['matches','teams','tours','series'].forEach(k=>(db[k]||[]).forEach(x=>s.add(x.id))); return s; };
+  const markDel=()=>{ try{ const now=allIds(); if(_ids){ _ids.forEach(i=>{ if(!now.has(i)) dels()[i]=Date.now(); }); } _ids=now; }catch(x){} };
+  setTimeout(()=>{ try{ _ids=allIds(); }catch(x){} },1500);
+  /* ---- merge ---- */
+  function merge(p){
+    let n=0; db.del=Object.assign({},p.del,db.del);
+    ['teams','tours','series','matches'].forEach(k=>{ (p[k]||[]).forEach(x=>{ if(x&&x.id&&!db.del[x.id]&&!db[k].some(y=>y.id===x.id)){ db[k].push(deep(x)); if(k==='matches') n++; } }); });
+    ['teams','tours','series','matches'].forEach(k=>{ db[k]=db[k].filter(x=>!db.del[x.id]); });
+    try{ fixTeams(); }catch(x){} _ids=allIds(); return n;
+  }
+  /* ---- hooks ---- */
+  const _ca=clApply;
+  clApply=function(j){ let s=null; try{ if(db&&db.matches&&db.matches.length) s=JSON.stringify(db); }catch(x){} const r=_ca.apply(this,arguments); try{ if(s) keepSnap('cloud data aane se pehle (phone ki copy)',s); _ids=allIds(); setTimeout(refresh,400); }catch(x){} return r; };
+  const _cp=clPush;
+  clPush=async function(){
+    try{ if(isAdm()&&CL&&navigator.onLine!==false){ markDel();
+      if(BASE){ const t=await fetch(clUrl().replace(/\.json$/,'/ts.json')).then(r=>r.ok?r.json():null).catch(()=>null);
+        if(t&&t!==BASE){ const j=await fetch(clUrl()).then(r=>r.json()).catch(()=>null);
+          if(j&&j.data){ const p=JSON.parse(j.data); await vFrom(p,'cloud'); await sPut({id:Date.now(),t:Date.now(),reason:'cloud overwrite se pehle (cloud ki copy)',mc:(p.matches||[]).length,data:j.data});
+            const n=merge(p); BASE=j.ts; if(n){ try{ _lsave(); R(); }catch(x){} toast('🔀 Cloud ke '+n+' naye match merge hue'); } } } } } }catch(x){}
+    const r=await _cp.apply(this,arguments); setTimeout(refresh,600); return r;
+  };
+  const _pl=clPull;
+  clPull=async function(manual){
+    try{ if(isAdm()&&CL&&DIRTY&&!clBusy){ const r=await fetch(clUrl()); const j=r.ok?await r.json():null;
+      if(j&&j.data&&j.ts>(db._ts||0)){ const p=JSON.parse(j.data); await keepSnap('merge se pehle (phone ki copy)',JSON.stringify(db)); await vFrom(p,'cloud'); markDel();
+        const n=merge(p); db._ts=Date.now(); _lsave(); BASE=j.ts; try{ localStorage.setItem(BSK,String(BASE)); }catch(x){}
+        if(manual||SM==='auto') await clPush(); if(view!=='play') go(view==='data'?'data':'home'); toast('🔀 Merge ho gaya: cloud ke '+n+' naye match jud gaye, is phone ke badlao safe'); setTimeout(refresh,500); return; } } }catch(x){}
+    return _pl.apply(this,arguments);
+  };
+  const _cb=clBadge;
+  clBadge=function(){ _cb.apply(this,arguments); try{ const b=document.getElementById('clbd'); if(!b||!isAdm()) return; const n=unsynced(); if(navigator.onLine===false){ b.textContent='📴 Offline · phone mein safe'+(n?' ('+n+' match)':''); b.style.background='#b3541e'; } else if(DIRTY&&n) b.textContent+=' · '+n+' match phone mein'; }catch(x){} };
+  window.addEventListener('online',()=>{ try{ clBadge(); }catch(x){} }); window.addEventListener('offline',()=>{ try{ clBadge(); }catch(x){} });
+  /* ---- 🔒 Delete sirf Owner ---- */
+  const DELRX=/delete|permanently|hamesha ke liye|hata dein|saaf karein|dobara banayein|Sab kuch/i, DELOK=/Squad se|Innings|Cloud|logout/i;
+  const _cf=cf;
+  cf=function(m,fn){ try{ if(CL&&isAdm()&&!isOwn()&&DELRX.test(String(m))&&!DELOK.test(String(m))){ toast('🔒 Delete / hatana sirf Owner kar sakta hai. Aap scoring, naye teams aur naye tournament bana sakte ho.',false); return; } }catch(x){} return _cf.apply(this,arguments); };
+  /* ---- 🛟 Recovery panel ---- */
+  async function panel(){
+    const o=dlg('<div style="font-size:1.05rem;font-weight:800">🛟 Matches Recovery</div><div class="m" style="margin:4px 0 8px">Har match ki alag copy is phone mein mehfooz hai (cloud, restore ya sync usay nahi mita sakte). Gayab match yahan se wapas jodo. <b>Scoring chal rahi ho to pehle Home par aa jao.</b></div><div id="rjb">Load ho raha hai…</div><button class="b s wide" id="rjx">Band</button>');
+    o.querySelector('#rjx').onclick=()=>o.remove();
+    const b=o.querySelector('#rjb'); const draw=async()=>{
+      const all=(await vAll()).sort((x,y)=>y.savedAt-x.savedAt); await refresh(); b.innerHTML='';
+      const row=document.createElement('div'); row.className='row'; row.style.cssText='gap:6px;flex-wrap:wrap;margin-bottom:8px'; b.appendChild(row);
+      const btn=(t,c,f)=>{ const x=document.createElement('button'); x.className='b '+c; x.textContent=t; x.onclick=f; row.appendChild(x); return x; };
+      const miss=all.filter(e=>e.status==='completed'&&!gone(e)&&!present(e));
+      if(miss.length) btn('📥 Saare gayab ('+miss.length+') wapas jodo','g',()=>{ if(!confirm(miss.length+' gayab match wapas jodein?')) return; miss.forEach(putBack); save(); R(); toast('✅ '+miss.length+' match wapas aa gaye'); draw(); });
+      btn('⬇ Poora vault file','s',()=>dl(APP+'_vault_'+Date.now()+'.json',{rjVault:1,entries:all.map(entFile)}));
+      const fi=document.createElement('input'); fi.type='file'; fi.accept='.json,application/json'; fi.style.display='none';
+      fi.onchange=async()=>{ try{ const f=fi.files[0]; if(!f) return; const j=JSON.parse(await f.text()); let L=[];
+          if(j.rjMatch) L=[j]; else if(j.rjVault) L=j.entries||[]; else if(j.matches) L=j.matches.map(m=>({id:m.id,match:m,label:mlabel(m),status:m.status,date:m.date,ta:(j.teams||[]).find(t=>t.id===m.a),tb:(j.teams||[]).find(t=>t.id===m.b)})); else if(j.data) { const p=JSON.parse(j.data); L=(p.matches||[]).map(m=>({id:m.id,match:m,label:mlabel(m),status:m.status,date:m.date,ta:(p.teams||[]).find(t=>t.id===m.a),tb:(p.teams||[]).find(t=>t.id===m.b)})); }
+          L=L.filter(e=>e&&e.match&&e.id&&!present(e)); if(!L.length){ alert('Is file ka koi naya match nahi (sab pehle se maujood ya file mein match nahi).'); return; }
+          if(!confirm(L.length+' match file se jodein?\n\n'+L.map(e=>'• '+(e.label||e.id)).join('\n'))) return;
+          for(const e of L){ e.fp=e.fp||hsh(JSON.stringify(e.match)); e.savedAt=Date.now(); e.src='file'; await vPut(e); putBack(e); } save(); R(); toast('✅ '+L.length+' match jud gaye'); draw();
+        }catch(x){ alert('Import nahi hua: '+x.message); } fi.value=''; };
+      btn('📂 File se match jodo','s',()=>fi.click()); row.appendChild(fi); btn('🔄 Dobara check','s',draw);
+      if(!all.length){ const p=document.createElement('div'); p.className='m'; p.textContent='Vault abhi khali hai. Match save hote hi yahan aa jayega.'; b.appendChild(p); }
+      all.forEach(e=>{ const here=present(e); const tag=here?'✅ app mein maujood':(gone(e)?'🗑 hataya gaya':(e.status==='completed'?'⚠ GAYAB':'(live copy)'));
+        const c=document.createElement('div'); c.className='card'; c.style.cssText='margin:6px 0;'+((!here&&!gone(e)&&e.status==='completed')?'border:2px solid #b00020':''); const t=document.createElement('div'); t.style.fontSize='.82rem'; t.innerHTML='<b></b><br><span class="m"></span>'; t.querySelector('b').textContent=e.label; t.querySelector('span').textContent=(e.date||'')+' · '+tag+' · vault: '+ft(e.savedAt)+' · '+(e.src||''); c.appendChild(t);
+        const r2=document.createElement('div'); r2.className='row'; r2.style.cssText='gap:6px;margin-top:6px;flex-wrap:wrap'; c.appendChild(r2);
+        const a2=(tx2,cl,f)=>{ const x=document.createElement('button'); x.className='b '+cl; x.textContent=tx2; x.onclick=f; r2.appendChild(x); };
+        if(!here) a2('📥 Wapas jodo','g',()=>{ const s=putBack(e); if(s==='ok'){ save(); R(); toast('✅ Match wapas aa gaya'); } else alert(s); draw(); });
+        a2('📤 File','s',()=>share(e)); if(!here&&!gone(e)) a2('🙈 Chhupao','s',async()=>{ e.dismissed=true; await vPut(e); draw(); }); b.appendChild(c); });
+      const sn=(await sAll()).sort((x,y)=>y.id-x.id); const h=document.createElement('div'); h.innerHTML='<b>📦 Phone ki poori safe copies ('+sn.length+')</b><div class="m">Cloud data aane/overwrite se pehle ki puri copy — zaroorat par download karo.</div>'; h.style.marginTop='12px'; b.appendChild(h);
+      sn.forEach(s=>{ const c=document.createElement('div'); c.className='card'; c.style.margin='5px 0'; c.innerHTML='<div style="font-size:.8rem"></div>'; c.firstChild.textContent=ft(s.t)+' · '+s.reason+' · '+s.mc+' match · '+Math.round(s.data.length/1024)+' KB'; const x=document.createElement('button'); x.className='b s'; x.textContent='⬇ Download'; x.onclick=()=>dl(APP+'_safe_'+s.id+'.json',s.data); c.appendChild(x); b.appendChild(c); });
+    }; draw();
+  }
+  A.vault=()=>panel();
+  A.vhelp=()=>{ const o=dlg('<div style="font-size:1.05rem;font-weight:800">📖 Safety features</div><div style="font-size:.85rem;line-height:1.55;margin:6px 0"><b>🛟 Matches Recovery</b> — har match ki alag copy phone mein; gayab match wapas jodo.<br><br><b>🔀 Auto Merge</b> — do phones ke alag alag matches cloud par DONO jud jate hain. Sirf teams/tours/series/matches jodte hain; baaqi data (entry, rules, photos) mein "aakhri sync wala" jeetta hai.<br><br><b>🔒 Delete sirf Owner</b> — match history, team, series, fixtures ya sab kuch delete karna sirf Owner ('+e(OWNERS.join(', '))+') kar sakta hai. Doosre admin scoring, naye teams aur naye tournament bana sakte hain.<br><br><b>⚠ Gayab badge</b> — laal badge dabao aur "Wapas jodo". Owner ne jaan boojh kar delete kiya ho to nahi aata.<br><br><b>📤 Match ke baad file</b> — match poora hote hi Share/Save file; WhatsApp ya Drive par bhej do.<br><br><b>📴 Offline nishan</b> — net na ho to badge dikhata hai; scoring phone mein save rehti hai.</div><button class="b s wide" id="hx">OK</button>'); o.querySelector('#hx').onclick=()=>o.remove(); };
+  const _cc=clCard;
+  clCard=function(){ let h=_cc.apply(this,arguments); try{ if(CL&&isAdm()){ const add='<button class="b s" data-a="vault">🛟 Matches Recovery (gayab match wapas)</button><button class="b s" data-a="vhelp">📖 Safety features kya hain?</button><div class="m" style="margin-top:6px;font-size:.7rem">Safety v104 · Vault ✓ · Auto-merge ✓ · Delete = '+(isOwn()?'aap ko haq hai':'sirf Owner')+'</div>'; const i=h.lastIndexOf('</div>'); h=h.slice(0,i)+add+h.slice(i); } }catch(x){} return h; };
+  setTimeout(()=>{ try{ if(isAdm()) scan(); else refresh(); }catch(x){} },4500);
+})();
 </script><script>/*offline install (service worker)*/if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol)){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}</script>
 </body></html>

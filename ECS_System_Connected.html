@@ -16215,7 +16215,7 @@ async function ecsMakeBackup(reason){
     const r = await fetch(clUrl()); if(!r.ok) return false; const j = await r.json(); if(!j || !j.data) return false;
     const id = String(Date.now());
     const a = await metaReq('PUT','backupsData/'+id,{ts:j.ts||0,data:j.data}); if(!a.ok) return false;
-    await metaReq('PUT','backupsIdx/'+id,{t:Date.now(),cloudTs:j.ts||0,by:AD.email,name:(ROLE&&ROLE.name)||'',dev:ecsDev(),reason:reason||'auto',size:j.data.length});
+    await metaReq('PUT','backupsIdx/'+id,{t:Date.now(),cloudTs:j.ts||0,by:AD.email,name:(ROLE&&ROLE.name)||'',dev:ecsDev(),reason:reason||'auto',size:j.data.length,mc:(function(){try{return JSON.parse(j.data).seriesList.reduce(function(a,q){return a+(q.matches||[]).length;},0);}catch(e){return null;}})()});
     try{ localStorage.setItem(BKK,String(Date.now())); }catch(e){}
     return true;
   }catch(x){ return false; }
@@ -16225,7 +16225,7 @@ async function ecsPrune(){
   try{
     const r = await metaReq('GET','backupsIdx'); if(!r.ok) return; const j = await r.json(); if(!j) return;
     const ids = Object.keys(j).sort(); const cut = Date.now()-30*86400000; const del = {};
-    ids.forEach((id,i)=>{ if(j[id].t<cut || i<ids.length-60) del[id]=null; });
+    const mx=Math.max(0,...ids.map(q=>+j[q].mc||0)); const prot=new Set(mx>0?ids.filter(q=>(+j[q].mc||0)===mx).slice(-5):[]); ids.forEach((id,i)=>{ if(!prot.has(id) && (j[id].t<cut || i<ids.length-60)) del[id]=null; });
     if(Object.keys(del).length){ await metaReq('PATCH','backupsIdx',del); await metaReq('PATCH','backupsData',del); }
   }catch(x){}
 }
@@ -16363,13 +16363,13 @@ async function ecsAdminPanel(){
           catch(x){ alert('Ye sirf Owner kar sakta hai, ya Firebase Rules abhi update nahi hue ('+x.message+').'); } };
         b.appendChild(sb); return;
       }
-      b.appendChild(el(`<p class="muted" style="font-size:.8rem;">Owner: <b>${ecsEsc(j.owner)}</b> (poore haq). Baaqi admins ke haq neeche se tay karein.</p>`));
+      b.appendChild(el(`<p class="muted" style="font-size:.8rem;">Owner: <b>${ecsEsc(j.owner)}</b> (poore haq). Baaqi admins ke haq neeche se tay karein.<br><b>Haq badalne ka tareeqa:</b> admin ke card mein role chuno (Manager = scoring+teams+players+naye series, Scorer = sirf scoring) ya tick lagakar Custom banao, phir <b>💾 Save</b>. <b>🗑 Delete karna</b> ka tick sirf bharosemand admin ko do (default mein band hai). Badlao admin ke agle sync/login par lagta hai.</p>`));
       const admins=j.admins||{};
       Object.keys(admins).forEach(k=>{
         const en=admins[k]; const c=el(`<div class="card" style="margin:8px 0;"><b>${ecsEsc(en.name||en.email)}</b> <span class="muted" style="font-size:.75rem;">${ecsEsc(en.email)}</span>${en.off?' <span class="tag">BAND</span>':''}
           <div class="row" style="margin-top:6px;gap:6px;flex-wrap:wrap;"><select class="rsel" style="flex:1"><option value="manager">Manager</option><option value="scorer">Scorer</option><option value="custom">Custom</option></select>
           <button class="btn gold small" data-cl="1" data-sv>💾 Save</button><button class="btn secondary small" data-cl="1" data-off>${en.off?'▶ Chalu':'⏸ Band'}</button><button class="btn danger small" data-cl="1" data-rm>✕ Hatao</button></div><div class="pb"></div></div>`);
-        const sel=c.querySelector('.rsel'); sel.value=en.role||'custom'; let pr=Object.assign({},en.perms||ECS_PRESETS[en.role]||{});
+        const sel=c.querySelector('.rsel'); sel.value=en.role||'custom'; try{ c.querySelector('.row').before(window.ecsPermSummary(en)); }catch(e){} let pr=Object.assign({},en.perms||ECS_PRESETS[en.role]||{});
         const showP=()=>{ const pb=c.querySelector('.pb'); pb.innerHTML=''; pb.appendChild(permBoxes(pr,()=>{ sel.value='custom'; })); };
         sel.onchange=()=>{ if(sel.value!=='custom') pr=Object.assign({},ECS_PRESETS[sel.value]); showP(); }; showP();
         const wr=async(val,msg)=>{ try{ const r=await metaReq('PUT','roles/admins/'+k,val); if(!r.ok) throw new Error(r.status); if(val===null) delete admins[k]; else admins[k]=val; lqNote(msg); draw(); showToast('✅ Save ho gaya'); }catch(x){ alert('Save nahi hua ('+x.message+')'); } };
@@ -16453,6 +16453,375 @@ async function ecsBackupPanel(){
   };
 })();
 
+
+
+
+/* ===================== v103 — DATA-LOSS PROTECTION (Matches Vault) =====================
+   1) Har match ki ek alag copy phone ke IndexedDB mein (cloud/restore/sync usay nahi chhuta)
+   2) Cloud data se overwrite hone se pehle phone ki puri safe copy
+   3) Push se pehle check: cloud par kisi aur ka data ho to uske matches bhi vault mein save
+   4) Gayab matches ka red alert + 1-tap recover
+   5) Match complete hote hi file share/save ka option
+   6) Backups mein match count + "sirf gayab matches jodo" + khatarnak restore par saaf warning */
+(function(){
+  const hsh = s=>{ let h=5381; for(let i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))|0; return (h>>>0).toString(36); };
+  const uidNew = ()=> 'm'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  const mfp = m=>{ try{ return hsh(JSON.stringify([m.date,m.ground,m.overs,m.innings])); }catch(e){ return ''; } };
+  const tn = (s,k)=> (s&&s.teams&&s.teams[k]&&s.teams[k].name)||k;
+  const mlabel = (s,m)=> tn(s,'A')+' vs '+tn(s,'B')+' · Match '+m.number+(m.resultText?' · '+m.resultText:(m.status==='live'?' · live':''));
+  const totalM = r=>{ try{ return (r.seriesList||[]).reduce((a,s)=>a+(s.matches||[]).length,0); }catch(e){ return 0; } };
+  const deep = o=> JSON.parse(JSON.stringify(o));
+  const esc = t=> (typeof ecsEsc==='function'? ecsEsc(t) : String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])));
+
+  /* ---------- IndexedDB ---------- */
+  let _db=null;
+  function idb(){ if(_db) return _db; _db=new Promise((res,rej)=>{ try{ const q=indexedDB.open('ecs_vault',1);
+    q.onupgradeneeded=()=>{ const d=q.result; d.createObjectStore('m',{keyPath:'uid'}); d.createObjectStore('s',{keyPath:'id'}); };
+    q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }catch(e){ rej(e); } }); return _db; }
+  function tx(store,mode,fn){ return idb().then(d=>new Promise((res,rej)=>{ const t=d.transaction(store,mode); const r=fn(t.objectStore(store));
+    t.oncomplete=()=>res(r&&r.result!==undefined?r.result:undefined); t.onerror=()=>rej(t.error); t.onabort=()=>rej(t.error); })).catch(()=>null); }
+  const vAll=()=>tx('m','readonly',s=>s.getAll()).then(x=>x||[]);
+  const vPut=e=>tx('m','readwrite',s=>s.put(e));
+  const sAll=()=>tx('s','readonly',s=>s.getAll()).then(x=>x||[]);
+  const sPut=e=>tx('s','readwrite',s=>s.put(e));
+  const sDel=id=>tx('s','readwrite',s=>s.delete(id));
+
+  /* ---------- vault entries ---------- */
+  function mkEntries(r, src, byUid){
+    const out=[]; byUid=byUid||{};
+    (r.seriesList||[]).forEach(s=>{
+      const ser=Object.assign({},s); delete ser.matches;
+      (s.matches||[]).forEach(m=>{
+        const fp=mfp(m);
+        const uid = m.uid || ('f'+hsh(s.id+'|'+(m.status==='completed'?fp:(m.date+'#'+m.number))));
+        const old=byUid[uid];
+        if(old && (src==='cloud' || (old.fp===fp && old.status===m.status))) return;
+        const mm=deep(m); mm.undoStack=[]; mm.redoStack=[]; mm.uid=uid;
+        const now=Date.now();
+        out.push({uid, sid:s.id, sname:s.name||'', ser, number:m.number, date:m.date, status:m.status, fp,
+          label:mlabel(s,m), savedAt:now, src,
+          doneAt: old ? (old.doneAt || ((old.status!=='completed'&&m.status==='completed')?now:0)) : 0,
+          dismissed: !!(old&&old.dismissed), becameDone: !!(old&&old.status!=='completed'&&m.status==='completed'), match:mm});
+      });
+    });
+    return out;
+  }
+  async function vFromRoot(r, src){
+    const all=await vAll(); const byUid={}; all.forEach(e=>{ byUid[e.uid]=e; });
+    const list=mkEntries(r,src,byUid);
+    for(const e of list) await vPut(e);
+    return list;
+  }
+  function present(e){
+    try{ for(const s of root.seriesList){ for(const m of (s.matches||[])){
+      if(m.uid===e.uid) return true;
+      if(e.status==='completed' && s.id===e.sid && m.status==='completed' && mfp(m)===e.fp) return true;
+    } } }catch(x){}
+    return false;
+  }
+  let _VC=[], _lost=[];
+  async function refresh(){
+    try{ _VC=await vAll(); _lost=_VC.filter(e=>e.status==='completed' && !gone(e) && !present(e)); }catch(e){ _VC=[]; _lost=[]; }
+    lostUI(); try{ clBadge(); }catch(e){}
+  }
+  const unsyncedN = ()=>{ try{ return _VC.filter(e=>e.status==='completed' && e.doneAt>(BASE||0) && present(e)).length; }catch(e){ return 0; } };
+
+  /* ---------- insert a vault entry back into the app ---------- */
+  function insertEntry(e, quiet){
+    let s=root.seriesList.find(x=>x.id===e.sid);
+    if(!s){ if(!e.ser) return 'series nahi mili'; s=deep(e.ser); s.matches=[]; root.seriesList.push(s); }
+    if(present(e)) return 'pehle se maujood';
+    const m=deep(e.match); m.uid=e.uid; m.undoStack=m.undoStack||[]; m.redoStack=m.redoStack||[];
+    s.matches.push(m);
+    s.matches.sort((a,b)=> (a.date||'').localeCompare(b.date||'') || ((a.number||0)-(b.number||0)) || (a===m?-1:(b===m?1:0)));
+    s.matches.forEach((x,i)=>{ x.number=i+1; });
+    try{ _quotaUsageCache=null; }catch(x){}
+    if(!quiet){ saveState(); render(); }
+    return 'ok';
+  }
+  function insertMany(list){
+    let n=0; list.forEach(e=>{ if(insertEntry(e,true)==='ok') n++; });
+    if(n){ try{ _quotaUsageCache=null; }catch(x){} saveState(); render(); }
+    return n;
+  }
+
+  /* ---------- safe full-data copies ---------- */
+  let _lastSafe='';
+  async function keepSnap(reason, str){
+    try{
+      const h=hsh(str); if(h===_lastSafe) return; _lastSafe=h;
+      const parsed=JSON.parse(str); await vFromRoot(parsed,'safe');
+      await sPut({id:Date.now(), t:Date.now(), reason, mc:totalM(parsed), data:str});
+      const all=(await sAll()).sort((a,b)=>b.id-a.id);
+      for(let i=15;i<all.length;i++) await sDel(all[i].id);
+    }catch(e){}
+  }
+
+  /* ---------- files ---------- */
+  function dl(name,obj){ const b=new Blob([typeof obj==='string'?obj:JSON.stringify(obj)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{ try{URL.revokeObjectURL(a.href); a.remove();}catch(e){} },4000); }
+  const entFile = e=>({ecsMatch:1, uid:e.uid, sid:e.sid, sname:e.sname, ser:e.ser, number:e.number, date:e.date, status:e.status, fp:e.fp, label:e.label, match:e.match});
+  const fname = e=> 'ECS_match_'+(e.date||'')+'_M'+(e.number||'')+'.json';
+  async function shareEnt(e){
+    try{ const f=new File([JSON.stringify(entFile(e))], fname(e), {type:'application/json'});
+      if(navigator.canShare && navigator.canShare({files:[f]})){ await navigator.share({files:[f], title:e.label}); return; } }catch(x){ if(x&&x.name==='AbortError') return; }
+    dl(fname(e), entFile(e));
+  }
+  function offer(e){
+    try{
+      const old=document.getElementById('ecsOffer'); if(old) old.remove();
+      const d=el(`<div id="ecsOffer" style="position:fixed;left:10px;right:10px;bottom:10px;z-index:99998;background:#0a3d6b;border:2px solid #5aa9ff;border-radius:14px;padding:10px 12px;color:#fff;font-size:.82rem;box-shadow:0 6px 24px rgba(0,0,0,.5)"><b>✅ Match poora hua — file ki copy rakh lo</b><div style="opacity:.85;margin:3px 0 8px">${esc(e.label)}</div><div style="display:flex;gap:8px"><button data-a="s" class="btn gold small" data-cl="1" style="flex:1">📤 Share / Save file</button><button data-a="x" class="btn secondary small" data-cl="1" style="flex:0">✕</button></div></div>`);
+      d.querySelector('[data-a=s]').onclick=()=>{ shareEnt(e); d.remove(); };
+      d.querySelector('[data-a=x]').onclick=()=>d.remove();
+      document.body.appendChild(d); setTimeout(()=>{ try{d.remove();}catch(x){} },90000);
+    }catch(x){}
+  }
+
+  /* ---------- lost-matches alert ---------- */
+  function lostUI(){
+    let b=document.getElementById('ecsLost'); const n=_lost.length;
+    if(!isAdm()||!n){ if(b) b.remove(); return; }
+    if(!b){ b=document.createElement('div'); b.id='ecsLost'; b.style.cssText='position:fixed;top:34px;right:6px;z-index:61;font-size:11px;font-weight:800;padding:4px 10px;border-radius:12px;background:#b00020;color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.4)'; b.onclick=()=>vaultPanel(); document.body.appendChild(b); }
+    b.textContent='⚠ '+n+' match gayab — recover karo';
+  }
+
+  /* ---------- scan current data into vault ---------- */
+  let _vt=null;
+  function sched(){ clearTimeout(_vt); _vt=setTimeout(scan,2500); }
+  async function scan(){
+    if(!isAdm()||!root||!root.seriesList) return;
+    try{
+      const list=await vFromRoot({seriesList:deep(root.seriesList)},'local');
+      const done=list.filter(e=>e.becameDone); await refresh();
+      if(done.length) offer(done[done.length-1]);
+    }catch(e){}
+  }
+
+  /* ---------- hooks ---------- */
+  const _ss=saveState;
+  saveState=function(){
+    try{ if(!VW()&&root&&root.seriesList) root.seriesList.forEach(s=>(s.matches||[]).forEach(m=>{ if(!m.uid) m.uid=uidNew(); })); }catch(e){}
+    const r=_ss.apply(this,arguments);
+    try{ if(isAdm()) sched(); }catch(e){}
+    return r;
+  };
+  const _ca=clApply;
+  clApply=function(j){
+    let snap=null;
+    try{ if(root&&root.seriesList&&root.seriesList.some(s=>(s.matches||[]).length)) snap=JSON.stringify(root); }catch(e){}
+    const r=_ca.apply(this,arguments);
+    try{ if(snap) keepSnap('cloud data aane se pehle (phone ki copy)',snap); setTimeout(refresh,400); }catch(e){}
+    return r;
+  };
+  const _cp=clPush;
+  clPush=async function(){
+    try{
+      if(isAdm()&&CL&&navigator.onLine!==false){
+        const ac=new AbortController(); const tm=setTimeout(()=>ac.abort(),5000);
+        try{
+          const r=await fetch(clUrl().replace(/\.json$/,'/ts.json'),{signal:ac.signal});
+          if(r.ok){ const ts=await r.json();
+            if(ts && BASE && ts!==BASE){
+              const rr=await fetch(clUrl(),{signal:ac.signal}); const j=await rr.json();
+              if(j&&j.data){ const p=JSON.parse(j.data); await vFromRoot(p,'cloud');
+                await sPut({id:Date.now(), t:Date.now(), reason:'cloud overwrite se pehle (cloud ki copy)', mc:totalM(p), data:j.data}); }
+            } }
+        } finally { clearTimeout(tm); }
+      }
+    }catch(e){}
+    const r=await _cp.apply(this,arguments);
+    setTimeout(refresh,600);
+    return r;
+  };
+  const _dm=deleteMatch;
+  deleteMatch=function(m){
+    try{ if(m&&m.uid){ const u=m.uid; vAll().then(a=>{ const e=a.find(x=>x.uid===u); if(e){ e.dismissed=true; return vPut(e); } }).then(refresh); } }catch(x){}
+    return _dm.apply(this,arguments);
+  };
+  const _cb=clBadge;
+  clBadge=function(){
+    _cb.apply(this,arguments);
+    try{ const b=document.getElementById('clbd'); if(!b||!isAdm()) return; const n=unsyncedN();
+      if(navigator.onLine===false){ b.textContent='📴 Offline · phone mein safe'+(n?' ('+n+' match)':''); b.style.background='#b3541e'; }
+      else if(DIRTY&&n){ b.textContent+=' · '+n+' match phone mein'; }
+    }catch(e){}
+  };
+  window.addEventListener('online',()=>{ try{ clBadge(); }catch(e){} });
+  window.addEventListener('offline',()=>{ try{ clBadge(); }catch(e){} });
+
+  /* ---------- Matches Recovery panel ---------- */
+  async function vaultPanel(){
+    ecsPanel('🛟 Matches Recovery', async (b)=>{
+      const draw=async()=>{
+        b.textContent='Load ho raha hai…';
+        const all=(await vAll()).sort((a,c)=>c.savedAt-a.savedAt); await refresh(); b.innerHTML='';
+        b.appendChild(el(`<p class="muted" style="font-size:.78rem;">Har match ki ek alag copy is phone mein mehfooz hoti hai (cloud, restore ya sync usay nahi mita sakte). Jo match app se gayab ho woh yahan se wapas jod sakte ho. <b>Scoring chal rahi ho to pehle Home par aa jao.</b></p>`));
+        const row=el(`<div class="row" style="gap:6px;margin-bottom:8px;flex-wrap:wrap;"></div>`);
+        const add=(t,cls,fn)=>{ const x=el(`<button class="btn ${cls} small" data-cl="1">${t}</button>`); x.onclick=fn; row.appendChild(x); return x; };
+        const miss=all.filter(e=>e.status==='completed'&&!gone(e)&&!present(e));
+        if(miss.length) add('📥 Saare gayab ('+miss.length+') wapas jodo','gold',()=>{ if(!confirm(miss.length+' gayab match wapas jodein?')) return; const n=insertMany(miss); showToast('✅ '+n+' match wapas aa gaye'); draw(); });
+        add('⬇ Poora vault file','secondary',()=>dl('ECS_vault_'+Date.now()+'.json',{ecsVault:1,entries:all.map(entFile)}));
+        const fi=el(`<input type="file" accept=".json,application/json" style="display:none">`);
+        fi.onchange=async()=>{ try{ const f=fi.files[0]; if(!f) return; const o=JSON.parse(await f.text()); let ents=[];
+            if(o.ecsMatch) ents=[o]; else if(o.ecsVault) ents=o.entries||[]; else if(o.seriesList) ents=mkEntries(o,'file',{}); else if(o.data&&typeof o.data==='string'){ ents=mkEntries(JSON.parse(o.data),'file',{}); }
+            ents=ents.filter(e=>e&&e.match&&e.sid).map(e=>Object.assign({},e,{uid:e.uid||e.match.uid||('f'+hsh(e.sid+'|'+(e.fp||e.date)))}));
+            if(!ents.length) throw new Error('is file mein koi match nahi mila');
+            const todo=ents.filter(e=>!present(e));
+            if(!todo.length){ alert('Is file ke saare '+ents.length+' match pehle se app mein maujood hain.'); return; }
+            if(!confirm(todo.length+' match file se jodein?\n\n'+todo.map(e=>'• '+(e.label||('Match '+e.number))).join('\n'))) return;
+            for(const e of todo){ e.savedAt=Date.now(); e.fp=e.fp||mfp(e.match); e.status=e.status||e.match.status; e.label=e.label||'Match '+e.number; await vPut(e); }
+            const n=insertMany(todo); showToast('✅ '+n+' match jud gaye'); draw();
+          }catch(x){ alert('Import nahi hua: '+x.message); } fi.value=''; };
+        add('📂 File se match jodo','secondary',()=>fi.click()); row.appendChild(fi);
+        add('🔄 Dobara check','secondary',()=>draw());
+        b.appendChild(row);
+        if(!all.length) b.appendChild(el(`<p class="muted">Abhi vault khali hai. Jaise hi koi match save hoga yahan aa jayega.</p>`));
+        all.forEach(e=>{
+          const here=present(e); const tag = here?'✅ app mein maujood':(gone(e)?'🗑 hataya gaya / chhupaya':(e.status==='completed'?'⚠ GAYAB':'(live copy)'));
+          const c=el(`<div class="card" style="margin:6px 0;${(!here&&!gone(e)&&e.status==='completed')?'border:2px solid #b00020;':''}"><div style="font-size:.8rem;"><b>${esc(e.label)}</b><br><span class="muted">${esc(e.sname)} · ${esc(e.date||'')} · ${tag}<br>Vault mein save: ${fmtT(e.savedAt)} · source: ${esc(e.src||'')}</span></div><div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap;"></div></div>`);
+          const r2=c.querySelector('.row'); const add2=(t,cls,fn)=>{ const x=el(`<button class="btn ${cls} small" data-cl="1">${t}</button>`); x.onclick=fn; r2.appendChild(x); };
+          if(!here) add2('📥 Wapas jodo','gold',()=>{ const res=insertEntry(e); if(res==='ok'){ showToast('✅ Match wapas aa gaya'); } else alert(res); draw(); });
+          add2('📤 File','secondary',()=>shareEnt(e));
+          if(!here&&!gone(e)) add2('🙈 Chhupao','secondary',async()=>{ e.dismissed=true; await vPut(e); draw(); });
+          b.appendChild(c);
+        });
+        const sn=(await sAll()).sort((a,c)=>c.id-a.id);
+        b.appendChild(el(`<h4 style="margin:14px 0 4px;">📦 Phone ki poori safe copies (${sn.length})</h4>`));
+        b.appendChild(el(`<p class="muted" style="font-size:.75rem;margin:0 0 6px;">Cloud se data aane ya overwrite hone se pehle ki puri copy. Zaroorat par file download karke Firebase/Import mein kaam aa sakti hai.</p>`));
+        sn.forEach(s=>{ const c=el(`<div class="card" style="margin:5px 0;font-size:.78rem;"><b>${fmtT(s.t)}</b> · ${esc(s.reason)}<br><span class="muted">${s.mc} match · ${Math.round(s.data.length/1024)} KB</span><div style="margin-top:5px;"><button class="btn secondary small" data-cl="1">⬇ Download</button></div></div>`);
+          c.querySelector('button').onclick=()=>dl('ECS_safe_'+s.id+'.json',s.data); b.appendChild(c); });
+      };
+      draw();
+    });
+  }
+  window.ecsVaultPanel=vaultPanel;
+  const _cc2=clCard;
+  clCard=function(){
+    const c=_cc2.apply(this,arguments);
+    try{ if(CL&&isAdm()){ const row=c.querySelector('.row'); if(row){ const x=el(`<button class="btn gold" data-cl="1">🛟 Matches Recovery</button>`); x.onclick=()=>vaultPanel(); row.appendChild(x); } } }catch(e){}
+    return c;
+  };
+
+  /* ---------- Cloud Backups panel (match count + safe restore) ---------- */
+  ecsBackupPanel=async function(){
+    ecsPanel('💾 Cloud Backups', async (b)=>{
+      const getData=async id=>{ const rr=await metaReq('GET','backupsData/'+id); const d=await rr.json(); if(!d||!d.data) throw new Error('data nahi mila'); return d; };
+      const curCount=()=> totalM(root);
+      const draw=async()=>{
+        b.textContent='Load ho raha hai…';
+        try{
+          const r=await metaReq('GET','backupsIdx'); if(!r.ok) throw new Error(r.status); const j=await r.json()||{}; b.innerHTML='';
+          b.appendChild(el(`<p class="muted" style="font-size:.78rem;">Har 6 ghante mein, aur kisi bhi delete se pehle cloud ka purana data yahan save hota hai. <b>Abhi app mein ${curCount()} match hain.</b> Restore se poora data purane jaisa ho jata hai (naye matches hat sakte hain) — behtar hai <b>"➕ Sirf gayab matches jodo"</b> use karo.</p>`));
+          const nb=el(`<button class="btn gold" data-cl="1" style="width:100%;margin-bottom:8px;">➕ Abhi backup banao</button>`); nb.onclick=async()=>{ nb.disabled=true; const ok=await ecsMakeBackup('manual'); showToast(ok?'✅ Backup ban gaya':'Backup nahi bana', ok); draw(); }; b.appendChild(nb);
+          const ids=Object.keys(j).sort().reverse(); if(!ids.length) b.appendChild(el(`<p class="muted">Abhi koi backup nahi.</p>`));
+          ids.forEach(id=>{ const x=j[id];
+            const mcTxt=()=> (x.mc!=null? '<b>'+x.mc+' match</b>' : '<i>match count ? (🔍 dabao)</i>');
+            const c=el(`<div class="card" style="margin:6px 0;"><div style="font-size:.8rem;"><b>${fmtT(x.t)}</b> · ${esc(x.reason||'')}<br><span class="muted">${esc(x.name||x.by||'')} · ${esc(x.dev||'')} · ${Math.round((x.size||0)/1024)} KB</span><br><span class="mc">${mcTxt()}</span></div><div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap;"><button data-a="chk" class="btn secondary small" data-cl="1">🔍 Check</button><button data-a="mrg" class="btn gold small" data-cl="1">➕ Sirf gayab matches jodo</button><button data-a="rst" class="btn secondary small" data-cl="1">♻️ Restore</button></div></div>`);
+            const q=a=>c.querySelector('[data-a='+a+']');
+            q('chk').onclick=async()=>{ try{ const d=await getData(id); const p=JSON.parse(d.data); x.mc=totalM(p); await vFromRoot(p,'cloud'); await refresh();
+                const ls=[]; (p.seriesList||[]).forEach(s=>(s.matches||[]).forEach(m=>ls.push('• '+mlabel(s,m))));
+                c.querySelector('.mc').innerHTML=mcTxt()+(ls.length?'<br><span class="muted">'+ls.map(esc).join('<br>')+'</span>':''); showToast('Is backup mein '+x.mc+' match hain (vault mein bhi save)'); }catch(e){ alert('Check nahi hua: '+e.message); } };
+            q('mrg').onclick=async()=>{ try{ const d=await getData(id); const p=JSON.parse(d.data); const ents=mkEntries(p,'cloud',{}).filter(e=>!present(e));
+                if(!ents.length){ alert('Is backup ke saare matches pehle se app mein maujood hain (ya isme koi match nahi).'); return; }
+                if(!confirm('Ye '+ents.length+' match wapas jodein? (baqi data nahi badlega)\n\n'+ents.map(e=>'• '+e.label).join('\n'))) return;
+                for(const e of ents){ await vPut(e); }
+                const n=insertMany(ents); await refresh(); showToast('✅ '+n+' match wapas jur gaye'); draw(); }catch(e){ alert('Nahi hua: '+e.message); } };
+            q('rst').onclick=async()=>{
+              try{
+                const d=await getData(id); const p=JSON.parse(d.data); const bm=totalM(p), cm=curCount();
+                let msg='Ye backup ('+fmtT(x.t)+') wapas laayein?\n\nBackup mein matches: '+bm+'\nAbhi app mein matches: '+cm+'\n\nAbhi ka data pehle backup ho jayega, phir ye purana data sab devices par aa jayega.';
+                if(bm<cm){ msg='⚠⚠ KHABARDAR ⚠⚠\nIs backup mein '+bm+' match hain, jabke abhi app mein '+cm+' hain.\nRestore karne se '+(cm-bm)+' match hat jayenge!\n\n(Behtar: "➕ Sirf gayab matches jodo" use karo.)\n\n'+msg; }
+                if(!confirm(msg)) return;
+                if(bm<cm && prompt('Pakka karne ke liye RESTORE likho')!=='RESTORE'){ showToast('Restore cancel',false); return; }
+                try{ await keepSnap('restore se pehle (phone ki copy)',JSON.stringify(root)); }catch(e){}
+                await ecsMakeBackup('restore se pehle');
+                clApply({ts:Date.now(),data:d.data}); root._ts=Date.now(); try{ localStorage.setItem(STORAGE_KEY,JSON.stringify(root)); }catch(e){} setDirty(true); lqNote('Backup restore kiya: '+fmtT(x.t)); await clPush(); saveDig(ecsDigest()); render(); showToast('✅ Backup restore ho gaya'); draw();
+              }catch(e){ alert('Restore nahi hua: '+e.message); } };
+            b.appendChild(c); });
+        }catch(x){ b.innerHTML=''; b.appendChild(el(`<p>⚠ Backups load nahi hue (${esc(x.message)}). Internet ya Firebase Rules check karein.</p>`)); const rb=el(`<button class="btn gold" data-cl="1" style="width:100%">🔐 Rules dekho / copy karo</button>`); rb.onclick=ecsRulesPanel; b.appendChild(rb); }
+      };
+      draw(); ecsPrune();
+    });
+  };
+
+  /* ===================== v104 — DELETE = OWNER ONLY + MATCH-WISE MERGE + LABELS ===================== */
+  const gone = e=> !!(e.dismissed || (root.delM&&root.delM[e.uid]) || (root.delS&&root.delS[e.sid]));
+  const canDel = ()=> !(CL&&isAdm()) || !!(ROLE&&ROLE.perms&&ROLE.perms.del);
+  const noDel = ()=>{ ecsDeny('Delete / hatana sirf Owner kar sakta hai. Aap scoring, naye teams aur naye tournament bana sakte ho.'); };
+  /* 1) Delete sirf Owner: function level par band (sirf button chhupana kaafi nahi) */
+  ['deleteSeries','deleteSeriesFromRecords','wipeAllRules','deleteRulesByNumberSpec'].forEach(n=>{
+    try{ const o=window[n]; if(typeof o!=='function') return;
+      window[n]=function(){ if(!canDel()) return noDel(); if(n==='deleteSeries'){ try{ (root.delS=root.delS||{})[arguments[0]]=Date.now(); }catch(e){} } return o.apply(this,arguments); }; }catch(e){}
+  });
+  const _dm2=deleteMatch;
+  deleteMatch=function(m){ if(!canDel()) return noDel(); try{ if(m&&m.uid) (root.delM=root.delM||{})[m.uid]=Date.now(); }catch(e){} return _dm2.apply(this,arguments); };
+
+  /* 2) Match-wise merge: cloud ke naye matches/series is phone ke data mein JOD do (replace nahi) */
+  function mergeCloud(p){
+    let added=0; if(!p||!root) return 0;
+    root.delM=Object.assign({},p.delM,root.delM); root.delS=Object.assign({},p.delS,root.delS);
+    (p.seriesList||[]).forEach(s=>{
+      if(root.delS[s.id]) return;
+      if(!root.seriesList.some(x=>x.id===s.id)){ root.seriesList.push(deep(s)); added+=(s.matches||[]).length; return; }
+      mkEntries({seriesList:[s]},'cloud',{}).forEach(e=>{ if(!root.delM[e.uid] && !present(e) && insertEntry(e,true)==='ok') added++; });
+    });
+    root.seriesList.forEach(s=>{ s.matches=(s.matches||[]).filter(m=>!(m.uid&&root.delM[m.uid])); s.matches.forEach((x,i)=>{ x.number=i+1; }); });
+    root.seriesList=root.seriesList.filter(s=>!root.delS[s.id]);
+    try{ _quotaUsageCache=null; if(!root.seriesList.some(s=>s.id===root.activeSeriesId)) root.activeSeriesId=(root.seriesList[0]||{}).id; state=root.seriesList.find(s=>s.id===root.activeSeriesId)||state; }catch(e){}
+    return added;
+  }
+  function saveLocalNow(){ root._ts=Date.now(); try{ localStorage.setItem(STORAGE_KEY,JSON.stringify(root)); }catch(e){} }
+  const _pl2=clPull;
+  clPull=async function(manual){
+    try{
+      if(isAdm()&&CL&&DIRTY&&!clBusy){
+        const r=await fetch(clUrl()); const j=r.ok?await r.json():null;
+        if(j&&j.data&&j.ts>(root._ts||0)){
+          const p=JSON.parse(j.data); await keepSnap('merge se pehle (phone ki copy)',JSON.stringify(root)); await vFromRoot(p,'cloud');
+          const n=mergeCloud(p); saveLocalNow(); BASE=j.ts; try{ localStorage.setItem(BSK,String(BASE)); }catch(e){}
+          if(manual||SM==='auto') await clPush();
+          try{ render(); }catch(e){} showToast('🔀 Merge ho gaya: cloud ke '+n+' naye match is phone mein jur gaye, is phone ke badlao bhi safe'); setTimeout(refresh,500); return;
+        }
+      }
+    }catch(e){}
+    return _pl2.apply(this,arguments);
+  };
+  /* push se pehle: agar cloud par kisi aur ne likha ho to uska data merge karke hi push hoga */
+  const _cp2=clPush;
+  clPush=async function(){
+    try{
+      if(isAdm()&&CL&&navigator.onLine!==false&&BASE){
+        const t=await fetch(clUrl().replace(/\.json$/,'/ts.json')).then(r=>r.ok?r.json():null).catch(()=>null);
+        if(t && t!==BASE){ const j=await fetch(clUrl()).then(r=>r.json()).catch(()=>null);
+          if(j&&j.data){ const n=mergeCloud(JSON.parse(j.data)); BASE=j.ts; if(n){ saveLocalNow(); try{ render(); }catch(e){} showToast('🔀 Cloud ke '+n+' naye match merge hue'); } } }
+      }
+    }catch(e){}
+    return _cp2.apply(this,arguments);
+  };
+
+  /* 3) Labels / madad */
+  window.ecsPermSummary=function(en){
+    const pr=en.perms||ECS_PRESETS[en.role]||{};
+    return el(`<div style="font-size:.74rem;margin:5px 0;line-height:1.55"><b>Abhi ke haq:</b> ${ECS_PERMS.map(p=>(pr[p[0]]?'✅ ':'❌ ')+esc(p[1].split(' (')[0].replace(/^\S+\s/,''))).join(' · ')}<br><span class="muted">${en.added?'Add: '+fmtT(en.added)+(en.addedBy?' · '+esc(en.addedBy):''):''}</span></div>`);
+  };
+  window.ecsHelpPanel=function(){
+    ecsPanel('📖 Safety features — kaun kya karta hai',b=>{
+      [['🛟 Matches Recovery','Har match ki alag copy phone mein. Koi match gayab ho to yahan se wapas jodo.'],
+       ['🔀 Auto Merge','Do phones ne alag matches khele to cloud sync par DONO jud jate hain (pehle sirf aakhri phone ka data bachta tha). Sirf matches/series jodte hain; players, finance, rules waghera ab bhi "aakhri sync wala jeetta" hai.'],
+       ['🔒 Delete sirf Owner','Match, series, rules delete karna sirf Owner/jisko "🗑 Delete karna" ka haq ho. Manager aur Scorer ko ye haq default mein nahi hota.'],
+       ['⚠ Gayab badge','Laal badge: koi poora hua match app se gayab hai. Dabao aur "Wapas jodo". Owner ne jaan boojh kar delete kiya ho to badge nahi aata.'],
+       ['📤 Match ke baad file','Match poora hote hi neeche "Share / Save file" aata hai. WhatsApp ya Drive par bhej do — ye aap ki bahar ki copy hai.'],
+       ['💾 Cloud Backups','Har backup mein match count dikhta hai. "Sirf gayab matches jodo" baqi data nahi badalta. "Restore" poora data purane jaisa kar deta hai (warning aati hai).'],
+       ['📴 Offline nishan','Net na ho to badge "Offline · phone mein safe" dikhata hai — scoring phone mein save hoti rehti hai.']
+      ].forEach(([t,d])=>b.appendChild(el(`<div class="card" style="margin:6px 0"><b>${t}</b><div style="font-size:.8rem;margin-top:3px">${d}</div></div>`)));
+    });
+  };
+  const _cc3=clCard;
+  clCard=function(){ const c=_cc3.apply(this,arguments);
+    try{ if(CL&&isAdm()){ const row=c.querySelector('.row'); if(row){ const x=el(`<button class="btn secondary" data-cl="1">📖 Safety features kya hain?</button>`); x.onclick=()=>ecsHelpPanel(); row.appendChild(x); } const v=el(`<div class="muted" style="font-size:.7rem;margin-top:6px">Safety v104 · Vault ✓ · Auto-merge ✓ · Delete = ${canDel()?'aap ko haq hai':'sirf Owner'}</div>`); c.appendChild(v); } }catch(e){}
+    return c; };
+
+  setTimeout(()=>{ try{ if(isAdm()) scan(); else refresh(); }catch(e){} }, 4500);
+})();
 
 loadState();
 clBadge(); clPull();
