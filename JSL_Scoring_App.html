@@ -4415,6 +4415,309 @@ A.ef=v=>{_ef(v);const[c,f]=v.split('|'),fx=findc(c).c.fx.find(z=>z.id===f),b=$('
 A.efs=v=>{const[c,f]=v.split('|'),fx=findc(c).c.fx.find(z=>z.id===f),x=fxPd();_efs(v);if(fx&&!$('#fa')){fx.pd=fx.pd||{};fx.pd.date=x.d;fx.pd.venue=x.v;save()}};
 
 
+
+/* ===================== GUARD v104 — Matches Vault + Roles + Activity Record + Cloud Backups (JSL) =====================
+   🛟 Vault   : har match ki alag copy phone ke IndexedDB mein; cloud/restore/sync usay mita nahi sakta. Gayab ho to red badge + 1-tap wapas.
+   👑 Owner   : sab kuch (delete, purana edit, settings, backup restore, admin banana)
+   🛠 Manager : schedule match ki scoring + naye teams/players + naya tournament/series   (peeche ja kar kuch badal/delete NAHI)
+   🏏 Scorer  : sirf scoring
+   🎛 Custom  : Owner har admin ke liye alag tick lagata hai
+   Gayab match wapas jodna (Matches Recovery) sab admins kar sakte hain - ye sirf jodta hai, mitata nahi. */
+(function(){
+const P='jsl', LOW='jsl';
+const hsh=s=>{let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return (h>>>0).toString(36)};
+const deep=o=>JSON.parse(JSON.stringify(o));
+const lc=s=>String(s||'').trim().toLowerCase(), ekey=s=>lc(s).replace(/\./g,',');
+const canV=()=>{try{return !CL||isAdm()}catch(x){return false}};
+const fT=t=>{try{return new Date(t).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}catch(x){return ''}};
+const H=s=>{const d=document.createElement('div');d.innerHTML=s.trim();return d.firstElementChild};
+const deny=m=>{try{toast('🔒 '+(m||'Is kaam ka haq aap ko nahi - Owner se baat karein.'),false)}catch(x){}};
+function gPanel(title,build){const o=document.createElement('div');o.className='ov';o.style.cssText='z-index:95;align-items:flex-start;overflow:auto';o.innerHTML='<div class="md" style="max-width:520px;max-height:none;margin:8px auto"><div class="row" style="justify-content:space-between;flex-wrap:nowrap;margin-bottom:8px"><h3 style="margin:0;font-size:1rem">'+e(title)+'</h3><button class="b s sm" data-x style="flex:0;white-space:nowrap">✕ Band</button></div><div class="pbody"></div></div>';o.querySelector('[data-x]').onclick=()=>o.remove();document.body.appendChild(o);build(o.querySelector('.pbody'),o);return o}
+const cbtn=(t,cls,fn)=>{const b=H('<button class="b '+(cls||'s')+' sm" style="white-space:nowrap">'+t+'</button>');b.onclick=fn;return b};
+
+/* ---------- IndexedDB vault ---------- */
+let _idb=null;
+function idb(){if(_idb)return _idb;_idb=new Promise((res,rej)=>{try{const q=indexedDB.open(P+'_vault',1);q.onupgradeneeded=()=>{const d=q.result;d.createObjectStore('m',{keyPath:'uid'});d.createObjectStore('s',{keyPath:'id'})};q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)}catch(x){rej(x)}});return _idb}
+function tx(st,mode,fn){return idb().then(d=>new Promise((res,rej)=>{const t=d.transaction(st,mode);const r=fn(t.objectStore(st));t.oncomplete=()=>res(r&&r.result!==undefined?r.result:undefined);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)})).catch(()=>null)}
+const vAll=()=>tx('m','readonly',s=>s.getAll()).then(x=>x||[]),vPut=x=>tx('m','readwrite',s=>s.put(x)),sAll=()=>tx('s','readonly',s=>s.getAll()).then(x=>x||[]),sPut=x=>tx('s','readwrite',s=>s.put(x)),sDel=id=>tx('s','readwrite',s=>s.delete(id));
+const KEEPST=new Set(['completed','live','paused']);
+const fcD=(D,id)=>{let c=(D.tours||[]).find(x=>x.id===id);if(c)return{c,k:'t'};c=(D.series||[]).find(x=>x.id===id);return c?{c,k:'s'}:null};
+const mkey=m=>m.status+'|'+(m.result||'')+'|'+(m.inns||[]).map(i=>i.balls.length+':'+i.runs+':'+i.wk+':'+(i.done?1:0)).join(',')+'|'+(m.toss||'')+(m.dec||'')+(m.overs||'')+(m.venue||'')+(m.date||'')+(m.man||'');
+function ent(m,src,old,D){
+  D=D||db;const fp=hsh(JSON.stringify([m.inns,m.status,m.result,m.toss,m.dec,m.overs,m.venue,m.date,m.man]));
+  if(old&&old.fp===fp&&old.status===m.status)return null;
+  const z=m.comp?fcD(D,m.comp):null,fx=z?z.c.fx.find(f=>f.mid===m.id):null,ta=(D.teams||[]).find(t=>t.id===m.a),tb=(D.teams||[]).find(t=>t.id===m.b),now=Date.now();
+  return{uid:m.id,comp:m.comp||null,cat:m.cat||'i',status:m.status,fp,label:(ta?ta.name:'?')+' vs '+(tb?tb.name:'?')+' · '+(m.status==='completed'?(m.result||'complete'):m.status),cname:z?z.c.name:'',savedAt:now,src,
+   doneAt:old?(old.doneAt||((old.status!=='completed'&&m.status==='completed')?now:0)):0,dismissed:!!(old&&old.dismissed),becameDone:!!(old&&old.status!=='completed'&&m.status==='completed'),
+   match:deep(m),ta:ta?deep(ta):null,tb:tb?deep(tb):null,cmp:z?deep(z.c):null,ck:z?z.k:null,fx:fx?deep(fx):null}}
+function mkEnts(D,src,byUid){const out=[];byUid=byUid||{};(D.matches||[]).forEach(m=>{if(!m||!m.id||!KEEPST.has(m.status))return;const old=byUid[m.id];if(old&&src==='cloud')return;const x=ent(m,src,old,D);if(x)out.push(x)});return out}
+async function vFrom(D,src){const all=await vAll(),by={};all.forEach(x=>by[x.uid]=x);const L=mkEnts(D,src,by);for(const x of L)await vPut(x);return L}
+const present=x=>db.matches.some(m=>m.id===x.uid);
+const totalM=D=>{try{return (D.matches||[]).length}catch(x){return 0}};
+let _VC=[],_lost=[];
+async function refresh(){try{_VC=await vAll();const tomb=db.delIds||{};for(const x of _VC){if(!x.dismissed&&tomb[x.uid]){x.dismissed=true;await vPut(x)}}_lost=_VC.filter(x=>KEEPST.has(x.status)&&!x.dismissed&&!present(x))}catch(x){_VC=[];_lost=[]}lostUI()}
+function lostUI(){let b=document.getElementById('gLost');const n=_lost.length;if(!canV()||!n){if(b)b.remove();return}if(!b){b=document.createElement('div');b.id='gLost';b.style.cssText='position:fixed;top:34px;right:6px;z-index:61;font-size:11px;font-weight:800;padding:4px 10px;border-radius:12px;background:#b00020;color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.4)';b.onclick=()=>gVault();document.body.appendChild(b)}b.textContent='⚠ '+n+' match gayab — recover karo'}
+function ins(x,quiet){
+  if(present(x))return 'pehle se maujood';
+  [['a','ta'],['b','tb']].forEach(([s,k])=>{const id=x.match[s];if(id&&!db.teams.some(t=>t.id===id)&&x[k]){db.teams.push(deep(x[k]));try{x[k].players.forEach(p=>regAdd(p.name))}catch(z){}}});
+  if(x.match.comp){let z=findc(x.match.comp);if(!z&&x.cmp){const c=deep(x.cmp);(c.fx||[]).forEach(f=>{if(f.mid&&!db.matches.some(q=>q.id===f.mid))f.mid=null});(x.ck==='t'?db.tours:db.series).push(c);z=findc(c.id)}
+   if(z&&x.fx){let f=z.c.fx.find(q=>q.id===x.fx.id);if(!f){z.c.fx.push(deep(x.fx));f=z.c.fx[z.c.fx.length-1];try{num(z.c)}catch(q){}}if(!f.mid||!db.matches.some(q=>q.id===f.mid))f.mid=x.uid}}
+  db.matches.push(deep(x.match));if(!quiet){save();R()}return 'ok'}
+function insMany(L){let n=0;L.forEach(x=>{if(ins(x,true)==='ok')n++});if(n){save();R()}return n}
+let _lastSafe='';
+async function keepSnap(reason,str){try{const h=hsh(str);if(h===_lastSafe)return;_lastSafe=h;const p=JSON.parse(str);await vFrom(p,'safe');await sPut({id:Date.now(),t:Date.now(),reason,mc:totalM(p),data:str});const all=(await sAll()).sort((a,b)=>b.id-a.id);for(let i=30;i<all.length;i++)await sDel(all[i].id)}catch(x){}}
+function dlj(name,obj){const b=new Blob([typeof obj==='string'?obj:JSON.stringify(obj)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{try{URL.revokeObjectURL(a.href);a.remove()}catch(x){}},4000)}
+const entFile=x=>({gMatch:1,uid:x.uid,comp:x.comp,cat:x.cat,status:x.status,fp:x.fp,label:x.label,cname:x.cname,match:x.match,ta:x.ta,tb:x.tb,cmp:x.cmp,ck:x.ck,fx:x.fx});
+const fname=x=>LOW.toUpperCase()+'_match_'+((x.match&&x.match.date)||'')+'_'+x.uid+'.json';
+async function shareEnt(x){try{const f=new File([JSON.stringify(entFile(x))],fname(x),{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:x.label});return}}catch(z){if(z&&z.name==='AbortError')return}dlj(fname(x),entFile(x))}
+function offer(x){try{const o=document.getElementById('gOffer');if(o)o.remove();const d=H('<div id="gOffer" style="position:fixed;left:10px;right:10px;bottom:10px;z-index:99998;background:#0a3d6b;border:2px solid #5aa9ff;border-radius:14px;padding:10px 12px;color:#fff;font-size:.82rem;box-shadow:0 6px 24px rgba(0,0,0,.5)"><b>✅ Match poora hua — file ki copy rakh lo</b><div style="opacity:.85;margin:3px 0 8px">'+e(x.label)+'</div><div style="display:flex;gap:8px"><button class="b g sm" data-s style="flex:1">📤 Share / Save file</button><button class="b s sm" data-x style="flex:0">✕</button></div></div>');d.querySelector('[data-s]').onclick=()=>{shareEnt(x);d.remove()};d.querySelector('[data-x]').onclick=()=>d.remove();document.body.appendChild(d);setTimeout(()=>{try{d.remove()}catch(z){}},90000)}catch(z){}}
+/* ---------- scan: db -> vault ---------- */
+let _kc={},_vt=null,_lts=null,_delSet=null,_userDel=0,_scanning=false;
+const allIds=()=>{const q=new Set();['matches','teams','tours','series'].forEach(k=>(db[k]||[]).forEach(x=>x&&x.id&&q.add(x.id)));return q};
+function sched(){clearTimeout(_vt);_vt=setTimeout(scan,1200)}
+async function scan(){
+  if(!canV()||!db||_scanning)return;_scanning=true;
+  try{
+    const cur=allIds();
+    if(_delSet&&Date.now()-_userDel<120000){const gone=[..._delSet].filter(u=>!cur.has(u));
+      if(gone.length){db.delIds=db.delIds||{};const all=await vAll();for(const u of gone){db.delIds[u]=Date.now();const x=all.find(q=>q.uid===u);if(x){x.dismissed=true;await vPut(x)}}try{save()}catch(z){}}}
+    if(_delSet&&Date.now()-_userDel>=120000)_delSet=null;
+    const changed=db.matches.filter(m=>{if(!KEEPST.has(m.status))return false;const k=mkey(m);if(_kc[m.id]===k)return false;_kc[m.id]=k;return true});
+    if(changed.length){const all=await vAll(),by={};all.forEach(x=>by[x.uid]=x);const done=[];
+      for(const m of changed){const x=ent(m,'local',by[m.id]);if(x){await vPut(x);if(x.becameDone)done.push(x)}}
+      if(done.length)offer(done[done.length-1])}
+    await refresh();
+  }catch(x){}
+  _scanning=false}
+setInterval(()=>{try{if(canV()&&db&&db._ts!==_lts){_lts=db._ts;sched()}}catch(x){}},1000);
+document.addEventListener('visibilitychange',()=>{if(document.hidden){try{clearTimeout(_vt);scan()}catch(x){}}});
+window.addEventListener('pagehide',()=>{try{clearTimeout(_vt);scan()}catch(x){}});
+/* ---------- hooks: cloud apply / push / delete-confirms ---------- */
+const _ca=clApply;
+clApply=function(j){let snap=null;try{if(db&&db.matches&&db.matches.length)snap=JSON.stringify(db)}catch(x){}const r=_ca.apply(this,arguments);_delSet=null;_kc={};try{if(snap)keepSnap('cloud data aane se pehle (phone ki copy)',snap);setTimeout(refresh,400)}catch(x){}return r};
+const _cp=clPush;
+clPush=async function(){
+  try{await gPrePush()}catch(x){}
+  try{if(isAdm()&&CL&&navigator.onLine!==false){const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),5000);
+    try{const r=await fetch(clUrl().replace(/\.json$/,'/ts.json'),{signal:ac.signal});if(r.ok){const ts=await r.json();if(ts&&BASE&&ts!==BASE){const rr=await fetch(clUrl(),{signal:ac.signal});const j=await rr.json();if(j&&j.data){const p=JSON.parse(j.data);await vFrom(p,'cloud');await sPut({id:Date.now(),t:Date.now(),reason:'cloud overwrite se pehle (cloud ki copy)',mc:totalM(p),data:j.data});const nm=mergeCloud(p);BASE=j.ts;try{localStorage.setItem(BSK,String(BASE))}catch(z){}db._ts=Date.now();try{_lsave()}catch(z){}if(nm){toast('🔀 Cloud ke '+nm+' naye match is phone mein merge hue');if(!midScore()){try{R()}catch(z){}}}}}}}finally{clearTimeout(tm)}}}catch(x){}
+  const r=await _cp.apply(this,arguments);
+  try{if(/^✅ Cloud par save/.test(clSt)){if(_digNow)saveDig(_digNow);try{await flushLog(SM==='manual')}catch(z){}}}catch(z){}
+  setTimeout(refresh,600);return r};
+const DELRX=/delete|permanently|hamesha|wipe|REPLACE|Fixture hata|purge|saaf karein/i, DELEX=/logout|Cloud sync band|Cloud par data|Admin/i;
+const _cf=cf;
+cf=function(m,fn){const s=String(m||'');
+  if(DELRX.test(s)&&!DELEX.test(s)){
+    if(CL&&isAdm()&&!can('del')){deny('Delete / reset ka haq sirf Owner ke paas hai.');return}
+    return _cf.call(this,m,function(){try{_userDel=Date.now();_delSet=allIds();keepSnap('delete/reset se pehle (phone ki copy)',JSON.stringify(db))}catch(x){}return fn.apply(this,arguments)})}
+  return _cf.apply(this,arguments)};
+/* ---------- Matches Recovery panel ---------- */
+function gVault(){
+  gPanel('🛟 Matches Recovery',async b=>{
+    const draw=async()=>{b.textContent='Load ho raha hai…';const all=(await vAll()).sort((a,c)=>c.savedAt-a.savedAt);await refresh();b.innerHTML='';
+      b.appendChild(H('<div class="m">Har match ki ek alag copy is phone mein mehfooz hoti hai (cloud, restore ya sync usay nahi mita sakte). Jo match app se gayab ho woh yahan se wapas jod sakte ho. <b>Scoring chal rahi ho to pehle Home par aa jao.</b> Ye sab admins kar sakte hain (sirf jodta hai, mitata nahi).</div>'));
+      const row=H('<div class="row" style="margin:8px 0"></div>');const miss=all.filter(x=>KEEPST.has(x.status)&&!x.dismissed&&!present(x));
+      if(miss.length)row.appendChild(cbtn('📥 Saare gayab ('+miss.length+') wapas jodo','g',()=>{cf2(miss.length+' gayab match wapas jodein?',()=>{const n=insMany(miss);toast('✅ '+n+' match wapas aa gaye');draw()})}));
+      row.appendChild(cbtn('⬇ Poora vault file','s',()=>dlj(LOW.toUpperCase()+'_vault_'+Date.now()+'.json',{gVault:1,entries:all.map(entFile)})));
+      const fi=H('<input type="file" accept=".json,application/json" style="display:none">');
+      fi.onchange=async()=>{try{const f=fi.files[0];if(!f)return;const o=JSON.parse(await f.text());let L=[];
+        if(o.gMatch)L=[o];else if(o.gVault)L=o.entries||[];else if(o.type==='jsl_backup'&&o.db)L=mkEnts(o.db,'file',{});else if(o.matches)L=mkEnts(o,'file',{});
+        L=L.filter(x=>x&&x.match&&x.match.id).map(x=>Object.assign({},x,{uid:x.uid||x.match.id,status:x.status||x.match.status,label:x.label||('Match '+x.match.id)}));
+        if(!L.length)throw new Error('is file mein koi match nahi mila');const todo=L.filter(x=>!present(x));
+        if(!todo.length){msgBox('Is file ke saare '+L.length+' match pehle se app mein maujood hain.');return}
+        cf2(todo.length+' match file se jodein?\n\n'+todo.map(x=>'• '+x.label).join('\n'),async()=>{for(const x of todo){x.savedAt=Date.now();await vPut(x)}const n=insMany(todo);toast('✅ '+n+' match jud gaye');draw()})}catch(x){msgBox('Import nahi hua: '+x.message)}fi.value=''};
+      row.appendChild(cbtn('📂 File se match jodo','s',()=>fi.click()));row.appendChild(fi);row.appendChild(cbtn('🔄 Dobara check','s',()=>draw()));b.appendChild(row);
+      if(!all.length)b.appendChild(H('<div class="m">Abhi vault khali hai. Jaise hi koi match shuru/poora hoga yahan aa jayega.</div>'));
+      all.forEach(x=>{const here=present(x),tag=here?'✅ app mein maujood':(x.dismissed?'🗑 hataya gaya / chhupaya':(KEEPST.has(x.status)?'⚠ GAYAB':''));
+        const c=H('<div class="card" style="margin:6px 0;'+((!here&&!x.dismissed)?'border:2px solid #b00020;':'')+'"><div style="font-size:.8rem"><b>'+e(x.label)+'</b><br><span class="m">'+e(x.cname||'Individual')+' · '+tag+'<br>Vault mein save: '+fT(x.savedAt)+' · source: '+e(x.src||'')+'</span></div><div class="row" style="margin-top:6px"></div></div>');
+        const r2=c.querySelector('.row');
+        if(!here)r2.appendChild(cbtn('📥 Wapas jodo','g',()=>{const res=ins(x);if(res==='ok')toast('✅ Match wapas aa gaya');else msgBox(res);draw()}));
+        r2.appendChild(cbtn('📤 File','s',()=>shareEnt(x)));
+        if(!here&&!x.dismissed)r2.appendChild(cbtn('🙈 Chhupao','s',async()=>{x.dismissed=true;await vPut(x);draw()}));
+        b.appendChild(c)});
+      const sn=(await sAll()).sort((a,c)=>c.id-a.id);b.appendChild(H('<h4 style="margin:14px 0 4px">📦 Phone ki poori safe copies ('+sn.length+')</h4>'));
+      b.appendChild(H('<div class="m" style="margin-bottom:6px">Cloud se data aane, overwrite hone ya delete/reset se pehle ki poori copy. Zaroorat par file download karke Import mein kaam aa sakti hai.</div>'));
+      sn.forEach(s=>{const c=H('<div class="card" style="margin:5px 0;font-size:.78rem"><b>'+fT(s.t)+'</b> · '+e(s.reason)+'<br><span class="m">'+s.mc+' match · '+Math.round(s.data.length/1024)+' KB</span><div class="row" style="margin-top:5px"></div></div>');const r2=c.querySelector('.row');
+        r2.appendChild(cbtn('⬇ Download','s',()=>dlj(LOW.toUpperCase()+'_safe_'+s.id+'.json',{type:'jsl_backup',db:JSON.parse(s.data)})));
+        r2.appendChild(cbtn('➕ Sirf gayab matches jodo','g',()=>{try{const p=JSON.parse(s.data),L=mkEnts(p,'safe',{}).filter(x=>!present(x));if(!L.length){msgBox('Is copy ke saare matches pehle se app mein maujood hain.');return}
+          cf2('Is copy se ye '+L.length+' match wapas jodein? (baaqi data nahi badlega)\n\n'+L.map(x=>'• '+x.label).join('\n'),async()=>{for(const x of L)await vPut(x);const n=insMany(L);toast('✅ '+n+' match wapas aa gaye');draw()})}catch(z){msgBox('Nahi hua: '+z.message)}}));
+        b.appendChild(c)});
+    };draw()})}
+const cf2=_cf; /* gVault ke apne confirm - delete-gate se bachne ke liye original cf */
+window.gVault=gVault;A.gvault=()=>gVault();
+/* ===================== ROLES ===================== */
+const PERMS=[['score','🏏 Scoring — schedule hue match ki scoring (tournament / series / individual match chalana)'],['teams','👥 Naye Teams banana / squad badalna'],['players','🧢 Players List mein naya player add karna'],['newseries','📅 Naya tournament / series banana'],['edit','✏️ PURANA (khatam hua) match edit / amend karna  [default: sirf Owner]'],['settings','⚙️ Rules & Regulations + Edit password badalna  [default: sirf Owner]'],['money','💰 Entry Management (fees / kharcha)  [default: sirf Owner]'],['data','💾 Import / Export, Full backup, Restore  [default: sirf Owner]'],['del','🗑 Kuch bhi DELETE / reset karna (match, team, tournament, player, rule, entry)  [default: sirf Owner]']];
+const ALLP={};PERMS.forEach(p=>ALLP[p[0]]=1);
+const PRESETS={manager:{score:1,teams:1,players:1,newseries:1},scorer:{score:1},custom:{}};
+const RLK=P+'_role',DVK=P+'_dev',DGK=P+'_dig',LQK=P+'_logq',BKK=P+'_lastbk';
+let ROLE=null,_roleAt=0,_digNow=null;
+try{const r=JSON.parse(localStorage.getItem(RLK)||'null');if(r&&AD&&r.email===AD.email)ROLE=r}catch(x){}
+const can=p=>{if(!CL||!isAdm())return true;if(!ROLE)return true;return !!(ROLE.perms&&ROLE.perms[p])};
+const isOwner=()=>!!(CL&&isAdm()&&(!ROLE||ROLE.owner));
+window.can=can;window.isOwner=isOwner;
+const ROLEN={owner:'👑 Owner',manager:'🛠 Manager',scorer:'🏏 Scorer',custom:'🎛 Custom'};
+const roleName=r=>!r?'…':r.owner?(r.legacy?'👑 Owner (roles abhi band — sab ko poore haq)':'👑 Owner'):r.none?'⛔ Role nahi (sirf dekhna)':(ROLEN[r.role]||('🎛 '+r.role));
+function roleFrom(j,email){const em=lc(email);if(!j||!j.owner)return{email:em,legacy:true,owner:true,role:'owner',name:'Owner (roles setup baaqi)',perms:Object.assign({},ALLP)};
+  if(lc(j.owner)===em)return{email:em,owner:true,role:'owner',name:j.ownerName||'Owner',perms:Object.assign({},ALLP)};
+  const en=j.admins&&j.admins[ekey(em)];if(!en||en.off)return{email:em,none:true,role:en?'band':'unlisted',name:(en&&en.name)||em,perms:{}};
+  return{email:em,role:en.role||'custom',name:en.name||em,perms:en.perms?Object.assign({},en.perms):Object.assign({},PRESETS[en.role]||{})}}
+const saveRole=()=>{try{ROLE?localStorage.setItem(RLK,JSON.stringify(ROLE)):localStorage.removeItem(RLK)}catch(x){}};
+const metaUrl=(p,q)=>CL.url.replace(/\/+$/,'')+'/ecsmeta/'+encodeURIComponent(CL.club)+'/'+p+'.json'+(q||'');
+async function metaReq(method,p,body,q){const t=await clToken();return fetch(metaUrl(p,'?auth='+encodeURIComponent(t)+(q?'&'+q:'')),{method,body:body===undefined?undefined:JSON.stringify(body)})}
+let _seen=false;
+async function loadRole(){if(!CL||!isAdm()){ROLE=null;return}
+  try{const r=await metaReq('GET','roles');if(!r.ok)throw new Error(r.status);const j=await r.json();const nr=roleFrom(j,AD.email);const ch=JSON.stringify(nr)!==JSON.stringify(ROLE);ROLE=nr;_roleAt=Date.now();saveRole();
+    if(!_seen){_seen=true;lqNote('🔑 Login: '+AD.email+' — '+roleName(ROLE).replace(/^\S+\s/,'')+(ROLE.none?' (Owner ne abhi add nahi kiya)':''));await flushLog(true)}
+    if(ch){try{R()}catch(x){}}}catch(x){}}
+/* device naam + record queue */
+const devN=()=>{try{return localStorage.getItem(DVK)||''}catch(x){return ''}};
+function askDev(force){let d=devN();if(d&&!force)return d;const v=(prompt('Is device ka naam likho (jaise "Ali ka phone"). Admin record mein ye naam dikhega:',d||'')||'').trim();if(v){try{localStorage.setItem(DVK,v.slice(0,40))}catch(x){}d=v.slice(0,40)}return d}
+const UA=()=>{const u=navigator.userAgent||'';return (/Android/.test(u)?'Android':/iPhone|iPad/.test(u)?'iOS':/Windows/.test(u)?'Windows':/Mac/.test(u)?'Mac':'Other')+' '+(/Edg\//.test(u)?'Edge':/Chrome\//.test(u)?'Chrome':/Safari\//.test(u)?'Safari':/Firefox\//.test(u)?'Firefox':'Browser')};
+const nm=id=>{const t=db.teams.find(x=>x.id===id);return t?t.name:'?'};
+function gDigest(){const d={};const put=(k,l,o)=>{d[k]=[hsh(JSON.stringify(o)),String(l).replace(/\s+/g,' ').slice(0,110)]};
+  db.teams.forEach(t=>put('t:'+t.id,'Team: '+t.name+' ('+t.players.length+' players)',t));
+  db.reg.forEach(r=>put('p:'+r.id,'Player: '+r.name,r));
+  db.tours.forEach(c=>{put('c:'+c.id,'Tournament: '+c.name,Object.assign({},c,{fx:0}));(c.fx||[]).forEach(f=>put('f:'+f.id,'Fixture #'+f.no+' ('+c.name+'): '+nm(f.a)+' vs '+nm(f.b),f))});
+  db.series.forEach(c=>{put('c:'+c.id,'Series: '+c.name,Object.assign({},c,{fx:0}));(c.fx||[]).forEach(f=>put('f:'+f.id,'Fixture #'+f.no+' ('+c.name+'): '+nm(f.a)+' vs '+nm(f.b),f))});
+  db.matches.forEach(m=>put('m:'+m.id,'Match: '+nm(m.a)+' vs '+nm(m.b)+' ['+m.status+']'+(m.result?' '+m.result:''),[m.status,m.result,m.inns.map(i=>i.runs+'/'+i.wk+'/'+i.balls.length)]));
+  db.entries.forEach(x=>put('e:'+x.id,'Entry: '+(x.player||'')+' '+(x.amount||''),x));db.expenses.forEach(x=>put('x:'+x.id,'Kharcha: '+(x.item||x.note||'')+' '+(x.amount||''),x));
+  db.rules.forEach(r=>put('r:'+r.id,'Rule '+(r.no||'')+(r.deleted?' (deleted)':'')+': '+String(r.text||r.t||'').slice(0,50),r));
+  (db.pl||[]).forEach(l=>put('l:'+l.id,'List: '+l.name+' ('+(l.names||[]).length+')',l));return d}
+const diffD=(a,b)=>{const o=[];Object.keys(b).forEach(k=>{if(!a[k])o.push([k,'+',b[k][1]]);else if(a[k][0]!==b[k][0])o.push([k,'~',b[k][1]])});Object.keys(a).forEach(k=>{if(!b[k])o.push([k,'-',a[k][1]])});return o};
+const loadDig=()=>{try{return JSON.parse(localStorage.getItem(DGK)||'null')}catch(x){return null}},saveDig=d=>{try{localStorage.setItem(DGK,JSON.stringify(d))}catch(x){}};
+let LQ={t0:0,lines:{}};try{const q=JSON.parse(localStorage.getItem(LQK)||'null');if(q&&q.lines)LQ=q}catch(x){}
+const saveLQ=()=>{try{localStorage.setItem(LQK,JSON.stringify(LQ))}catch(x){}};
+function lqAdd(diff){diff.forEach(([k,t,l])=>{const o=LQ.lines[k];if(!o)LQ.lines[k]={t,l};else if(o.t==='+'&&t==='-')LQ.lines[k]={t:'-',l:l+' (abhi hi add hua tha)'};else if(o.t==='+'&&t==='~')o.l=l;else if(o.t==='~'&&t==='-')LQ.lines[k]={t:'-',l};else if(o.t==='-'&&t==='+')LQ.lines[k]={t:'~',l};else{o.t=(o.t==='-'?'-':t);o.l=l}});if(!LQ.t0&&Object.keys(LQ.lines).length)LQ.t0=Date.now();saveLQ()}
+function lqNote(text){LQ.lines['note:'+Date.now()+Math.random()]={t:'!',l:text};if(!LQ.t0)LQ.t0=Date.now();saveLQ()}
+async function flushLog(force){if(!CL||!isAdm())return;const ks=Object.keys(LQ.lines);if(!ks.length)return;if(!force&&Date.now()-LQ.t0<300000)return;const ic={'+':'➕','-':'🗑','~':'✏️','!':'🔔'};let lines=ks.map(k=>ic[LQ.lines[k].t]+' '+LQ.lines[k].l);const n=lines.length;if(n>80)lines=lines.slice(0,80).concat(['… aur '+(n-80)+' changes']);
+  const x={ts:Date.now(),from:LQ.t0,email:AD.email,name:(ROLE&&ROLE.name)||AD.email,role:(ROLE&&ROLE.role)||'?',dev:devN()||'(naam nahi)',ua:UA(),n,lines};try{const r=await metaReq('POST','log',x);if(r.ok){LQ={t0:0,lines:{}};saveLQ()}}catch(z){}}
+async function makeBackup(reason){try{const r=await fetch(clUrl());if(!r.ok)return false;const j=await r.json();if(!j||!j.data)return false;const id=String(Date.now());const a=await metaReq('PUT','backupsData/'+id,{ts:j.ts||0,data:j.data});if(!a.ok)return false;
+  await metaReq('PUT','backupsIdx/'+id,{t:Date.now(),cloudTs:j.ts||0,by:AD.email,name:(ROLE&&ROLE.name)||'',dev:devN(),reason:reason||'auto',size:j.data.length,mc:(function(){try{return JSON.parse(j.data).matches.length}catch(x){return null}})()});try{localStorage.setItem(BKK,String(Date.now()))}catch(x){}return true}catch(x){return false}}
+async function prune(){if(!isOwner())return;try{const r=await metaReq('GET','backupsIdx');if(!r.ok)return;const j=await r.json();if(!j)return;const ids=Object.keys(j).sort(),cut=Date.now()-30*86400000,del={};const mx=Math.max(0,...ids.map(q=>+j[q].mc||0));const prot=new Set(mx>0?ids.filter(q=>(+j[q].mc||0)===mx).slice(-5):[]);ids.forEach((id,i)=>{if(!prot.has(id)&&(j[id].t<cut||i<ids.length-60))del[id]=null});if(Object.keys(del).length){await metaReq('PATCH','backupsIdx',del);await metaReq('PATCH','backupsData',del)}}catch(x){}}
+async function gPrePush(){if(!CL||!isAdm())return;const cur=gDigest();_digNow=cur;const base=loadDig();if(!base){saveDig(cur);return}const diff=diffD(base,cur);if(!diff.length)return;lqAdd(diff);const removed=diff.some(d=>d[1]==='-');const last=+localStorage.getItem(BKK)||0;if(removed||Date.now()-last>6*3600000)await makeBackup(removed?'delete se pehle':'auto')}
+{const o=clLogin;clLogin=async function(){await o.apply(this,arguments);if(isAdm()){askDev(false);_seen=false;await loadRole();if(ROLE&&ROLE.none)msgBox('Aap ka account Owner ne abhi kisi role mein add nahi kiya (ya band hai).\nAap sirf dekh sakte hain. Owner se kahein ke Import/Export → Admin Management mein aap ko add karein.');try{R()}catch(x){}}}}
+{const o=clPull;clPull=async function(manual){await o.apply(this,arguments);if(isAdm()&&(manual||Date.now()-_roleAt>60000))await loadRole();if(isAdm())flushLog(false)}}
+{const o=A.cao;if(o)A.cao=function(){if(!DIRTY){try{flushLog(true)}catch(x){}}return o.apply(this,arguments)}}
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&CL&&isAdm())flushLog(true)});setInterval(()=>{if(CL&&isAdm())flushLog(false)},90000);
+setTimeout(()=>{try{if(CL&&isAdm())loadRole()}catch(x){}},3000);
+/* ---------- permission gates ---------- */
+const NEED={tour:'score',ser:'score',ind:'score',play:'score',teams:'teams',plist:'players',rules:'settings',entry:'money',edit:'edit'};
+const DELA=new Set('tdel hdel pldel cdel rdel rdelok rrdel erdel dfx wipe rwipe rpurge terclr erclr exdl'.split(' '));
+const NEWA=new Set(['mk']);const EDITA=new Set(['hed']);const DATAA=new Set(['bi','bx','dx']);const SETA=new Set(['chpw']);
+{const o=go;go=function(v,c){if(CL&&isAdm()&&NEED[v]&&!can(NEED[v])){deny(v==='edit'?'Purana match edit karne ka haq sirf Owner ke paas hai.':undefined);v='home';c=null}return o.call(this,v,c)}}
+document.addEventListener('click',ev=>{if(!CL||!isAdm())return;const t=ev.target.closest&&ev.target.closest('[data-a]');if(!t)return;const a=t.dataset.a;let need=null,msg;
+  if(DELA.has(a)){need='del';msg='Delete / reset ka haq sirf Owner ke paas hai.'}else if(NEWA.has(a)){need='newseries';msg='Naya tournament / series banane ka haq nahi.'}else if(EDITA.has(a)){need='edit';msg='Purana match edit karne ka haq sirf Owner ke paas hai.'}else if(DATAA.has(a)){need='data';msg='Import / Export / Restore ka haq sirf Owner ke paas hai.'}else if(SETA.has(a)){need='settings';msg='Ye haq sirf Owner ke paas hai.'}
+  if(need&&!can(need)){ev.stopPropagation();ev.preventDefault();deny(msg)}},true);
+{const o=V.home;V.home=function(){const h=o.apply(this,arguments);if(!(CL&&isAdm()))return h;return h.replace(/<button class="tile [^"]*" data-a="go" data-v="(\w+)">[\s\S]*?<\/button>/g,(m,id)=>(NEED[id]&&!can(NEED[id]))?'':m)}}
+{const o=V.data;V.data=function(){if(CL&&isAdm()&&!can('data'))return '<h2 style="margin-top:12px">💾 Import / Export</h2>'+clCard();return o.apply(this,arguments)}}
+/* ---------- Admin UI ---------- */
+const yes='<span style="color:#3ddc84;font-weight:800">✅</span>',no='<span style="color:#ff6b6b;font-weight:800">❌</span>';
+function matrix(){const row=(l,o,m,s)=>'<tr><td style="padding:5px 4px;border-bottom:1px solid rgba(255,255,255,.08)">'+e(l)+'</td><td style="text-align:center;border-bottom:1px solid rgba(255,255,255,.08)">'+(o?yes:no)+'</td><td style="text-align:center;border-bottom:1px solid rgba(255,255,255,.08)">'+(m?yes:no)+'</td><td style="text-align:center;border-bottom:1px solid rgba(255,255,255,.08)">'+(s?yes:no)+'</td></tr>';
+  let h='<table style="width:100%;border-collapse:collapse;font-size:.76rem"><tr style="color:#9fb3d1"><th style="text-align:left">Kaam</th><th>👑<br>Owner</th><th>🛠<br>Manager</th><th>🏏<br>Scorer</th></tr>';
+  PERMS.forEach(([k,l])=>{h+=row(l.replace(/\s*\[.*\]\s*$/,''),1,!!PRESETS.manager[k],!!PRESETS.scorer[k])});
+  h+=row('🛟 Gayab match wapas jodna (Matches Recovery — sirf jodta hai, mitata nahi)',1,1,1);h+=row('👥 Admin Management · 📜 Admin Record · 💾 Cloud Backups restore · 🔐 Firebase Rules',1,0,0);
+  return h+'</table><div class="m" style="margin-top:6px">🎛 Custom: Owner har admin ke liye alag tick lagata hai (Admin Management mein). Delete / purana edit / restore wale kaam default mein sirf Owner ke paas hain.</div>'}
+const chips=pr=>PERMS.map(([k,l])=>{const on=!!pr[k];const t=l.replace(/\s*\[.*\]\s*$/,'').split('—')[0].trim();return '<span style="display:inline-block;margin:1px 3px 1px 0;padding:1px 7px;border-radius:9px;font-size:.68rem;background:'+(on?'rgba(61,220,132,.18)':'rgba(255,107,107,.15)')+';color:'+(on?'#7dffb0':'#ff9d9d')+'">'+(on?'✅':'❌')+' '+e(t.length>34?t.slice(0,33)+'…':t)+'</span>'}).join('');
+function permBoxes(cur,onchg){const w=H('<div style="margin:6px 0"></div>');PERMS.forEach(([k,l])=>{const r=H('<label style="display:flex;gap:8px;align-items:flex-start;font-size:.8rem;margin:3px 0"><input type="checkbox" '+(cur[k]?'checked':'')+' style="width:auto;margin:2px 0 0"><span>'+e(l)+'</span></label>');r.querySelector('input').onchange=ev=>{if(ev.target.checked)cur[k]=1;else delete cur[k];if(onchg)onchg()};w.appendChild(r)});return w}
+function myRights(){gPanel('ℹ️ Mere haq — kis se kia hoga',async b=>{if(!ROLE&&CL&&isAdm()){b.textContent='Role load ho raha hai…';await loadRole();b.innerHTML=''}const r=ROLE;if(!r)b.appendChild(H('<div class="card" style="border:1px solid #ffd45f"><span style="color:#ffd45f;font-size:.8rem">⚠ Role abhi load nahi hua (internet nahi / rules update baaqi). Jab tak load na ho app aap ko poore haq deti hai — Owner se confirm karein.</span></div>'));const ok=[],bad=[];PERMS.forEach(([k,l])=>{const t=l.replace(/\s*\[.*\]\s*$/,'');((r&&(r.owner||(r.perms&&r.perms[k])))?ok:bad).push(t)});
+  b.appendChild(H('<div class="card"><b>'+e(AD?AD.email:'')+'</b><br>Role: <b>'+e(roleName(r))+'</b>'+(r&&r.legacy?'<br><span style="color:#ffd45f;font-size:.78rem">⚠ Owner ne roles system abhi chalu nahi kiya, isliye filhal har admin ko poore haq hain.</span>':'')+'</div>'));
+  b.appendChild(H('<div class="card"><b style="color:#3ddc84">✅ Aap kar sakte hain</b><div style="font-size:.8rem;margin-top:4px">'+(ok.length?ok.map(x=>'• '+e(x)).join('<br>'):'(kuch nahi — sirf dekhna)')+'</div></div>'));
+  if(bad.length)b.appendChild(H('<div class="card"><b style="color:#ff6b6b">❌ Sirf Owner (ya jise Owner de)</b><div style="font-size:.8rem;margin-top:4px">'+bad.map(x=>'• '+e(x)).join('<br>')+'</div></div>'));
+  b.appendChild(H('<div class="card"><b>🧭 Kis role se kia hoga</b>'+matrix()+'</div>'))})}
+function rulesTxt(){const o=AD&&AD.email||'OWNER@EMAIL.COM';const own="auth != null && auth.token.email === '"+o+"'";const adm=c=>"root.child('ecsmeta/"+c+"/roles/admins').child(auth.token.email.replace('.', ',')).exists()";
+  const wr=c=>"auth != null && (auth.token.email === '"+o+"' || "+adm(c)+")";const cl=CL?CL.club:'';
+  return JSON.stringify({rules:{rsl:{'.read':true,'.write':wr(P==='rsl'?cl:'RSL')},jsl:{'.read':true,'.write':wr(P==='jsl'?cl:'JSL')},ecs:{'.read':true,'.write':wr('ECS')},
+   ecsmeta:{'$club':{roles:{'.read':'auth != null','.write':own},log:{'.read':own,'.write':own,'$id':{'.write':"auth != null && (!data.exists() || auth.token.email === '"+o+"')"}},backupsIdx:{'.read':own,'.write':own,'$id':{'.write':"auth != null && (!data.exists() || auth.token.email === '"+o+"')"}},backupsData:{'.read':own,'.write':own,'$id':{'.write':"auth != null && (!data.exists() || auth.token.email === '"+o+"')"}}}}}},null,2)}
+function rulesPanel(){gPanel('🔐 Firebase Rules (ek dafa)',b=>{b.appendChild(H('<div class="m">Firebase Console → Realtime Database → <b>Rules</b> tab mein ye poora text paste karein, phir <b>Publish</b>. Is se Admin Management, Record aur Backup asli tor par mehfooz ho jate hain aur Owner ke ilawa sirf wohi account likh sakte hain jo Admin Management mein add hon. (Teeno apps — RSL, JSL, ECS — ek hi rules mein.)</div>'));
+  const ta=H('<textarea readonly style="height:240px;font-size:.7rem"></textarea>');ta.value=rulesTxt();b.appendChild(ta);b.appendChild(cbtn('📋 Rules copy karo','g',()=>{ta.select();let ok=false;try{ok=document.execCommand('copy')}catch(x){}if(!ok&&navigator.clipboard)navigator.clipboard.writeText(ta.value);toast('📋 Rules copy ho gaye')}))})}
+const rulesBtn=()=>{const b=cbtn('🔐 Rules dekho / copy karo','g',rulesPanel);b.style.width='100%';return b};
+async function adminPanel(){gPanel('👥 Admin Management',async b=>{b.textContent='Load ho raha hai…';let j=null,lg={};
+  try{const r=await metaReq('GET','roles');if(!r.ok)throw new Error(r.status);j=await r.json()}catch(x){b.innerHTML='';b.appendChild(H('<div>⚠ Roles load nahi ho sake. Ya internet nahi, ya Firebase Rules abhi update nahi hue.</div>'));b.appendChild(rulesBtn());return}
+  try{const r=await metaReq('GET','log',undefined,'orderBy=%22%24key%22&limitToLast=300');if(r.ok){const L=await r.json()||{};Object.keys(L).sort().forEach(id=>{const x=L[id];if(x&&x.email)lg[lc(x.email)]={name:x.name,dev:x.dev,ts:x.ts,role:x.role}})}}catch(x){}
+  const draw=()=>{b.innerHTML='';b.appendChild(H('<details style="margin-bottom:8px"><summary style="cursor:pointer;font-weight:800">🧭 Kis role se kia hoga (tap karke dekhein)</summary>'+matrix()+'</details>'));
+   if(!j||!j.owner){b.appendChild(H('<div class="card" style="border:2px solid #ff6b6b"><b style="color:#ff9d9d">⚠ Roles abhi BAND hain</b><div style="font-size:.82rem;margin-top:6px">Is waqt jis bhi account ko Firebase mein likhne ka haq hai usay <b>Owner jaise poore haq</b> hain — delete, edit, restore sab. Isi liye list mein koi admin nazar nahi aata.<br><br><b>Chalu karne par:</b> aap ('+e(AD.email)+') <b>Owner</b> ban jate hain. Baaqi har admin pehle <b>sirf dekh</b> sakega jab tak aap use neeche se Manager / Scorer na bana dein (Manager: scoring + teams + players + naya tournament; delete / purana edit nahi).</div></div>'));
+    const sb=H('<button class="b g wide">✅ Roles chalu karo — main Owner hoon</button>');sb.onclick=()=>cf2('Roles chalu karein? Aap Owner banenge; baaqi admins ko aap ko add karna hoga.',async()=>{try{const r=await metaReq('PUT','roles',{owner:lc(AD.email),ownerName:'Owner',admins:{},created:Date.now()});if(!r.ok)throw new Error(r.status);j={owner:lc(AD.email),ownerName:'Owner',admins:{}};lqNote('Roles system chalu kiya (Owner: '+AD.email+')');await loadRole();draw()}catch(x){msgBox('Ye sirf Owner kar sakta hai, ya Firebase Rules abhi update nahi hue ('+x.message+').')}});b.appendChild(sb);
+    const seen=Object.keys(lg).filter(q=>q!==lc(AD.email));if(seen.length){b.appendChild(H('<h4 style="margin:12px 0 4px">🔎 Aur accounts jo login kar chuke hain</h4>'));seen.forEach(q=>b.appendChild(H('<div class="card" style="margin:5px 0;font-size:.78rem"><b>'+e(lg[q].name||q)+'</b> · '+e(q)+'<br><span class="m">📱 '+e(lg[q].dev||'')+' · '+fT(lg[q].ts)+'</span></div>')))}return}
+   b.appendChild(H('<div class="card"><b>👑 '+e(j.ownerName||'Owner')+'</b> <span class="m">'+e(j.owner)+'</span><div style="font-size:.72rem;margin-top:4px">Poore haq — badle nahi ja sakte.</div></div>'));
+   const admins=j.admins||{};if(!Object.keys(admins).length)b.appendChild(H('<div class="m">Abhi koi admin add nahi hua.</div>'));
+   Object.keys(admins).forEach(k=>{const en=admins[k],sn=lg[lc(en.email)];
+    const c=H('<div class="card" style="margin:8px 0"><b>'+e(en.name||en.email)+'</b> <span class="m">'+e(en.email)+'</span>'+(en.off?' <b style="color:#ff9d9d">[BAND]</b>':'')+'<div class="m" style="margin:2px 0 4px">'+(sn?('Aakhri login: 📱 '+e(sn.dev||'')+' · '+fT(sn.ts)):'Abhi tak login ka record nahi')+'</div><div class="chp"></div><div class="row" style="margin-top:6px"><select class="rsel" style="flex:1"><option value="manager">🛠 Manager</option><option value="scorer">🏏 Scorer</option><option value="custom">🎛 Custom</option></select></div><div class="row act" style="margin-top:4px"></div><div class="pb"></div></div>');
+    const sel=c.querySelector('.rsel');sel.value=en.role||'custom';let pr=Object.assign({},en.perms||PRESETS[en.role]||{});
+    const showP=()=>{c.querySelector('.chp').innerHTML=chips(pr);const pb=c.querySelector('.pb');pb.innerHTML='';pb.appendChild(permBoxes(pr,()=>{sel.value='custom';c.querySelector('.chp').innerHTML=chips(pr)}))};
+    sel.onchange=()=>{if(sel.value!=='custom')pr=Object.assign({},PRESETS[sel.value]);showP()};showP();
+    const wr=async(val,msg)=>{try{const r=await metaReq('PUT','roles/admins/'+k,val);if(!r.ok)throw new Error(r.status);if(val===null)delete admins[k];else admins[k]=val;lqNote(msg);draw();toast('✅ Save ho gaya')}catch(x){msgBox('Save nahi hua ('+x.message+')')}};
+    const ac=c.querySelector('.act');ac.appendChild(cbtn('💾 Save','g',()=>wr(Object.assign({},en,{role:sel.value,perms:pr}),'Admin ke haq badle: '+en.email+' → '+sel.value)));
+    ac.appendChild(cbtn(en.off?'▶ Chalu':'⏸ Band','s',()=>wr(Object.assign({},en,{off:en.off?null:1}),(en.off?'Admin chalu kiya: ':'Admin band kiya: ')+en.email)));
+    ac.appendChild(cbtn('✕ Hatao','d',()=>cf2(en.email+' ko hata dein? Ye sirf is app ke haq hatata hai.',()=>wr(null,'Admin hataya: '+en.email))));b.appendChild(c)});
+   const un=Object.keys(lg).filter(q=>q!==lc(j.owner)&&!admins[ekey(q)]);
+   if(un.length){b.appendChild(H('<h4 style="margin:14px 0 4px">🔎 Login kiya par list mein nahi (abhi sirf dekh sakte hain)</h4>'));un.forEach(q=>{const x=lg[q];const c=H('<div class="card" style="margin:5px 0;font-size:.78rem"><b>'+e(x.name||q)+'</b> · '+e(q)+'<br><span class="m">📱 '+e(x.dev||'')+' · '+fT(x.ts)+'</span><div class="row act" style="margin-top:6px"></div></div>');
+     const add=async rl=>{const en={email:q,name:x.name&&x.name!==q?x.name:q,role:rl,perms:Object.assign({},PRESETS[rl]),added:Date.now(),addedBy:AD.email};try{const r=await metaReq('PUT','roles/admins/'+ekey(q),en);if(!r.ok)throw new Error(r.status);j.admins=j.admins||{};j.admins[ekey(q)]=en;lqNote('Admin add kiya: '+q+' ('+rl+')');draw();toast('✅ Add ho gaya')}catch(er){msgBox('Add nahi hua ('+er.message+')')}};
+     const ac=c.querySelector('.act');ac.appendChild(cbtn('🛠 Manager banao','g',()=>add('manager')));ac.appendChild(cbtn('🏏 Scorer banao','s',()=>add('scorer')));b.appendChild(c)})}
+   const nf=H('<div class="card" style="margin-top:10px"><h4 style="margin:0 0 6px">➕ Naya admin</h4><input id="ne" type="email" placeholder="Email"><input id="nn" placeholder="Naam (jaise Ali)"><input id="np2" placeholder="Password (kam az kam 6)"><select id="nr"><option value="scorer">🏏 Scorer — sirf scoring</option><option value="manager">🛠 Manager — scoring + teams + players + naya tournament (delete / purana edit nahi)</option></select><button class="b g wide" id="nadd">Account banao aur add karo</button><div class="m" style="margin-top:6px">Agar is email ka Firebase account pehle se hai to password khali chhod dein - sirf role add hoga. Role baad mein upar card se badal sakte hain.</div></div>');
+   nf.querySelector('#nadd').onclick=async()=>{const em=lc(nf.querySelector('#ne').value),nn=nf.querySelector('#nn').value.trim(),pw=nf.querySelector('#np2').value,rl=nf.querySelector('#nr').value;
+     if(!/^\S+@\S+\.\S+$/.test(em))return msgBox('Email sahi likho.');if(lc(j.owner)===em)return msgBox('Ye Owner ki email hai.');
+     if(pw){if(pw.length<6)return msgBox('Password kam az kam 6 characters.');try{const r=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key='+encodeURIComponent(CL.key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:pw,returnSecureToken:false})});const x=await r.json();if(!r.ok){const m=(x.error&&x.error.message)||'';if(!/EMAIL_EXISTS/.test(m))return msgBox('Account nahi bana: '+m.replace(/_/g,' ')+(/OPERATION_NOT_ALLOWED/.test(m)?'\n\nFirebase Console → Authentication → Users mein ye account khud bana kar yahan password khali chhod kar add karein.':''))}}catch(z){return msgBox('Internet ka masla.')}}
+     const en={email:em,name:nn||em,role:rl,perms:Object.assign({},PRESETS[rl]),added:Date.now(),addedBy:AD.email};try{const r=await metaReq('PUT','roles/admins/'+ekey(em),en);if(!r.ok)throw new Error(r.status);j.admins=j.admins||{};j.admins[ekey(em)]=en;lqNote('Naya admin add kiya: '+em+' ('+rl+')');draw();toast('✅ Admin add ho gaya'+(pw?' - ab unhe email/password de dein':''))}catch(x){msgBox('Add nahi hua ('+x.message+'). Firebase Rules check karein.')}};
+   b.appendChild(nf)};draw()})}
+async function logPanel(){gPanel('📜 Admin Activity Record',async b=>{b.textContent='Load ho raha hai…';
+  try{const r=await metaReq('GET','log',undefined,'orderBy=%22%24key%22&limitToLast=150');if(!r.ok)throw new Error(r.status);const j=await r.json()||{};let list=Object.keys(j).map(k=>Object.assign({_id:k},j[k])).sort((a,c)=>c.ts-a.ts);
+   const draw=flt=>{b.innerHTML='';const emails=[...new Set(list.map(x=>x.email))];const sel=H('<select><option value="">Sab admins</option>'+emails.map(q=>'<option '+(q===flt?'selected':'')+'>'+e(q)+'</option>').join('')+'</select>');sel.onchange=()=>draw(sel.value);b.appendChild(sel);
+    const rows=list.filter(x=>!flt||x.email===flt);if(!rows.length)b.appendChild(H('<div class="m">Abhi koi record nahi.</div>'));
+    rows.forEach(x=>b.appendChild(H('<div class="card" style="margin:6px 0"><div style="font-size:.78rem"><b>'+e(x.name||x.email)+'</b> · '+e(x.role||'')+' · 📱 '+e(x.dev||'')+' <span class="m">('+e(x.ua||'')+')</span><br><span class="m">'+fT(x.from||x.ts)+' → '+fT(x.ts)+' · '+(x.n||0)+' changes · '+e(x.email)+'</span></div><div style="font-size:.78rem;margin-top:4px">'+(x.lines||[]).map(l=>'<div>'+e(l)+'</div>').join('')+'</div></div>')));
+    const cl=H('<button class="b d wide">🧹 60 din se purana record saaf karo</button>');cl.onclick=()=>cf2('60 din se purane records delete karein?',async()=>{const cut=Date.now()-60*86400000,del={};list.forEach(x=>{if(x.ts<cut)del[x._id]=null});if(!Object.keys(del).length){toast('Purana record nahi mila');return}await metaReq('PATCH','log',del);list=list.filter(x=>!(x._id in del));draw(flt)});b.appendChild(cl)};draw('')}
+  catch(x){b.innerHTML='';b.appendChild(H('<div>⚠ Record load nahi hua ('+e(x.message)+'). Internet ya Firebase Rules check karein.</div>'));b.appendChild(rulesBtn())}})}
+async function backupPanel(){gPanel('💾 Cloud Backups',async b=>{
+  const getData=async id=>{const rr=await metaReq('GET','backupsData/'+id);const d=await rr.json();if(!d||!d.data)throw new Error('data nahi mila');return d};
+  const draw=async()=>{b.textContent='Load ho raha hai…';
+   try{const r=await metaReq('GET','backupsIdx');if(!r.ok)throw new Error(r.status);const j=await r.json()||{};b.innerHTML='';
+    b.appendChild(H('<div class="m">Har 6 ghante mein, aur kisi bhi delete se pehle cloud ka purana data yahan save hota hai. <b>Abhi app mein '+db.matches.length+' match hain.</b> Restore se poora data purane jaisa ho jata hai (naye matches hat sakte hain) — behtar hai <b>"➕ Sirf gayab matches jodo"</b> use karo. Restore sirf Owner kar sakta hai.</div>'));
+    const nb=H('<button class="b g wide">➕ Abhi backup banao</button>');nb.onclick=async()=>{nb.disabled=true;const ok=await makeBackup('manual');toast(ok?'✅ Backup ban gaya':'Backup nahi bana',ok);draw()};b.appendChild(nb);
+    const ids=Object.keys(j).sort().reverse();if(!ids.length)b.appendChild(H('<div class="m">Abhi koi backup nahi.</div>'));
+    ids.forEach(id=>{const x=j[id];const mcT=()=>x.mc!=null?'<b>'+x.mc+' match</b>':'<i>match count ? (🔍 dabao)</i>';
+     const c=H('<div class="card" style="margin:6px 0"><div style="font-size:.8rem"><b>'+fT(x.t)+'</b> · '+e(x.reason||'')+'<br><span class="m">'+e(x.name||x.by||'')+' · '+e(x.dev||'')+' · '+Math.round((x.size||0)/1024)+' KB</span><br><span class="mc">'+mcT()+'</span></div><div class="row act" style="margin-top:6px"></div></div>');const ac=c.querySelector('.act');
+     ac.appendChild(cbtn('🔍 Check','s',async()=>{try{const d=await getData(id),p=JSON.parse(d.data);x.mc=totalM(p);await vFrom(p,'cloud');await refresh();const ls=(p.matches||[]).map(m=>'• '+(((p.teams||[]).find(t=>t.id===m.a)||{}).name||'?')+' vs '+(((p.teams||[]).find(t=>t.id===m.b)||{}).name||'?')+' · '+(m.result||m.status));c.querySelector('.mc').innerHTML=mcT()+(ls.length?'<br><span class="m">'+ls.map(e).join('<br>')+'</span>':'');toast('Is backup mein '+x.mc+' match hain (vault mein bhi save)')}catch(z){msgBox('Check nahi hua: '+z.message)}}));
+     ac.appendChild(cbtn('➕ Sirf gayab matches jodo','g',async()=>{try{const d=await getData(id),p=JSON.parse(d.data);const L=mkEnts(p,'cloud',{}).filter(q=>!present(q));if(!L.length)return msgBox('Is backup ke saare matches pehle se app mein maujood hain (ya isme koi match nahi).');
+       cf2('Ye '+L.length+' match wapas jodein? (baaqi data nahi badlega)\n\n'+L.map(q=>'• '+q.label).join('\n'),async()=>{for(const q of L)await vPut(q);const n=insMany(L);await refresh();toast('✅ '+n+' match wapas jur gaye');draw()})}catch(z){msgBox('Nahi hua: '+z.message)}}));
+     ac.appendChild(cbtn('♻️ Restore','s',async()=>{if(!isOwner())return deny('Backup restore sirf Owner kar sakta hai.');
+       try{const d=await getData(id),p=JSON.parse(d.data),bm=totalM(p),cm=db.matches.length;let msg='Ye backup ('+fT(x.t)+') wapas laayein?\n\nBackup mein matches: '+bm+'\nAbhi app mein matches: '+cm+'\n\nAbhi ka data pehle backup ho jayega, phir ye purana data sab devices par aa jayega.';
+        if(bm<cm)msg='⚠⚠ KHABARDAR ⚠⚠\nIs backup mein '+bm+' match hain, jabke abhi app mein '+cm+' hain.\nRestore karne se '+(cm-bm)+' match hat jayenge!\n\n(Behtar: "➕ Sirf gayab matches jodo" use karo.)\n\n'+msg;
+        cf2(msg,async()=>{if(bm<cm&&prompt('Pakka karne ke liye RESTORE likho')!=='RESTORE'){toast('Restore cancel',false);return}
+          try{await keepSnap('restore se pehle (phone ki copy)',JSON.stringify(db))}catch(z){}await makeBackup('restore se pehle');
+          clApply({ts:Date.now(),data:d.data});db._ts=Date.now();try{_lsave()}catch(z){}setDirty(true);lqNote('Backup restore kiya: '+fT(x.t));await clPush();saveDig(gDigest());R();toast('✅ Backup restore ho gaya');draw()})}catch(z){msgBox('Restore nahi hua: '+z.message)}}));
+     b.appendChild(c)})}catch(x){b.innerHTML='';b.appendChild(H('<div>⚠ Backups load nahi hue ('+e(x.message)+'). Internet ya Firebase Rules check karein.</div>'));b.appendChild(rulesBtn())}};
+  draw();prune()})}
+A.gadm=()=>adminPanel();A.glog=()=>logPanel();A.gbk=()=>backupPanel();A.grules=()=>rulesPanel();A.gme=()=>myRights();A.gdev=()=>{askDev(true);R()};
+window.gGuard={vault:gVault,me:myRights};
+/* ---------- Cloud card: role + buttons ---------- */
+{const o=clCard;clCard=function(){let h=o.apply(this,arguments);try{let extra='';
+  if(CL&&isAdm()){extra+='<div class="m" style="margin:6px 0"><b>Haq:</b> '+e(roleName(ROLE))+'<br><b>Device:</b> '+e(devN()||'(naam nahi)')+'</div>';
+    if(ROLE&&ROLE.legacy)extra+='<div class="m" style="color:#ffd45f;margin:4px 0">⚠ Roles abhi band hain — har admin account ko poore haq (delete samet) hain. Owner: Admin Management mein "Roles chalu karo" dabaye.</div>';
+    extra+='<button class="b s" data-a="gme">ℹ️ Mere haq / Kis se kia hoga</button><button class="b s" data-a="gdev">📱 Device ka naam</button>';
+    if(isOwner())extra+='<button class="b g" data-a="gadm">👥 Admin Management</button><button class="b s" data-a="glog">📜 Admin Record</button><button class="b s" data-a="gbk">💾 Cloud Backups</button><button class="b s" data-a="grules">🔐 Firebase Rules</button>'}
+  extra+='<button class="b s" data-a="gsafe">📖 Safety features kya hain?</button>';
+  if(canV())extra+='<button class="b g" data-a="gvault">🛟 Matches Recovery (sab admins)</button>';
+  if(extra)h=h.replace(/<\/div>$/,extra+'</div>')}catch(x){}return h}}
+/* ---- MATCH-WISE AUTO MERGE (do phones ke alag matches DONO bachte hain) ---- */
+const midScore=()=>view==='play';
+function mergeCloud(p){
+  if(!p)return 0;let added=0;db.delIds=Object.assign({},p.delIds,db.delIds);const D=db.delIds;
+  (p.teams||[]).forEach(t=>{if(t&&t.id&&!D[t.id]&&!db.teams.some(x=>x.id===t.id)){db.teams.push(deep(t));try{t.players.forEach(q=>regAdd(q.name))}catch(z){}}});
+  [['tours',db.tours],['series',db.series]].forEach(([k,arr])=>(p[k]||[]).forEach(c=>{if(c&&c.id&&!D[c.id]&&!arr.some(x=>x.id===c.id)){const cc=deep(c);(cc.fx||[]).forEach(f=>{if(f.mid&&!(p.matches||[]).some(m=>m.id===f.mid&&!D[m.id]))f.mid=null});arr.push(cc)}}));
+  (p.matches||[]).forEach(m=>{if(!m||!m.id||D[m.id]||present({uid:m.id})||!KEEPST.has(m.status))return;const x=ent(m,'cloud',null,p);if(x&&ins(x,true)==='ok')added++});
+  ['teams','tours','series','matches'].forEach(k=>{db[k]=db[k].filter(x=>!D[x.id])});
+  [...db.tours,...db.series].forEach(c=>(c.fx||[]).forEach(f=>{if(f.mid&&!db.matches.some(m=>m.id===f.mid))f.mid=null}));
+  try{fixTeams()}catch(z){}return added}
+{const o=clPull;clPull=async function(manual){
+  try{if(isAdm()&&CL&&DIRTY&&!clBusy&&(manual||!midScore())){const r=await fetch(clUrl());const j=r.ok?await r.json():null;
+    if(j&&j.data&&j.ts>(db._ts||0)){const p=JSON.parse(j.data);await keepSnap('merge se pehle (phone ki copy)',JSON.stringify(db));await vFrom(p,'cloud');const n=mergeCloud(p);db._ts=Date.now();try{_lsave()}catch(z){}BASE=j.ts;try{localStorage.setItem(BSK,String(BASE))}catch(z){}
+      if(manual||SM==='auto')await clPush();if(view!=='play')go(view==='data'?'data':'home');toast('🔀 Merge ho gaya: cloud ke '+n+' naye match is phone mein jur gaye, is phone ke badlao bhi safe');setTimeout(refresh,500);return}}}catch(x){}
+  return o.apply(this,arguments)}}
+A.gsafe=()=>gPanel('📖 Safety features — kaun kya karta hai',b=>{[['🛟 Matches Recovery','Har match ki alag copy phone mein. Koi match gayab ho to yahan se wapas jodo (sab admins).'],['🔀 Auto Merge','Do phones ne alag matches khele to cloud sync par DONO jud jate hain (pehle sirf aakhri phone ka data bachta tha). Matches, teams, tournaments aur series jodte hain; players list, entry, rules waghera ab bhi "aakhri sync wala jeetta" hai.'],['🔒 Delete sirf Owner','Match, team, tournament, rule delete / purana edit sirf Owner (ya jise Owner "Delete karna" ka haq de). Manager aur Scorer ko ye default mein nahi hota.'],['⚠ Gayab badge','Laal badge: koi match app se gayab hai. Dabao aur "Wapas jodo". Jaan-boojh kar delete kiya ho to badge nahi aata.'],['📤 Match ke baad file','Match poora hote hi "Share / Save file" aata hai — WhatsApp ya Drive par bhej do, ye aap ki bahar ki copy hai.'],['📦 Phone ki safe copies','Cloud se data aane, overwrite, delete/reset ya import se pehle poori copy phone mein banti hai.'],['💾 Cloud Backups (Owner)','Har backup mein match count. "Sirf gayab matches jodo" baaqi data nahi badalta. Restore sirf Owner.'],['📴 Offline nishan','Net na ho to badge "Offline · phone mein safe" — scoring phone mein save hoti rehti hai.']].forEach(([a,d])=>b.appendChild(H('<div class="card" style="margin:6px 0"><b>'+a+'</b><div style="font-size:.8rem;margin-top:3px">'+d+'</div></div>')))});
+/* offline nishan + phone mein unsynced match */
+{const o=clBadge;clBadge=function(){o.apply(this,arguments);try{const b=document.getElementById('clbd');if(!b||!isAdm())return;const n=_VC.filter(x=>x.status==='completed'&&x.doneAt>(BASE||0)&&present(x)).length;if(navigator.onLine===false){b.textContent='📴 Offline · phone mein safe'+(n?' ('+n+' match)':'');b.style.background='#b3541e'}else if(DIRTY&&n)b.textContent+=' · '+n+' match phone mein'}catch(x){}}}
+window.addEventListener('online',()=>{try{clBadge()}catch(x){}});window.addEventListener('offline',()=>{try{clBadge()}catch(x){}});
+setTimeout(()=>{try{if(canV())scan();else refresh()}catch(x){}},4500);
+})();
+
 fixTeams();fixRules();regSync();R();
 clBadge();clPull();
 </script></body></html>

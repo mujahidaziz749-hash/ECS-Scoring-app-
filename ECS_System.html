@@ -16162,7 +16162,7 @@ function ecsDigest(){
     put('fo','Entry: opening balance/monthly fee',[f.openingBalance,f.monthlyFee]);
     (f.months||[]).forEach(mo=>{ put('fp:'+mo.key,'Entry: fees/payments '+mo.key,[mo.paid,mo.fee]); (mo.expenses||[]).forEach((e,i)=>put('fx:'+mo.key+':'+(e.id||i),'Kharcha '+mo.key+': '+(e.item||'')+' '+(e.amount||''),e)); });
   }
-  const skip = /^(activeSeriesId|poster.*|prof.*|photo.*|sTheme|sBg|_ts|seriesList|playersReg|teamsLib|tours|rules|finance|knownPlayers|ecsSeeded|dedupeV\d+)$/;
+  const skip = /^(activeSeriesId|poster.*|prof.*|photo.*|sTheme|sBg|_ts|delUids|delSer|seriesList|playersReg|teamsLib|tours|rules|finance|knownPlayers|ecsSeeded|dedupeV\d+)$/;
   Object.keys(root).forEach(k=>{ if(!skip.test(k)) put('cfg:'+k,'Setting: '+k,root[k]); });
   put('kp','Known players list',root.knownPlayers||[]);
   return d;
@@ -16214,7 +16214,7 @@ async function ecsMakeBackup(reason){
     const r = await fetch(clUrl()); if(!r.ok) return false; const j = await r.json(); if(!j || !j.data) return false;
     const id = String(Date.now());
     const a = await metaReq('PUT','backupsData/'+id,{ts:j.ts||0,data:j.data}); if(!a.ok) return false;
-    await metaReq('PUT','backupsIdx/'+id,{t:Date.now(),cloudTs:j.ts||0,by:AD.email,name:(ROLE&&ROLE.name)||'',dev:ecsDev(),reason:reason||'auto',size:j.data.length});
+    await metaReq('PUT','backupsIdx/'+id,{t:Date.now(),cloudTs:j.ts||0,by:AD.email,name:(ROLE&&ROLE.name)||'',dev:ecsDev(),reason:reason||'auto',size:j.data.length,mc:(function(){try{return JSON.parse(j.data).seriesList.reduce(function(a,q){return a+(q.matches||[]).length;},0);}catch(e){return null;}})()});
     try{ localStorage.setItem(BKK,String(Date.now())); }catch(e){}
     return true;
   }catch(x){ return false; }
@@ -16224,7 +16224,7 @@ async function ecsPrune(){
   try{
     const r = await metaReq('GET','backupsIdx'); if(!r.ok) return; const j = await r.json(); if(!j) return;
     const ids = Object.keys(j).sort(); const cut = Date.now()-30*86400000; const del = {};
-    ids.forEach((id,i)=>{ if(j[id].t<cut || i<ids.length-60) del[id]=null; });
+    const mx=Math.max(0,...ids.map(q=>+j[q].mc||0)); const prot=new Set(mx>0?ids.filter(q=>(+j[q].mc||0)===mx).slice(-5):[]); ids.forEach((id,i)=>{ if(!prot.has(id) && (j[id].t<cut || i<ids.length-60)) del[id]=null; });
     if(Object.keys(del).length){ await metaReq('PATCH','backupsIdx',del); await metaReq('PATCH','backupsData',del); }
   }catch(x){}
 }
@@ -16325,8 +16325,8 @@ function ecsPanel(title, build){
 const fmtT = t=>{ try{ return new Date(t).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } };
 const fillRules = ()=>{ const o=AD&&AD.email||'OWNER@EMAIL.COM'; const own="auth != null && auth.token.email === '"+o+"'";
   return JSON.stringify({rules:{
-    rsl:{'.read':true,'.write':'APNI_PURANI_RULES_WALI_EMAIL_CONDITION'},
-    jsl:{'.read':true,'.write':'APNI_PURANI_RULES_WALI_EMAIL_CONDITION'},
+    rsl:{'.read':true,'.write':"auth != null && (auth.token.email === '"+o+"' || root.child('ecsmeta/RSL/roles/admins').child(auth.token.email.replace('.', ',')).exists())"},
+    jsl:{'.read':true,'.write':"auth != null && (auth.token.email === '"+o+"' || root.child('ecsmeta/JSL/roles/admins').child(auth.token.email.replace('.', ',')).exists())"},
     ecs:{'.read':true,'.write':"auth != null && (auth.token.email === '"+o+"' || root.child('ecsmeta/"+(CL?CL.club:'ECS')+"/roles/admins').child(auth.token.email.replace('.', ',')).exists())"},
     ecsmeta:{'$club':{
       roles:{'.read':'auth != null','.write':own},
@@ -16336,7 +16336,7 @@ const fillRules = ()=>{ const o=AD&&AD.email||'OWNER@EMAIL.COM'; const own="auth
     }}}},null,2); };
 function ecsRulesPanel(){
   ecsPanel('🔐 Firebase Rules (ek dafa)', (b)=>{
-    b.appendChild(el(`<p class="muted" style="font-size:.8rem;">Firebase Console → Realtime Database → <b>Rules</b> tab mein ye poora text paste karein, phir <b>Publish</b>. Sirf <code>APNI_PURANI_RULES_WALI_EMAIL_CONDITION</code> (2 jagah) ko apni purani rules wali poori <code>auth != null && (auth.token.email === '...' || ...)</code> line se badal dein (RSL/JSL ke liye). Is se Admin Management, Record aur Backup asli tor par mehfooz ho jate hain.</p>`));
+    b.appendChild(el(`<p class="muted" style="font-size:.8rem;">Firebase Console → Realtime Database → <b>Rules</b> tab mein ye poora text paste karein, phir <b>Publish</b>. Ye rules RSL, JSL aur ECS teeno apps ke liye ek hi hain (Owner + jin admins ko aap ne Admin Management mein add kiya). </p>`));
     const ta=el(`<textarea readonly style="width:100%;height:240px;font-size:.7rem;"></textarea>`); ta.value=fillRules(); b.appendChild(ta);
     const bt=el(`<button class="btn gold" data-cl="1" style="width:100%;margin-top:6px;">📋 Rules copy karo</button>`); bt.onclick=()=>{ ta.select(); let ok=false; try{ ok=document.execCommand('copy'); }catch(e){} if(!ok&&navigator.clipboard) navigator.clipboard.writeText(ta.value); showToast('📋 Rules copy ho gaye'); }; b.appendChild(bt);
   });
@@ -16449,6 +16449,539 @@ async function ecsBackupPanel(){
       add('👥 Admin Management','gold',ecsAdminPanel); add('📜 Admin Record','secondary',ecsLogPanel); add('💾 Cloud Backups','secondary',ecsBackupPanel); add('🔐 Firebase Rules','secondary',ecsRulesPanel);
     }
     return c;
+  };
+})();
+
+
+
+/* ===================== v103 — DATA-LOSS PROTECTION (Matches Vault) =====================
+   1) Har match ki ek alag copy phone ke IndexedDB mein (cloud/restore/sync usay nahi chhuta)
+   2) Cloud data se overwrite hone se pehle phone ki puri safe copy
+   3) Push se pehle check: cloud par kisi aur ka data ho to uske matches bhi vault mein save
+   4) Gayab matches ka red alert + 1-tap recover
+   5) Match complete hote hi file share/save ka option
+   6) Backups mein match count + "sirf gayab matches jodo" + khatarnak restore par saaf warning */
+(function(){
+  const hsh = s=>{ let h=5381; for(let i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))|0; return (h>>>0).toString(36); };
+  const uidNew = ()=> 'm'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  const mfp = m=>{ try{ return hsh(JSON.stringify([m.date,m.ground,m.overs,m.innings])); }catch(e){ return ''; } };
+  const tn = (s,k)=> (s&&s.teams&&s.teams[k]&&s.teams[k].name)||k;
+  const mlabel = (s,m)=> tn(s,'A')+' vs '+tn(s,'B')+' · Match '+m.number+(m.resultText?' · '+m.resultText:(m.status==='live'?' · live':''));
+  const totalM = r=>{ try{ return (r.seriesList||[]).reduce((a,s)=>a+(s.matches||[]).length,0); }catch(e){ return 0; } };
+  const deep = o=> JSON.parse(JSON.stringify(o));
+  const canV = ()=>{ try{ return !CL || isAdm(); }catch(e){ return false; } };
+  const esc = t=> (typeof ecsEsc==='function'? ecsEsc(t) : String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])));
+
+  /* ---------- IndexedDB ---------- */
+  let _db=null;
+  function idb(){ if(_db) return _db; _db=new Promise((res,rej)=>{ try{ const q=indexedDB.open('ecs_vault',1);
+    q.onupgradeneeded=()=>{ const d=q.result; d.createObjectStore('m',{keyPath:'uid'}); d.createObjectStore('s',{keyPath:'id'}); };
+    q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }catch(e){ rej(e); } }); return _db; }
+  function tx(store,mode,fn){ return idb().then(d=>new Promise((res,rej)=>{ const t=d.transaction(store,mode); const r=fn(t.objectStore(store));
+    t.oncomplete=()=>res(r&&r.result!==undefined?r.result:undefined); t.onerror=()=>rej(t.error); t.onabort=()=>rej(t.error); })).catch(()=>null); }
+  const vAll=()=>tx('m','readonly',s=>s.getAll()).then(x=>x||[]);
+  const vPut=e=>tx('m','readwrite',s=>s.put(e));
+  const sAll=()=>tx('s','readonly',s=>s.getAll()).then(x=>x||[]);
+  const sPut=e=>tx('s','readwrite',s=>s.put(e));
+  const sDel=id=>tx('s','readwrite',s=>s.delete(id));
+
+  /* ---------- vault entries ---------- */
+  function mkEntries(r, src, byUid){
+    const out=[]; byUid=byUid||{};
+    (r.seriesList||[]).forEach(s=>{
+      const ser=Object.assign({},s); delete ser.matches;
+      (s.matches||[]).forEach(m=>{
+        const fp=mfp(m);
+        const uid = m.uid || ('f'+hsh(s.id+'|'+(m.status==='completed'?fp:(m.date+'#'+m.number))));
+        const old=byUid[uid];
+        if(old && (src==='cloud' || (old.fp===fp && old.status===m.status))) return;
+        const mm=deep(m); mm.undoStack=[]; mm.redoStack=[]; mm.uid=uid;
+        const now=Date.now();
+        out.push({uid, sid:s.id, sname:s.name||'', ser, number:m.number, date:m.date, status:m.status, fp,
+          label:mlabel(s,m), savedAt:now, src,
+          doneAt: old ? (old.doneAt || ((old.status!=='completed'&&m.status==='completed')?now:0)) : 0,
+          dismissed: !!(old&&old.dismissed), becameDone: !!(old&&old.status!=='completed'&&m.status==='completed'), match:mm});
+      });
+    });
+    return out;
+  }
+  async function vFromRoot(r, src){
+    const all=await vAll(); const byUid={}; all.forEach(e=>{ byUid[e.uid]=e; });
+    const list=mkEntries(r,src,byUid);
+    for(const e of list) await vPut(e);
+    return list;
+  }
+  function present(e){
+    try{ for(const s of root.seriesList){ for(const m of (s.matches||[])){
+      if(m.uid===e.uid) return true;
+      if(e.status==='completed' && s.id===e.sid && m.status==='completed' && mfp(m)===e.fp) return true;
+    } } }catch(x){}
+    return false;
+  }
+  let _VC=[], _lost=[];
+  async function refresh(){
+    try{ _VC=await vAll(); const tomb=(root&&root.delUids)||{};
+      for(const e of _VC){ if(!e.dismissed && tomb[e.uid]){ e.dismissed=true; await vPut(e); } }
+      _lost=_VC.filter(e=>(e.status==='completed'||e.status==='live') && !e.dismissed && !present(e)); }catch(e){ _VC=[]; _lost=[]; }
+    lostUI(); try{ clBadge(); }catch(e){}
+  }
+  const unsyncedN = ()=>{ try{ return _VC.filter(e=>e.status==='completed' && e.doneAt>(BASE||0) && present(e)).length; }catch(e){ return 0; } };
+
+  /* ---------- insert a vault entry back into the app ---------- */
+  function insertEntry(e, quiet){
+    let s=root.seriesList.find(x=>x.id===e.sid);
+    if(!s){ if(!e.ser) return 'series nahi mili'; s=deep(e.ser); s.matches=[]; root.seriesList.push(s); }
+    if(present(e)) return 'pehle se maujood';
+    const m=deep(e.match); m.uid=e.uid; m.undoStack=m.undoStack||[]; m.redoStack=m.redoStack||[];
+    s.matches.push(m);
+    s.matches.sort((a,b)=> (a.date||'').localeCompare(b.date||'') || ((a.number||0)-(b.number||0)) || (a===m?-1:(b===m?1:0)));
+    s.matches.forEach((x,i)=>{ x.number=i+1; });
+    try{ _quotaUsageCache=null; }catch(x){}
+    if(!quiet){ saveState(); render(); }
+    return 'ok';
+  }
+  function insertMany(list){
+    let n=0; list.forEach(e=>{ if(insertEntry(e,true)==='ok') n++; });
+    if(n){ try{ _quotaUsageCache=null; }catch(x){} saveState(); render(); }
+    return n;
+  }
+
+  /* ---------- safe full-data copies ---------- */
+  let _lastSafe='';
+  async function keepSnap(reason, str){
+    try{
+      const h=hsh(str); if(h===_lastSafe) return; _lastSafe=h;
+      const parsed=JSON.parse(str); await vFromRoot(parsed,'safe');
+      await sPut({id:Date.now(), t:Date.now(), reason, mc:totalM(parsed), data:str});
+      const all=(await sAll()).sort((a,b)=>b.id-a.id);
+      for(let i=30;i<all.length;i++) await sDel(all[i].id);
+    }catch(e){}
+  }
+
+  /* ---------- files ---------- */
+  function dl(name,obj){ const b=new Blob([typeof obj==='string'?obj:JSON.stringify(obj)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{ try{URL.revokeObjectURL(a.href); a.remove();}catch(e){} },4000); }
+  const entFile = e=>({ecsMatch:1, uid:e.uid, sid:e.sid, sname:e.sname, ser:e.ser, number:e.number, date:e.date, status:e.status, fp:e.fp, label:e.label, match:e.match});
+  const fname = e=> 'ECS_match_'+(e.date||'')+'_M'+(e.number||'')+'.json';
+  async function shareEnt(e){
+    try{ const f=new File([JSON.stringify(entFile(e))], fname(e), {type:'application/json'});
+      if(navigator.canShare && navigator.canShare({files:[f]})){ await navigator.share({files:[f], title:e.label}); return; } }catch(x){ if(x&&x.name==='AbortError') return; }
+    dl(fname(e), entFile(e));
+  }
+  function offer(e){
+    try{
+      const old=document.getElementById('ecsOffer'); if(old) old.remove();
+      const d=el(`<div id="ecsOffer" style="position:fixed;left:10px;right:10px;bottom:10px;z-index:99998;background:#0a3d6b;border:2px solid #5aa9ff;border-radius:14px;padding:10px 12px;color:#fff;font-size:.82rem;box-shadow:0 6px 24px rgba(0,0,0,.5)"><b>✅ Match poora hua — file ki copy rakh lo</b><div style="opacity:.85;margin:3px 0 8px">${esc(e.label)}</div><div style="display:flex;gap:8px"><button data-a="s" class="btn gold small" data-cl="1" style="flex:1">📤 Share / Save file</button><button data-a="x" class="btn secondary small" data-cl="1" style="flex:0">✕</button></div></div>`);
+      d.querySelector('[data-a=s]').onclick=()=>{ shareEnt(e); d.remove(); };
+      d.querySelector('[data-a=x]').onclick=()=>d.remove();
+      document.body.appendChild(d); setTimeout(()=>{ try{d.remove();}catch(x){} },90000);
+    }catch(x){}
+  }
+
+  /* ---------- lost-matches alert ---------- */
+  function lostUI(){
+    let b=document.getElementById('ecsLost'); const n=_lost.length;
+    if(!canV()||!n){ if(b) b.remove(); return; }
+    if(!b){ b=document.createElement('div'); b.id='ecsLost'; b.style.cssText='position:fixed;top:34px;right:6px;z-index:61;font-size:11px;font-weight:800;padding:4px 10px;border-radius:12px;background:#b00020;color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.4)'; b.onclick=()=>vaultPanel(); document.body.appendChild(b); }
+    b.textContent='⚠ '+n+' match gayab — recover karo';
+  }
+
+  /* ---------- scan current data into vault ---------- */
+  let _vt=null;
+  function sched(){ clearTimeout(_vt); _vt=setTimeout(scan,1200); }
+  let _delSet=null, _delSer=null, _userDel=0;
+  async function scan(){
+    if(!canV()||!root||!root.seriesList) return;
+    try{
+      const cur=new Set(); root.seriesList.forEach(s=>(s.matches||[]).forEach(m=>{ if(m.uid) cur.add(m.uid); }));
+      /* khud (is device par) delete kiya gaya match = jaan-boojh kar: tombstone, taake gayab-alert na aaye aur doosre devices par bhi na aaye */
+      if(_delSet && Date.now()-_userDel<120000){
+        const gone=[..._delSet].filter(u=>!cur.has(u));
+        const gs=_delSer?[..._delSer].filter(u=>!root.seriesList.some(s=>s.id===u)):[]; if(gs.length){ root.delSer=root.delSer||{}; gs.forEach(u=>{ root.delSer[u]=Date.now(); }); try{ saveState(); }catch(x){} }
+        if(gone.length){ root.delUids=root.delUids||{}; const all=await vAll(); for(const u of gone){ root.delUids[u]=Date.now(); const e=all.find(x=>x.uid===u); if(e){ e.dismissed=true; await vPut(e); } } try{ saveState(); }catch(x){} }
+      }
+      if(_delSet && Date.now()-_userDel>=120000) _delSet=null;
+      const list=await vFromRoot({seriesList:deep(root.seriesList)},'local');
+      const done=list.filter(e=>e.becameDone); await refresh();
+      if(done.length) offer(done[done.length-1]);
+    }catch(e){}
+  }
+
+  /* ---------- hooks ---------- */
+  const _ss=saveState;
+  saveState=function(){
+    try{ if(!VW()&&root&&root.seriesList) root.seriesList.forEach(s=>(s.matches||[]).forEach(m=>{ if(!m.uid) m.uid=uidNew(); })); }catch(e){}
+    const r=_ss.apply(this,arguments);
+    try{ if(canV()) sched(); }catch(e){}
+    return r;
+  };
+  const _ca=clApply;
+  clApply=function(j){
+    let snap=null;
+    try{ if(root&&root.seriesList&&root.seriesList.some(s=>(s.matches||[]).length)) snap=JSON.stringify(root); }catch(e){}
+    const r=_ca.apply(this,arguments); _delSet=null; _delSer=null;
+    try{ if(snap) keepSnap('cloud data aane se pehle (phone ki copy)',snap); setTimeout(refresh,400); }catch(e){}
+    return r;
+  };
+  const _cp=clPush;
+  clPush=async function(){
+    try{
+      if(isAdm()&&CL&&navigator.onLine!==false){
+        const ac=new AbortController(); const tm=setTimeout(()=>ac.abort(),5000);
+        try{
+          const r=await fetch(clUrl().replace(/\.json$/,'/ts.json'),{signal:ac.signal});
+          if(r.ok){ const ts=await r.json();
+            if(ts && BASE && ts!==BASE){
+              const rr=await fetch(clUrl(),{signal:ac.signal}); const j=await rr.json();
+              if(j&&j.data){ const p=JSON.parse(j.data); await vFromRoot(p,'cloud');
+                await sPut({id:Date.now(), t:Date.now(), reason:'cloud overwrite se pehle (cloud ki copy)', mc:totalM(p), data:j.data});
+                const nm=mergeCloud(p); BASE=j.ts; try{ localStorage.setItem(BSK,String(BASE)); }catch(e){} saveLocalNow();
+                if(nm){ showToast('🔀 Cloud ke '+nm+' naye match is phone mein merge hue'); if(!midScore()){ try{ render(); }catch(e){} } } }
+            } }
+        } finally { clearTimeout(tm); }
+      }
+    }catch(e){}
+    const r=await _cp.apply(this,arguments);
+    setTimeout(refresh,600);
+    return r;
+  };
+  const _dm=deleteMatch;
+  deleteMatch=function(m){
+    try{ if(m&&m.uid){ const u=m.uid; try{ root.delUids=root.delUids||{}; root.delUids[u]=Date.now(); }catch(x){} vAll().then(a=>{ const e=a.find(x=>x.uid===u); if(e){ e.dismissed=true; return vPut(e); } }).then(refresh); } }catch(x){}
+    return _dm.apply(this,arguments);
+  };
+  const _cb=clBadge;
+  clBadge=function(){
+    _cb.apply(this,arguments);
+    try{ const b=document.getElementById('clbd'); if(!b||!isAdm()) return; const n=unsyncedN();
+      if(navigator.onLine===false){ b.textContent='📴 Offline · phone mein safe'+(n?' ('+n+' match)':''); b.style.background='#b3541e'; }
+      else if(DIRTY&&n){ b.textContent+=' · '+n+' match phone mein'; }
+    }catch(e){}
+  };
+  window.addEventListener('online',()=>{ try{ clBadge(); }catch(e){} });
+  window.addEventListener('offline',()=>{ try{ clBadge(); }catch(e){} });
+
+  /* ---------- Matches Recovery panel ---------- */
+  async function vaultPanel(){
+    ecsPanel('🛟 Matches Recovery', async (b)=>{
+      const draw=async()=>{
+        b.textContent='Load ho raha hai…';
+        const all=(await vAll()).sort((a,c)=>c.savedAt-a.savedAt); await refresh(); b.innerHTML='';
+        b.appendChild(el(`<p class="muted" style="font-size:.78rem;">Har match ki ek alag copy is phone mein mehfooz hoti hai (cloud, restore ya sync usay nahi mita sakte). Jo match app se gayab ho woh yahan se wapas jod sakte ho. <b>Scoring chal rahi ho to pehle Home par aa jao.</b></p>`));
+        const row=el(`<div class="row" style="gap:6px;margin-bottom:8px;flex-wrap:wrap;"></div>`);
+        const add=(t,cls,fn)=>{ const x=el(`<button class="btn ${cls} small" data-cl="1">${t}</button>`); x.onclick=fn; row.appendChild(x); return x; };
+        const miss=all.filter(e=>e.status==='completed'&&!e.dismissed&&!present(e));
+        if(miss.length) add('📥 Saare gayab ('+miss.length+') wapas jodo','gold',()=>{ if(!confirm(miss.length+' gayab match wapas jodein?')) return; const n=insertMany(miss); showToast('✅ '+n+' match wapas aa gaye'); draw(); });
+        add('⬇ Poora vault file','secondary',()=>dl('ECS_vault_'+Date.now()+'.json',{ecsVault:1,entries:all.map(entFile)}));
+        const fi=el(`<input type="file" accept=".json,application/json" style="display:none">`);
+        fi.onchange=async()=>{ try{ const f=fi.files[0]; if(!f) return; const o=JSON.parse(await f.text()); let ents=[];
+            if(o.ecsMatch) ents=[o]; else if(o.ecsVault) ents=o.entries||[]; else if(o.seriesList) ents=mkEntries(o,'file',{}); else if(o.data&&typeof o.data==='string'){ ents=mkEntries(JSON.parse(o.data),'file',{}); }
+            ents=ents.filter(e=>e&&e.match&&e.sid).map(e=>Object.assign({},e,{uid:e.uid||e.match.uid||('f'+hsh(e.sid+'|'+(e.fp||e.date)))}));
+            if(!ents.length) throw new Error('is file mein koi match nahi mila');
+            const todo=ents.filter(e=>!present(e));
+            if(!todo.length){ alert('Is file ke saare '+ents.length+' match pehle se app mein maujood hain.'); return; }
+            if(!confirm(todo.length+' match file se jodein?\n\n'+todo.map(e=>'• '+(e.label||('Match '+e.number))).join('\n'))) return;
+            for(const e of todo){ e.savedAt=Date.now(); e.fp=e.fp||mfp(e.match); e.status=e.status||e.match.status; e.label=e.label||'Match '+e.number; await vPut(e); }
+            const n=insertMany(todo); showToast('✅ '+n+' match jud gaye'); draw();
+          }catch(x){ alert('Import nahi hua: '+x.message); } fi.value=''; };
+        add('📂 File se match jodo','secondary',()=>fi.click()); row.appendChild(fi);
+        add('🔄 Dobara check','secondary',()=>draw());
+        b.appendChild(row);
+        if(!all.length) b.appendChild(el(`<p class="muted">Abhi vault khali hai. Jaise hi koi match save hoga yahan aa jayega.</p>`));
+        all.forEach(e=>{
+          const here=present(e); const tag = here?'✅ app mein maujood':(e.dismissed?'🗑 hataya gaya / chhupaya':(e.status==='completed'?'⚠ GAYAB':'(live copy)'));
+          const c=el(`<div class="card" style="margin:6px 0;${(!here&&!e.dismissed&&e.status==='completed')?'border:2px solid #b00020;':''}"><div style="font-size:.8rem;"><b>${esc(e.label)}</b><br><span class="muted">${esc(e.sname)} · ${esc(e.date||'')} · ${tag}<br>Vault mein save: ${fmtT(e.savedAt)} · source: ${esc(e.src||'')}</span></div><div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap;"></div></div>`);
+          const r2=c.querySelector('.row'); const add2=(t,cls,fn)=>{ const x=el(`<button class="btn ${cls} small" data-cl="1">${t}</button>`); x.onclick=fn; r2.appendChild(x); };
+          if(!here) add2('📥 Wapas jodo','gold',()=>{ const res=insertEntry(e); if(res==='ok'){ showToast('✅ Match wapas aa gaya'); } else alert(res); draw(); });
+          add2('📤 File','secondary',()=>shareEnt(e));
+          if(!here&&!e.dismissed) add2('🙈 Chhupao','secondary',async()=>{ e.dismissed=true; await vPut(e); draw(); });
+          b.appendChild(c);
+        });
+        const sn=(await sAll()).sort((a,c)=>c.id-a.id);
+        b.appendChild(el(`<h4 style="margin:14px 0 4px;">📦 Phone ki poori safe copies (${sn.length})</h4>`));
+        b.appendChild(el(`<p class="muted" style="font-size:.75rem;margin:0 0 6px;">Cloud se data aane ya overwrite hone se pehle ki puri copy. Zaroorat par file download karke Firebase/Import mein kaam aa sakti hai.</p>`));
+        sn.forEach(s=>{ const c=el(`<div class="card" style="margin:5px 0;font-size:.78rem;"><b>${fmtT(s.t)}</b> · ${esc(s.reason)}<br><span class="muted">${s.mc} match · ${Math.round(s.data.length/1024)} KB</span><div style="margin-top:5px;"><button class="btn secondary small" data-cl="1" data-dl>⬇ Download</button> <button class="btn gold small" data-cl="1" data-mg>➕ Sirf gayab matches jodo</button></div></div>`);
+          c.querySelector('[data-dl]').onclick=()=>dl('ECS_safe_'+s.id+'.json',s.data);
+          c.querySelector('[data-mg]').onclick=async()=>{ try{ const p=JSON.parse(s.data); const ents=mkEntries(p,'safe',{}).filter(e=>!present(e)); if(!ents.length){ alert('Is copy ke saare matches pehle se app mein maujood hain.'); return; }
+              if(!confirm('Is copy se ye '+ents.length+' match wapas jodein? (baaqi data nahi badlega)\n\n'+ents.map(e=>'• '+e.label).join('\n'))) return;
+              for(const e of ents){ await vPut(e); } const n=insertMany(ents); await refresh(); showToast('✅ '+n+' match wapas aa gaye'); draw(); }catch(e){ alert('Nahi hua: '+e.message); } };
+          b.appendChild(c); });
+      };
+      draw();
+    });
+  }
+  window.ecsVaultPanel=vaultPanel;
+  const _cc2=clCard;
+  clCard=function(){
+    const c=_cc2.apply(this,arguments);
+    try{ if(canV()){ const row=c.querySelector('.row'); if(row){ const x=el(`<button class="btn gold" data-cl="1">🛟 Matches Recovery (sab admins)</button>`); x.onclick=()=>vaultPanel(); row.appendChild(x); } } }catch(e){}
+    return c;
+  };
+
+  /* ---------- Cloud Backups panel (match count + safe restore) ---------- */
+  ecsBackupPanel=async function(){
+    ecsPanel('💾 Cloud Backups', async (b)=>{
+      const getData=async id=>{ const rr=await metaReq('GET','backupsData/'+id); const d=await rr.json(); if(!d||!d.data) throw new Error('data nahi mila'); return d; };
+      const curCount=()=> totalM(root);
+      const draw=async()=>{
+        b.textContent='Load ho raha hai…';
+        try{
+          const r=await metaReq('GET','backupsIdx'); if(!r.ok) throw new Error(r.status); const j=await r.json()||{}; b.innerHTML='';
+          b.appendChild(el(`<p class="muted" style="font-size:.78rem;">Har 6 ghante mein, aur kisi bhi delete se pehle cloud ka purana data yahan save hota hai. <b>Abhi app mein ${curCount()} match hain.</b> Restore se poora data purane jaisa ho jata hai (naye matches hat sakte hain) — behtar hai <b>"➕ Sirf gayab matches jodo"</b> use karo.</p>`));
+          const nb=el(`<button class="btn gold" data-cl="1" style="width:100%;margin-bottom:8px;">➕ Abhi backup banao</button>`); nb.onclick=async()=>{ nb.disabled=true; const ok=await ecsMakeBackup('manual'); showToast(ok?'✅ Backup ban gaya':'Backup nahi bana', ok); draw(); }; b.appendChild(nb);
+          const ids=Object.keys(j).sort().reverse(); if(!ids.length) b.appendChild(el(`<p class="muted">Abhi koi backup nahi.</p>`));
+          ids.forEach(id=>{ const x=j[id];
+            const mcTxt=()=> (x.mc!=null? '<b>'+x.mc+' match</b>' : '<i>match count ? (🔍 dabao)</i>');
+            const c=el(`<div class="card" style="margin:6px 0;"><div style="font-size:.8rem;"><b>${fmtT(x.t)}</b> · ${esc(x.reason||'')}<br><span class="muted">${esc(x.name||x.by||'')} · ${esc(x.dev||'')} · ${Math.round((x.size||0)/1024)} KB</span><br><span class="mc">${mcTxt()}</span></div><div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap;"><button data-a="chk" class="btn secondary small" data-cl="1">🔍 Check</button><button data-a="mrg" class="btn gold small" data-cl="1">➕ Sirf gayab matches jodo</button><button data-a="rst" class="btn secondary small" data-cl="1">♻️ Restore</button></div></div>`);
+            const q=a=>c.querySelector('[data-a='+a+']');
+            q('chk').onclick=async()=>{ try{ const d=await getData(id); const p=JSON.parse(d.data); x.mc=totalM(p); await vFromRoot(p,'cloud'); await refresh();
+                const ls=[]; (p.seriesList||[]).forEach(s=>(s.matches||[]).forEach(m=>ls.push('• '+mlabel(s,m))));
+                c.querySelector('.mc').innerHTML=mcTxt()+(ls.length?'<br><span class="muted">'+ls.map(esc).join('<br>')+'</span>':''); showToast('Is backup mein '+x.mc+' match hain (vault mein bhi save)'); }catch(e){ alert('Check nahi hua: '+e.message); } };
+            q('mrg').onclick=async()=>{ try{ const d=await getData(id); const p=JSON.parse(d.data); const ents=mkEntries(p,'cloud',{}).filter(e=>!present(e));
+                if(!ents.length){ alert('Is backup ke saare matches pehle se app mein maujood hain (ya isme koi match nahi).'); return; }
+                if(!confirm('Ye '+ents.length+' match wapas jodein? (baqi data nahi badlega)\n\n'+ents.map(e=>'• '+e.label).join('\n'))) return;
+                for(const e of ents){ await vPut(e); }
+                const n=insertMany(ents); await refresh(); showToast('✅ '+n+' match wapas jur gaye'); draw(); }catch(e){ alert('Nahi hua: '+e.message); } };
+            q('rst').onclick=async()=>{
+              if(!isOwner()){ ecsDeny('Backup restore sirf Owner kar sakta hai.'); return; }
+              try{
+                const d=await getData(id); const p=JSON.parse(d.data); const bm=totalM(p), cm=curCount();
+                let msg='Ye backup ('+fmtT(x.t)+') wapas laayein?\n\nBackup mein matches: '+bm+'\nAbhi app mein matches: '+cm+'\n\nAbhi ka data pehle backup ho jayega, phir ye purana data sab devices par aa jayega.';
+                if(bm<cm){ msg='⚠⚠ KHABARDAR ⚠⚠\nIs backup mein '+bm+' match hain, jabke abhi app mein '+cm+' hain.\nRestore karne se '+(cm-bm)+' match hat jayenge!\n\n(Behtar: "➕ Sirf gayab matches jodo" use karo.)\n\n'+msg; }
+                if(!confirm(msg)) return;
+                if(bm<cm && prompt('Pakka karne ke liye RESTORE likho')!=='RESTORE'){ showToast('Restore cancel',false); return; }
+                try{ await keepSnap('restore se pehle (phone ki copy)',JSON.stringify(root)); }catch(e){}
+                await ecsMakeBackup('restore se pehle');
+                clApply({ts:Date.now(),data:d.data}); root._ts=Date.now(); try{ localStorage.setItem(STORAGE_KEY,JSON.stringify(root)); }catch(e){} setDirty(true); lqNote('Backup restore kiya: '+fmtT(x.t)); await clPush(); saveDig(ecsDigest()); render(); showToast('✅ Backup restore ho gaya'); draw();
+              }catch(e){ alert('Restore nahi hua: '+e.message); } };
+            b.appendChild(c); });
+        }catch(x){ b.innerHTML=''; b.appendChild(el(`<p>⚠ Backups load nahi hue (${esc(x.message)}). Internet ya Firebase Rules check karein.</p>`)); const rb=el(`<button class="btn gold" data-cl="1" style="width:100%">🔐 Rules dekho / copy karo</button>`); rb.onclick=ecsRulesPanel; b.appendChild(rb); }
+      };
+      draw(); ecsPrune();
+    });
+  };
+
+  /* destructive confirm se pehle poori safe copy (delete/reset/import) */
+  const _oc2=window.confirm;
+  window.confirm=function(m){
+    const r=_oc2.apply(this,arguments);
+    try{ if(r && canV() && root && /delete|permanently|saare .*hata|wipe|reset|saaf kar|hata dein|nayi shuru|restore/i.test(String(m||'')) && !/Admin logout|Cloud|sync|logout/i.test(String(m||''))){ _userDel=Date.now(); _delSet=new Set(); _delSer=new Set(root.seriesList.map(s=>s.id)); root.seriesList.forEach(s=>(s.matches||[]).forEach(m=>{ if(m.uid) _delSet.add(m.uid); })); keepSnap('delete/reset se pehle (phone ki copy)',JSON.stringify(root)); } }catch(e){}
+    return r;
+  };
+  const _ib=importBackup;
+  importBackup=function(){ try{ if(root) keepSnap('import se pehle (phone ki copy)',JSON.stringify(root)); }catch(e){} return _ib.apply(this,arguments); };
+  /* app band/background hone se pehle turant vault */
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden){ try{ clearTimeout(_vt); scan(); }catch(e){} } });
+  window.addEventListener('pagehide',()=>{ try{ clearTimeout(_vt); scan(); }catch(e){} });
+/* ---- v105: MATCH-WISE AUTO MERGE (do phones ke alag matches DONO bachte hain) ---- */
+  const midScore = ()=>['match','editmatch','setup','play'].includes(activeTab);
+  function saveLocalNow(){ root._ts=Date.now(); try{ localStorage.setItem(STORAGE_KEY,JSON.stringify(root)); }catch(e){} }
+  function mergeCloud(p){
+    if(!p||!root||!p.seriesList) return 0; let added=0;
+    root.delUids=Object.assign({},p.delUids,root.delUids); root.delSer=Object.assign({},p.delSer,root.delSer);
+    p.seriesList.forEach(s=>{
+      if(root.delSer[s.id]) return;
+      if(!root.seriesList.some(x=>x.id===s.id)){ const c=deep(s); c.matches=(c.matches||[]).filter(m=>!(m.uid&&root.delUids[m.uid])); root.seriesList.push(c); added+=c.matches.length; return; }
+      const hasUid=new Set((s.matches||[]).filter(m=>m.uid).map(m=>m.uid));
+      mkEntries({seriesList:[s]},'cloud',{}).forEach(e=>{ if(root.delUids[e.uid]) return; if(e.status!=='completed' && !hasUid.has(e.uid)) return; if(!present(e) && insertEntry(e,true)==='ok') added++; });
+    });
+    root.seriesList.forEach(s=>{ s.matches=(s.matches||[]).filter(m=>!(m.uid&&root.delUids[m.uid])); });
+    root.seriesList=root.seriesList.filter(s=>!root.delSer[s.id]);
+    if(!root.seriesList.length) root.seriesList=[defaultState(1)];
+    root.seriesList.forEach(s=>{ (s.matches||[]).forEach((x,i)=>{ x.number=i+1; }); });
+    try{ _quotaUsageCache=null; if(!root.seriesList.some(s=>s.id===root.activeSeriesId)) root.activeSeriesId=root.seriesList[0].id; state=root.seriesList.find(s=>s.id===root.activeSeriesId)||state; }catch(e){}
+    return added;
+  }
+  const _pl2=clPull;
+  clPull=async function(manual){
+    try{
+      if(isAdm()&&CL&&DIRTY&&!clBusy&&(manual||!midScore())){
+        const r=await fetch(clUrl()); const j=r.ok?await r.json():null;
+        if(j&&j.data&&j.ts>(root._ts||0)){
+          const p=JSON.parse(j.data); await keepSnap('merge se pehle (phone ki copy)',JSON.stringify(root)); await vFromRoot(p,'cloud');
+          const n=mergeCloud(p); BASE=j.ts; try{ localStorage.setItem(BSK,String(BASE)); }catch(e){} saveLocalNow();
+          if(manual||SM==='auto') await clPush();
+          try{ render(); }catch(e){} showToast('🔀 Merge ho gaya: cloud ke '+n+' naye match is phone mein jur gaye, is phone ke badlao bhi safe'); setTimeout(refresh,500); return;
+        }
+      }
+    }catch(e){}
+    return _pl2.apply(this,arguments);
+  };
+  /* delete function-level par bhi band (sirf button chhupana kaafi nahi) */
+  const noDel=()=>ecsDeny('Delete / hatana sirf Owner kar sakta hai. Aap scoring, naye teams aur naye tournament bana sakte ho.');
+  ['deleteSeries','deleteSeriesFromRecords','wipeAllRules','deleteRulesByNumberSpec'].forEach(n=>{ try{ const o=window[n]; if(typeof o!=='function') return; const w=function(){ if(CL&&isAdm()&&!can('del')) return noDel(); return o.apply(this,arguments); }; try{ window[n]=w; }catch(e){} try{ eval(n+'=w'); }catch(e){} }catch(e){} });
+  const _dm3=deleteMatch; deleteMatch=function(){ if(CL&&isAdm()&&!can('del')) return noDel(); return _dm3.apply(this,arguments); };
+  window.ecsHelpPanel=function(){ ecsPanel('📖 Safety features — kaun kya karta hai',b=>{
+    [['🛟 Matches Recovery','Har match ki alag copy phone mein. Koi match gayab ho to yahan se wapas jodo (sab admins).'],
+     ['🔀 Auto Merge','Do phones ne alag matches khele to cloud sync par DONO jud jate hain (pehle sirf aakhri phone ka data bachta tha). Sirf matches/series jodte hain; players, finance, rules waghera ab bhi "aakhri sync wala jeetta" hai.'],
+     ['🔒 Delete sirf Owner','Match, series, rules delete / purana edit sirf Owner (ya jise Owner "Delete karna" ka haq de). Manager aur Scorer ko ye default mein nahi hota.'],
+     ['⚠ Gayab badge','Laal badge: koi match app se gayab hai. Dabao aur "Wapas jodo". Jaan-boojh kar delete kiya ho to badge nahi aata.'],
+     ['📤 Match ke baad file','Match poora hote hi "Share / Save file" aata hai — WhatsApp ya Drive par bhej do, ye aap ki bahar ki copy hai.'],
+     ['📦 Phone ki safe copies','Cloud se data aane, overwrite, delete/reset ya import se pehle poori copy phone mein banti hai.'],
+     ['💾 Cloud Backups (Owner)','Har backup mein match count. "Sirf gayab matches jodo" baaqi data nahi badalta. Restore sirf Owner.'],
+     ['📴 Offline nishan','Net na ho to badge "Offline · phone mein safe" — scoring phone mein save hoti rehti hai.']
+    ].forEach(([a,d])=>b.appendChild(el(`<div class="card" style="margin:6px 0"><b>${a}</b><div style="font-size:.8rem;margin-top:3px">${d}</div></div>`)));
+  }); };
+  const _cc4=clCard; clCard=function(){ const c=_cc4.apply(this,arguments); try{ if(canV()){ const row=c.querySelector('.row'); if(row){ const x=el(`<button class="btn secondary" data-cl="1">📖 Safety features kya hain?</button>`); x.onclick=()=>ecsHelpPanel(); row.appendChild(x); } } }catch(e){} return c; };
+  setTimeout(()=>{ try{ if(canV()) scan(); else refresh(); }catch(e){} }, 4500);
+})();
+
+/* ===================== v104 — ROLES SAAF + LABELS + VAULT SUDHAAR =====================
+   Kis role se kia hoga:
+   👑 Owner   : sab kuch (delete, purana edit, settings, backup restore, admin banana)
+   🛠 Manager : schedule match ki scoring + naye teams/players + naya series/tournament  (peeche ja kar kuch badal/delete NAHI)
+   🏏 Scorer  : sirf scoring
+   🎛 Custom  : Owner har admin ke liye alag tick lagata hai
+   Gayab match wapas jodna (Matches Recovery) sab admins kar sakte hain - ye sirf jodta hai, mitata nahi. */
+(function(){
+  /* --- permission labels (ek jaisi wazahat har jagah) --- */
+  ECS_PERMS.length=0;
+  [['score','🏏 Scoring — schedule hue match ki scoring (series / tournament / individual match chalana)'],
+   ['teams','👥 Naye Teams banana / squad badalna'],
+   ['players','🧢 Players List mein naya player add karna'],
+   ['newseries','📅 Naya series / tournament banana'],
+   ['edit','✏️ PURANA (khatam hua) match edit / amend karna  [default: sirf Owner]'],
+   ['settings','⚙️ Series settings + Rules & Regulations badalna  [default: sirf Owner]'],
+   ['money','💰 Monthly Entry (fees / kharcha)  [default: sirf Owner]'],
+   ['data','💾 Import / Export, backup file import  [default: sirf Owner]'],
+   ['del','🗑 Kuch bhi DELETE / reset karna (match, team, series, player, rule)  [default: sirf Owner]']].forEach(x=>ECS_PERMS.push(x));
+  const ROLEN = {owner:'👑 Owner', manager:'🛠 Manager', scorer:'🏏 Scorer', custom:'🎛 Custom'};
+  const roleName = r=> !r ? '…' : r.owner ? (r.legacy?'👑 Owner (roles abhi band — sab ko poore haq)':'👑 Owner') : r.none ? '⛔ Role nahi (sirf dekhna)' : (ROLEN[r.role]||('🎛 '+r.role));
+  const yes = '<span style="color:#3ddc84;font-weight:800">✅</span>', no = '<span style="color:#ff6b6b;font-weight:800">❌</span>';
+
+  /* --- matrix: kis role se kia hoga --- */
+  function ecsMatrix(){
+    const P = ECS_PERMS.map(([k,l])=>[l.replace(/\s*\[.*\]\s*$/,''),k]);
+    const row = (lab,o,m,s)=>`<tr><td style="padding:5px 4px;border-bottom:1px solid rgba(255,255,255,.08)">${ecsEsc(lab)}</td><td style="text-align:center;border-bottom:1px solid rgba(255,255,255,.08)">${o?yes:no}</td><td style="text-align:center;border-bottom:1px solid rgba(255,255,255,.08)">${m?yes:no}</td><td style="text-align:center;border-bottom:1px solid rgba(255,255,255,.08)">${s?yes:no}</td></tr>`;
+    let h = '<table style="width:100%;border-collapse:collapse;font-size:.76rem"><tr style="color:#9fb3d1"><th style="text-align:left">Kaam</th><th>👑<br>Owner</th><th>🛠<br>Manager</th><th>🏏<br>Scorer</th></tr>';
+    P.forEach(([lab,k])=>{ h += row(lab,1,!!ECS_PRESETS.manager[k],!!ECS_PRESETS.scorer[k]); });
+    h += row('🛟 Gayab match wapas jodna (Matches Recovery — sirf jodta hai, mitata nahi)',1,1,1);
+    h += row('👥 Admin Management · 📜 Admin Record · 💾 Cloud Backups restore · 🔐 Firebase Rules',1,0,0);
+    return h+'</table><p class="muted" style="font-size:.72rem;margin:6px 0 0">🎛 Custom: Owner har admin ke liye alag tick lagata hai (Admin Management mein). Delete / purana edit / restore wale kaam default mein sirf Owner ke paas hain.</p>';
+  }
+  window.ecsMatrix = ecsMatrix;
+  function mineSummary(r){
+    if(!r) return 'Role abhi load nahi hua (internet?)';
+    const ok=[],bad=[]; ECS_PERMS.forEach(([k,l])=>{ const t=l.replace(/\s*\[.*\]\s*$/,''); ((r.owner||(r.perms&&r.perms[k]))?ok:bad).push(t); });
+    return {ok,bad};
+  }
+  /* --- Mere haq panel (har admin ke liye) --- */
+  window.ecsMyRights = function(){
+    ecsPanel('ℹ️ Mere haq — kis se kia hoga', (b)=>{
+      const r = ROLE; const s = mineSummary(r);
+      b.appendChild(el(`<div class="card"><b>${ecsEsc(AD?AD.email:'')}</b><br>Role: <b>${ecsEsc(roleName(r))}</b>${r&&r.legacy?'<br><span style="color:#ffd45f;font-size:.78rem">⚠ Owner ne roles system abhi chalu nahi kiya, isliye filhal har admin ko poore haq hain.</span>':''}</div>`));
+      if(typeof s==='object'){
+        b.appendChild(el(`<div class="card" style="margin-top:8px"><b style="color:#3ddc84">✅ Aap kar sakte hain</b><div style="font-size:.8rem;margin-top:4px">${s.ok.length?s.ok.map(x=>'• '+ecsEsc(x)).join('<br>'):'(kuch nahi — sirf dekhna)'}</div></div>`));
+        if(s.bad.length) b.appendChild(el(`<div class="card" style="margin-top:8px"><b style="color:#ff6b6b">❌ Sirf Owner (ya jise Owner de)</b><div style="font-size:.8rem;margin-top:4px">${s.bad.map(x=>'• '+ecsEsc(x)).join('<br>')}</div></div>`));
+      }
+      b.appendChild(el(`<div class="card" style="margin-top:8px"><b>🧭 Kis role se kia hoga</b>${ecsMatrix()}</div>`));
+    });
+  };
+
+  /* --- login ka nishan log mein (Owner ko dikhe ke kaun login karta hai) --- */
+  const _lr = ecsLoadRole; let _seenNote=false;
+  ecsLoadRole = async function(){
+    await _lr.apply(this,arguments);
+    try{
+      if(CL && isAdm() && ROLE && !_seenNote){ _seenNote=true;
+        lqNote('🔑 Login: '+AD.email+' — '+roleName(ROLE).replace(/^\S+\s/,'')+(ROLE.none?' (Owner ne abhi add nahi kiya)':'')); await ecsFlushLog(true); }
+    }catch(e){}
+  };
+
+  /* --- Admin Management (naya) --- */
+  ecsAdminPanel = async function(){
+    ecsPanel('👥 Admin Management', async (b)=>{
+      b.textContent='Load ho raha hai…';
+      let j=null, lg={};
+      try{ const r=await metaReq('GET','roles'); if(!r.ok) throw new Error(r.status); j=await r.json(); }
+      catch(x){ b.innerHTML=''; b.appendChild(el(`<p>⚠ Roles load nahi ho sake. Ya internet nahi, ya Firebase Rules abhi update nahi hue.</p>`)); const rb=el(`<button class="btn gold" data-cl="1" style="width:100%">🔐 Rules dekho / copy karo</button>`); rb.onclick=ecsRulesPanel; b.appendChild(rb); return; }
+      try{ const r=await metaReq('GET','log',undefined,'orderBy=%22%24key%22&limitToLast=300'); if(r.ok){ const L=await r.json()||{}; Object.keys(L).sort().forEach(id=>{ const x=L[id]; if(x&&x.email) lg[lc(x.email)]={name:x.name,dev:x.dev,ts:x.ts,role:x.role}; }); } }catch(e){}
+      const draw = ()=>{
+        b.innerHTML='';
+        b.appendChild(el(`<details style="margin-bottom:8px"><summary style="cursor:pointer;font-weight:800">🧭 Kis role se kia hoga (tap karke dekhein)</summary>${ecsMatrix()}</details>`));
+        if(!j || !j.owner){
+          b.appendChild(el(`<div class="card" style="border:2px solid #ff6b6b"><b style="color:#ff9d9d">⚠ Roles abhi BAND hain</b><p style="font-size:.82rem;margin:6px 0 0">Is waqt jis bhi account ko Firebase mein likhne ka haq hai (jaise <b>mujahidazizofficial@gmail.com</b>) usay <b>Owner jaise poore haq</b> hain — delete, edit, restore sab. Isi liye list mein koi admin nazar nahi aata.<br><br><b>Chalu karne par:</b> aap (${ecsEsc(AD.email)}) <b>Owner</b> ban jate hain. Baaqi har admin pehle <b>sirf dekh</b> sakega jab tak aap use neeche se Manager / Scorer na bana dein (default Manager: scoring + teams + players + naya series; delete / purana edit nahi).</p></div>`));
+          const sb=el(`<button class="btn gold" data-cl="1" style="width:100%;margin-top:8px">✅ Roles chalu karo — main Owner hoon</button>`);
+          sb.onclick=async()=>{ if(!confirm('Roles chalu karein? Aap Owner banenge; baaqi admins ko aap ko add karna hoga.')) return;
+            try{ const r=await metaReq('PUT','roles',{owner:lc(AD.email),ownerName:'Owner',admins:{},created:Date.now()}); if(!r.ok) throw new Error(r.status); j={owner:lc(AD.email),ownerName:'Owner',admins:{}}; lqNote('Roles system chalu kiya (Owner: '+AD.email+')'); await ecsLoadRole(); draw(); }
+            catch(x){ alert('Ye sirf Owner kar sakta hai, ya Firebase Rules abhi update nahi hue ('+x.message+').'); } };
+          b.appendChild(sb);
+          const seen=Object.keys(lg).filter(e=>e!==lc(AD.email));
+          if(seen.length){ b.appendChild(el(`<h4 style="margin:12px 0 4px">🔎 Aur accounts jo login kar chuke hain</h4>`)); seen.forEach(e=>b.appendChild(el(`<div class="card" style="margin:5px 0;font-size:.78rem"><b>${ecsEsc(lg[e].name||e)}</b> · ${ecsEsc(e)}<br><span class="muted">📱 ${ecsEsc(lg[e].dev||'')} · ${fmtT(lg[e].ts)}</span></div>`))); }
+          return;
+        }
+        b.appendChild(el(`<div class="card"><b>👑 ${ecsEsc(j.ownerName||'Owner')}</b> <span class="muted" style="font-size:.75rem">${ecsEsc(j.owner)}</span><div style="font-size:.72rem;margin-top:4px">Poore haq — badle nahi ja sakte.</div></div>`));
+        const admins=j.admins||{};
+        if(!Object.keys(admins).length) b.appendChild(el(`<p class="muted" style="font-size:.8rem">Abhi koi admin add nahi hua.</p>`));
+        Object.keys(admins).forEach(k=>{
+          const en=admins[k]; const sn=lg[lc(en.email)];
+          const c=el(`<div class="card" style="margin:8px 0;"><b>${ecsEsc(en.name||en.email)}</b> <span class="muted" style="font-size:.75rem">${ecsEsc(en.email)}</span>${en.off?' <span class="tag">BAND</span>':''}
+            <div class="muted" style="font-size:.72rem;margin:2px 0 4px">${sn?('Aakhri login: 📱 '+ecsEsc(sn.dev||'')+' · '+fmtT(sn.ts)):'Abhi tak login ka record nahi'}</div>
+            <div class="chp"></div>
+            <div class="row" style="margin-top:6px;gap:6px;flex-wrap:wrap;"><select class="rsel" style="flex:1"><option value="manager">🛠 Manager</option><option value="scorer">🏏 Scorer</option><option value="custom">🎛 Custom</option></select>
+            <button class="btn gold small" data-cl="1" data-sv>💾 Save</button><button class="btn secondary small" data-cl="1" data-off>${en.off?'▶ Chalu':'⏸ Band'}</button><button class="btn danger small" data-cl="1" data-rm>✕ Hatao</button></div><div class="pb"></div></div>`);
+          const sel=c.querySelector('.rsel'); sel.value=en.role||'custom'; let pr=Object.assign({},en.perms||ECS_PRESETS[en.role]||{});
+          const showP=()=>{ c.querySelector('.chp').innerHTML=ecsChips(pr); const pb=c.querySelector('.pb'); pb.innerHTML=''; pb.appendChild(permBoxes(pr,()=>{ sel.value='custom'; c.querySelector('.chp').innerHTML=ecsChips(pr); })); };
+          sel.onchange=()=>{ if(sel.value!=='custom') pr=Object.assign({},ECS_PRESETS[sel.value]); showP(); }; showP();
+          const wr=async(val,msg)=>{ try{ const r=await metaReq('PUT','roles/admins/'+k,val); if(!r.ok) throw new Error(r.status); if(val===null) delete admins[k]; else admins[k]=val; lqNote(msg); draw(); showToast('✅ Save ho gaya'); }catch(x){ alert('Save nahi hua ('+x.message+')'); } };
+          c.querySelector('[data-sv]').onclick=()=>wr(Object.assign({},en,{role:sel.value,perms:pr}),'Admin ke haq badle: '+en.email+' → '+sel.value);
+          c.querySelector('[data-off]').onclick=()=>wr(Object.assign({},en,{off:en.off?null:1}),(en.off?'Admin chalu kiya: ':'Admin band kiya: ')+en.email);
+          c.querySelector('[data-rm]').onclick=()=>{ if(confirm(en.email+' ko hata dein? Ye sirf is app ke haq hatata hai.')) wr(null,'Admin hataya: '+en.email); };
+          b.appendChild(c);
+        });
+        /* login kiye par list mein nahi */
+        const un = Object.keys(lg).filter(e=>e!==lc(j.owner) && !admins[ekey(e)]);
+        if(un.length){
+          b.appendChild(el(`<h4 style="margin:14px 0 4px">🔎 Login kiya par list mein nahi (abhi sirf dekh sakte hain)</h4>`));
+          un.forEach(e=>{ const x=lg[e]; const c=el(`<div class="card" style="margin:5px 0;font-size:.78rem"><b>${ecsEsc(x.name||e)}</b> · ${ecsEsc(e)}<br><span class="muted">📱 ${ecsEsc(x.dev||'')} · ${fmtT(x.ts)}</span><div class="row" style="gap:6px;margin-top:6px"><button class="btn gold small" data-cl="1" data-m>🛠 Manager banao</button><button class="btn secondary small" data-cl="1" data-s>🏏 Scorer banao</button></div></div>`);
+            const add=async rl=>{ const en={email:e,name:x.name&&x.name!==e?x.name:e,role:rl,perms:Object.assign({},ECS_PRESETS[rl]),added:Date.now(),addedBy:AD.email};
+              try{ const r=await metaReq('PUT','roles/admins/'+ekey(e),en); if(!r.ok) throw new Error(r.status); j.admins=j.admins||{}; j.admins[ekey(e)]=en; lqNote('Admin add kiya: '+e+' ('+rl+')'); draw(); showToast('✅ Add ho gaya'); }catch(er){ alert('Add nahi hua ('+er.message+')'); } };
+            c.querySelector('[data-m]').onclick=()=>add('manager'); c.querySelector('[data-s]').onclick=()=>add('scorer'); b.appendChild(c); });
+        }
+        const nf=el(`<div class="card" style="margin-top:10px;"><h4 style="margin:0 0 6px;">➕ Naya admin</h4>
+          <input id="ne" type="email" placeholder="Email" style="width:100%;margin:3px 0;"><input id="nn" placeholder="Naam (jaise Ali)" style="width:100%;margin:3px 0;"><input id="np2" placeholder="Password (kam az kam 6)" style="width:100%;margin:3px 0;">
+          <select id="nr" style="width:100%;margin:3px 0;"><option value="scorer">🏏 Scorer — sirf scoring</option><option value="manager">🛠 Manager — scoring + teams + players + naya series/tournament (delete / purana edit nahi)</option></select>
+          <button class="btn gold" data-cl="1" id="nadd" style="width:100%;margin-top:4px;">Account banao aur add karo</button>
+          <p class="muted" style="font-size:.72rem;margin:6px 0 0;">Agar is email ka Firebase account pehle se hai to password khali chhod dein - sirf role add hoga. Role baad mein upar card se badal sakte hain.</p></div>`);
+        nf.querySelector('#nadd').onclick=async()=>{
+          const em=lc(nf.querySelector('#ne').value), nm=nf.querySelector('#nn').value.trim(), pw=nf.querySelector('#np2').value, rl=nf.querySelector('#nr').value;
+          if(!/^\S+@\S+\.\S+$/.test(em)){ alert('Email sahi likho.'); return; }
+          if(lc(j.owner)===em){ alert('Ye Owner ki email hai.'); return; }
+          if(pw){ if(pw.length<6){ alert('Password kam az kam 6 characters.'); return; }
+            try{ const r=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key='+encodeURIComponent(CL.key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:pw,returnSecureToken:false})}); const x=await r.json();
+              if(!r.ok){ const m=(x.error&&x.error.message)||''; if(!/EMAIL_EXISTS/.test(m)){ alert('Account nahi bana: '+m.replace(/_/g,' ')+(/OPERATION_NOT_ALLOWED/.test(m)?'\n\nFirebase Console → Authentication → Users mein ye account khud bana kar yahan password khali chhod kar add karein.':'')); return; } } }
+            catch(e){ alert('Internet ka masla.'); return; } }
+          const en={email:em,name:nm||em,role:rl,perms:Object.assign({},ECS_PRESETS[rl]),added:Date.now(),addedBy:AD.email};
+          try{ const r=await metaReq('PUT','roles/admins/'+ekey(em),en); if(!r.ok) throw new Error(r.status); j.admins=j.admins||{}; j.admins[ekey(em)]=en; lqNote('Naya admin add kiya: '+em+' ('+rl+')'); draw(); showToast('✅ Admin add ho gaya'+(pw?' - ab unhe email/password de dein':'')); }catch(x){ alert('Add nahi hua ('+x.message+'). Firebase Rules check karein.'); } };
+        b.appendChild(nf);
+      };
+      draw();
+    });
+  };
+  function ecsChips(pr){ return ECS_PERMS.map(([k,l])=>{ const on=!!pr[k]; const t=l.replace(/\s*\[.*\]\s*$/,'').split('—')[0].trim(); return `<span style="display:inline-block;margin:1px 3px 1px 0;padding:1px 7px;border-radius:9px;font-size:.68rem;background:${on?'rgba(61,220,132,.18)':'rgba(255,107,107,.15)'};color:${on?'#7dffb0':'#ff9d9d'}">${on?'✅':'❌'} ${ecsEsc(t.length>34?t.slice(0,33)+'…':t)}</span>`; }).join(''); }
+
+  /* --- Cloud card: role saaf + Mere haq button --- */
+  const _cc3 = clCard;
+  clCard = function(){
+    const c = _cc3.apply(this,arguments);
+    try{
+      if(CL && isAdm()){
+        const row=c.querySelector('.row');
+        if(row){ const x=el(`<button class="btn secondary" data-cl="1">ℹ️ Mere haq / Kis se kia hoga</button>`); x.onclick=()=>ecsMyRights(); row.appendChild(x); }
+        if(ROLE && ROLE.legacy){ const w=el(`<p style="font-size:.76rem;color:#ffd45f;margin:6px 0 0">⚠ Roles abhi band hain — har admin account ko poore haq (delete samet) hain. Owner: Admin Management mein "Roles chalu karo" dabaye.</p>`); c.appendChild(w); }
+      }
+    }catch(e){}
+    return c;
+  };
+
+  /* --- Import/Export tab: khatarnak buttons par label --- */
+  const _dd2 = renderDataTab;
+  renderDataTab = function(){
+    const w = _dd2.apply(this,arguments);
+    try{
+      const RX=/delete|permanently|restore|import backup|nayi shuru|reset|saaf|🗑|🧹/i;
+      w.querySelectorAll('button,label.btn').forEach(b=>{ if(b.getAttribute('data-cl')||b.closest('#clcard')) return; const t=b.textContent||''; if(RX.test(t) && !b.querySelector('.ownl')){ const s=document.createElement('span'); s.className='ownl'; s.style.cssText='font-size:.62rem;margin-left:5px;padding:1px 5px;border-radius:8px;background:#7a1f1f;color:#fff;white-space:nowrap'; s.textContent='🔒 Owner only'; b.appendChild(s); } });
+    }catch(e){}
+    return w;
   };
 })();
 
