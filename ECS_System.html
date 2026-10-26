@@ -2045,10 +2045,49 @@ function hasFixedQuota(teamKey, pid, kind){
   return (v!==null && v!==undefined && v!=="" && !isNaN(v));
 }
 function baseQuotaFor(teamKey, pid, kind){
+  let v;
   if(hasFixedQuota(teamKey, pid, kind)){
-    return Math.max(0, Math.round(Number(state.fixedQuota[teamKey][pid][kind])));
-  }
-  return autoBaseQuotaFor(teamKey);
+    v = Math.max(0, Math.round(Number(state.fixedQuota[teamKey][pid][kind])));
+  } else v = autoBaseQuotaFor(teamKey);
+  return penHalf(teamKey, pid) ? Math.round(v/2) : v;
+}
+/* ===== v107 — PENALTY SETTING (per series) =====
+   a3  : series ke 3 (ya zyada) matches mein absent -> quota half
+   a4  : 4 (ya zyada) matches mein absent -> batting/bowling mein block, sirf akhir mein batting
+   ent : monthly entry nahi mili (unpaid) -> quota half */
+function penCfg(sr){ const x = sr || state; return Object.assign({a3:false, a4:false, ent:false}, (x && x.pen) || {}); }
+function penAbsCount(teamKey, pid, sr){
+  const x = sr || state; let n = 0;
+  ((x && x.matches)||[]).forEach(m=>{ if(m && m.status!=='setup' && m.attendance && m.attendance[teamKey] && m.attendance[teamKey][pid]===false) n++; });
+  return n;
+}
+function penEntryUnpaid(teamKey, pid){
+  try{
+    const pl = teamPlayers(teamKey).find(p=>p.id===pid); if(!pl) return false;
+    const f = ensureFinance(); if(!f.months || !f.months.length) return false;
+    const mm = financeMemberByName(pl.name); if(!mm || mm.active===false) return false;
+    const mk = monthKeyOf(), mo = f.months.find(x=>x.key===mk);
+    if(!mo) return false;
+    return !isPaidRec(mo.paid[mm.id]);
+  }catch(e){ return false; }
+}
+function penHalf(teamKey, pid){
+  if(!state || isStandardMode()) return false;
+  const c = penCfg();
+  if(c.a3 && penAbsCount(teamKey, pid) >= 3) return true;
+  if(c.ent && penEntryUnpaid(teamKey, pid)) return true;
+  return false;
+}
+function penBlocked(teamKey, pid){
+  if(!state || isStandardMode()) return false;
+  const c = penCfg();
+  return !!(c.a4 && penAbsCount(teamKey, pid) >= 4);
+}
+function penReason(teamKey, pid){
+  const c = penCfg(), r = [];
+  if(c.a3 && penAbsCount(teamKey,pid)>=3) r.push('3+ matches absent');
+  if(c.ent && penEntryUnpaid(teamKey,pid)) r.push('entry unpaid');
+  return r.join(' + ');
 }
 /* Fixed mode chal raha hai magar is player ka quota abhi tak assign nahi hua — UI ko warn karna hai. */
 function isUnassignedInFixedMode(teamKey, pid){
@@ -2697,8 +2736,15 @@ function battingSequence(matchIdx, innIdx){
   // Jo is innings mein out ya retire ho chuka, ya abhi crease par hai — wo list mein nahi aata.
   const done = new Set([...inn.outBatters, ...inn.retiredBatters, ...atCrease]);
 
+  const _mkRow = p => {
+      const sp = quotaSplit(tk, 'bat', p.id, stats);
+      const dayUsed = m.dayBat[p.id] || 0;
+      const dayCap = (m.attendance[tk][p.id]===false) ? 6 : capBat();
+      return Object.assign({ p, dayUsed, dayLeft: Math.max(0, dayCap - dayUsed) }, sp);
+    };
+  const blockedRows = teamPlayers(tk).filter(p => m.attendance[tk][p.id] && !done.has(p.id) && penBlocked(tk, p.id)).map(_mkRow).filter(r => r.dayLeft > 0);
   const rows = teamPlayers(tk)
-    .filter(p => m.attendance[tk][p.id] && !done.has(p.id))
+    .filter(p => m.attendance[tk][p.id] && !done.has(p.id) && !penBlocked(tk, p.id))
     .map(p => {
       const sp = quotaSplit(tk, 'bat', p.id, stats);
       const dayUsed = m.dayBat[p.id] || 0;
@@ -2730,8 +2776,9 @@ function battingSequence(matchIdx, innIdx){
   else if (batCovers.length) step = 2;
   else if (locked.length)    step = 3;
   else                        step = 4; // recall / last man
+  if(step===4 && !recallPool.length && blockedRows.length) step = 5; // v107: 4+ absent wale sirf bilkul akhir mein
 
-  return { step, tk, fresh, locked, batCovers, recallPool, pool, stats, atCrease };
+  return { step, tk, fresh, locked, batCovers, recallPool, pool, stats, atCrease, blockedRows };
 }
 
 /* Kya ye pick "last man standing" hai — yani team ka har doosra maujood player genuinely OUT ho
@@ -2780,7 +2827,7 @@ function bowlingSequence(matchIdx, innIdx){
   const _repeatBlocked = (pid)=> _freshOver && _distinct.has(pid) && (_oversLeft - 1) < _needNew;
 
   let rows = teamPlayers(tk)
-    .filter(p => m.attendance[tk][p.id])
+    .filter(p => m.attendance[tk][p.id] && !penBlocked(tk, p.id))
     .map(p => {
       const sp = quotaSplit(tk, 'bowl', p.id, stats);
       const dayUsed = m.dayBowl[p.id] || 0;
@@ -5430,10 +5477,27 @@ function renderPickBatters(matchIdx, innIdx){
     });
   }
 
+  const waitingItems_pen = [];
+  /* ---------- STEP 5 (v107) — Penalty: 4+ matches absent wale players, sirf bilkul akhir mein ---------- */
+  if(seq.step===5){
+    seq.blockedRows.forEach(r=>{
+      if(usedIds.includes(r.p.id)) return;
+      const have = Math.min(r.dayLeft, r.plainRemaining);
+      const b = el(`<button class="choice-btn" style="border-color:#c0392b;cursor:default;">${r.p.name} <span class="tag" style="background:#c0392b;color:#fff;">⛔ PENALTY — AKHIR MEIN</span>
+        <span class="meta">4+ matches absent — baaki sab ke baad hi batting. Bachi: ${realLeftTxt(r.plainRemaining, have)} · ${careerLine(r.p.id)}</span>
+      </button>`);
+      list.appendChild(b);
+      makeTappable(b, r.p.id, have, have>0?'fresh':'locked');
+    });
+  }
+  if(seq.step<5 && seq.blockedRows && seq.blockedRows.length){
+    seq.blockedRows.forEach(r=> waitingItems_pen.push({ name:r.p.name, tag:'⛔ PENALTY', why:'4+ matches absent — sab se aakhir mein' }));
+  }
+
   /* ---------- Jo abhi lock hain (agle steps ke liye) — v58: koi alag "ABHI LOCKED" box ya step
      heading nahi — seedha isi list mein disabled button + chhota status tag, taake list ek hi
      dikhe (mechanism wahi hai, sirf extra headings hata di hain). ---------- */
-  const waitingItems = [];
+  const waitingItems = waitingItems_pen;
   if(seq.step<2 && seq.batCovers.length){
     seq.batCovers.forEach(slot=> waitingItems.push({ name: playerName(tk,slot.absentId), tag:'ABSENT', why:`Cover ${playerName(tk,slot.coveredBy)} ke zimme` }));
   }
@@ -9528,7 +9592,7 @@ function monthSummary(key){
   const mo = getMonth(key);
   const f = ensureFinance();
   const members = f.members.filter(x=>x.active!==false);
-  const paidIds = mo ? Object.keys(mo.paid).filter(id=>(Number(mo.paid[id].amount)||0)>0) : [];
+  const paidIds = mo ? Object.keys(mo.paid).filter(id=>isPaidRec(mo.paid[id])) : [];
   return {
     opening: monthOpening(key),
     collection: monthCollection(key),
@@ -9553,13 +9617,14 @@ function financeMemberByName(name){
   return f.members.find(mm=> mm.name.trim().toLowerCase() === k) || null;
 }
 
+function isPaidRec(r){ return !!(r && ((Number(r.amount)||0)>0 || r.free)); }
 /* Kis kis mahine ki payment baqi hai — sirf un mahinon ki jo already shuru ho chuke hain. */
 function unpaidMonthsForMember(memberId){
   const f = ensureFinance();
   const today = monthKeyOf();
   return f.months
     .filter(mo => mo.key <= today)
-    .filter(mo => !(mo.paid[memberId] && (Number(mo.paid[memberId].amount)||0) > 0))
+    .filter(mo => !isPaidRec(mo.paid[memberId]))
     .map(mo => mo.key);
 }
 
@@ -9723,12 +9788,12 @@ function renderFinance(){
   members.forEach((mm, i)=>{
     const rec = mo.paid[mm.id];
     const amt = rec ? (Number(rec.amount)||0) : 0;
-    const isPaid = amt>0;
+    const isPaid = isPaidRec(rec);
     const cat = mm.categoryId ? financeCategoryById(mm.categoryId) : null;
     const tr = elRow(`<tr class="${isPaid?'fin-paid':'fin-unpaid'}">
       <td>${i+1}</td>
       <td><span class="fin-name">${mm.name}</span><div>${cat?`<span class="fin-cat">${cat.name} · ${fmtMoney(cat.fee)}</span>`:`<span class="fin-cat" style="color:#ff8f8f;background:#3a1414;border-color:#6b1a1a;">Category set nahi</span>`}</div>${rec && rec.note?`<div class="fin-note">${rec.note}</div>`:''}</td>
-      <td style="text-align:right;font-weight:700;">${isPaid? fmtMoney(amt) : '—'}</td>
+      <td style="text-align:right;font-weight:700;">${isPaid? (amt>0?fmtMoney(amt):'FREE') : '—'}</td>
       <td style="font-size:0.7rem;">${rec && rec.date ? rec.date : '—'}</td>
       <td><span class="fin-badge ${isPaid?'ok':'no'}">${isPaid?'PAID':'NOT PAID'}</span></td>
     </tr>`);
@@ -9828,6 +9893,7 @@ function openFinanceEntryModal(key, memberId){
     ${cat?`<p class="muted" style="font-size:0.74rem;margin-top:-4px;">${cat.name} · monthly fee ${fmtMoney(cat.fee)}</p>`:`<p class="muted" style="font-size:0.74rem;margin-top:-4px;color:#ff8f8f;">Is player ki category set nahi — ⋮ → Members se set karein.</p>`}
     <label style="font-size:0.75rem;color:var(--muted);">Amount received</label>
     <input type="number" id="feAmt" value="${rec? (rec.amount||0) : categoryFeeForMember(mm, mo)}" style="width:100%;margin:4px 0 10px;">
+    <label style="display:flex;gap:8px;align-items:center;font-size:0.8rem;margin:0 0 10px;"><input type="checkbox" id="feFree" ${rec&&rec.free?'checked':''} style="width:auto;"> 🎟 Bagair amount ke PAID mark karo (guest / koi aur wajah)</label>
     <label style="font-size:0.75rem;color:var(--muted);">Date</label>
     <input type="date" id="feDate" value="${rec && rec.date ? rec.date : today}" style="width:100%;margin:4px 0 10px;">
     <label style="font-size:0.75rem;color:var(--muted);">Note (optional)</label>
@@ -9843,8 +9909,10 @@ function openFinanceEntryModal(key, memberId){
   overlay.querySelector('#feCancel').onclick = close;
   overlay.querySelector('#feSave').onclick = ()=>{
     const amt = Number(overlay.querySelector('#feAmt').value)||0;
-    if(amt<=0){ alert("Amount 0 se zyada honi chahiye. Entry hatani ho to 'Entry hatayein' use karein."); return; }
-    mo.paid[memberId] = { amount: amt, date: overlay.querySelector('#feDate').value || today, note: overlay.querySelector('#feNote').value.trim() };
+    const free = overlay.querySelector('#feFree').checked;
+    if(amt<=0 && !free){ alert("Amount 0 se zyada likhein, ya 'Bagair amount ke PAID mark karo' tick karein. Entry hatani ho to 'Entry hatayein' use karein."); return; }
+    mo.paid[memberId] = { amount: amt>0?amt:0, date: overlay.querySelector('#feDate').value || today, note: overlay.querySelector('#feNote').value.trim() };
+    if(free && amt<=0) mo.paid[memberId].free = true;
     close(); saveState(); render();
   };
   const clr = overlay.querySelector('#feClear');
@@ -10009,7 +10077,7 @@ function buildFinancePayload(months){
     openingBalance: f.openingBalance||0,
     months: months.map(mo=>({
       key: mo.key, fee: mo.fee, note: mo.note||"",
-      paid: Object.keys(mo.paid||{}).map(id=>({ name: memName(id), amount: mo.paid[id].amount, date: mo.paid[id].date||"", note: mo.paid[id].note||"" })).filter(x=>x.name),
+      paid: Object.keys(mo.paid||{}).map(id=>({ name: memName(id), amount: mo.paid[id].amount, free: !!mo.paid[id].free, date: mo.paid[id].date||"", note: mo.paid[id].note||"" })).filter(x=>x.name),
       expenses: (mo.expenses||[]).map(e=>({ item:e.item, amount:e.amount, date:e.date||"", note:e.note||"" }))
     }))
   };
@@ -10040,7 +10108,7 @@ function normalizeFinanceImport(data){
     monthlyFee: fin.monthlyFee||0,
     months: fin.months.map(mo=>({
       key: mo.key, fee: mo.fee, note: mo.note||"",
-      paid: Object.keys(mo.paid||{}).map(id=>({ name: memName(id), amount: mo.paid[id].amount, date: mo.paid[id].date||"", note: mo.paid[id].note||"" })).filter(x=>x.name),
+      paid: Object.keys(mo.paid||{}).map(id=>({ name: memName(id), amount: mo.paid[id].amount, free: !!mo.paid[id].free, date: mo.paid[id].date||"", note: mo.paid[id].note||"" })).filter(x=>x.name),
       expenses: (mo.expenses||[]).map(e=>({ item:e.item, amount:e.amount, date:e.date||"", note:e.note||"" }))
     }))
   };
@@ -10075,7 +10143,7 @@ function mergeFinanceMonth(fileMonth, targetKey, payload){
     if(!p.name) return;
     const r = _financeEnsureMember(p.name, (payload.members||[]).find(x=>String(x.name).trim().toLowerCase()===String(p.name).trim().toLowerCase())?.category, payload);
     if(r.created) res.newMembers++;
-    mo.paid[r.mm.id] = { amount: Number(p.amount)||0, date: p.date||"", note: p.note||"" };
+    mo.paid[r.mm.id] = { amount: Number(p.amount)||0, date: p.date||"", note: p.note||"" }; if(p.free) mo.paid[r.mm.id].free = true;
     res.players++;
   });
   (fileMonth.expenses||[]).forEach(e=>{
@@ -10189,7 +10257,7 @@ function exportFinancePdf(key){
     const rec = mo.paid[mm.id];
     const amt = rec ? (Number(rec.amount)||0) : 0;
     const cat = mm.categoryId ? financeCategoryById(mm.categoryId) : null;
-    return [String(i+1), mm.name, cat?cat.name:"-", amt>0? fmtMoney(amt) : "-", (rec&&rec.date)?rec.date:"-", amt>0?"PAID":"NOT PAID"];
+    return [String(i+1), mm.name, cat?cat.name:"-", amt>0? fmtMoney(amt) : (isPaidRec(rec)?"FREE":"-"), (rec&&rec.date)?rec.date:"-", isPaidRec(rec)?"PAID":"NOT PAID"];
   });
   y = drawTable(doc, y, ["#","Player","Category","Amount","Date","Status"], [8,48,32,28,28,30], rows, 14, PDF_COLORS.blue);
 
@@ -10256,7 +10324,7 @@ function exportFinanceSummaryPdf(){
     const today = monthKeyOf();
     const mrows = members.map((mm,i)=>{
       let total = 0, paidM = 0;
-      f.months.forEach(mo=>{ const r = mo.paid[mm.id]; if(r && (Number(r.amount)||0)>0){ total += Number(r.amount); paidM++; } });
+      f.months.forEach(mo=>{ const r = mo.paid[mm.id]; if(isPaidRec(r)){ total += Number(r.amount)||0; paidM++; } });
       const due = f.months.filter(mo=>mo.key<=today).length - paidM;
       return [String(i+1), mm.name, fmtMoney(total), String(paidM), due>0?String(due):"-"];
     });
@@ -10641,7 +10709,7 @@ function renderSetup(){
     ['basics','⚙️','Series Basics',`${state.totalMatches} matches · ${state.standardOvers} overs`,'ecs-c1'],
     ['mode','🏏','Series Mode',state.standardMode?'Standard cricket: ON':'Standard cricket: OFF','ecs-c3'],
     ['quota','🎯','Series Quota Selection',state.quotaMode==='fixed'?'FIXED (assigned)':'AUTO (equal share)','ecs-c4'],
-    ['penalty','🚫','Set Absent Player Penalty',`Bat ${getAbsentPenaltyBalls('bat')} · Bowl ${getAbsentPenaltyBalls('bowl')} balls`,'ecs-c5'],
+    ['penalty','🚫','Penalty Setting',`Bat ${getAbsentPenaltyBalls('bat')} · Bowl ${getAbsentPenaltyBalls('bowl')} balls`,'ecs-c5'],
     ['match','🏏','Match Day',(state.matches.filter(m=>m.status==='paused').length?state.matches.filter(m=>m.status==='paused').length+' pending':'Naya match / schedule'),'ecs-c2'],
     ['stats','📊','Player Stats','Is series ke stats','ecs-c7'],
     ['history','📋','History','Is series ke matches','ecs-c6']
@@ -11222,6 +11290,7 @@ function ecsOpenSeries(s){ switchSeries(s.id); }
 /* --- Caps / extra settings: ab engine ke minBowlersRequired ko bhi override kiya ja sakta hai --- */
 function minBowlersRequired(overs){ const v = state && state.minBowlers; if(typeof v==='number' && v>=1) return Math.round(v); return overs>=7 ? 5 : 4; }
 function ecsDefaultsFor(ns){
+  try{ const pd = root.penDefaults; if(pd){ ns.pen = Object.assign({a3:false,a4:false,ent:false}, pd.pen||{}); if(typeof pd.bat==='number') ns.absentPenaltyBat = pd.bat; if(typeof pd.bowl==='number') ns.absentPenaltyBowl = pd.bowl; } }catch(e){}
   const d = root.defaults || {};
   ['capBat','capBowl','minRetire','minBowlers'].forEach(k=>{ if(typeof d[k]==='number') ns[k] = d[k]; });
 }
@@ -11413,14 +11482,38 @@ function renderSetup(){
       };
     }
     if(ecsSub==='penalty'){
-      wrap.appendChild(el(`<div class="card"><h2>🚫 Set Absent Player Penalty</h2><div class="grid2">
+      const pc = penCfg(s);
+      const sw = (id,on,title,desc)=>`<label class="row" style="align-items:flex-start;gap:10px;cursor:pointer;margin:10px 0;"><input type="checkbox" id="${id}" ${on?'checked':''} style="margin-top:3px;width:18px;height:18px;flex-shrink:0;"><span style="font-size:.85rem;line-height:1.5;"><b>${title}</b><br><span class="muted" style="font-size:.76rem;">${desc}</span></span></label>`;
+      const keep = !!root.penKeep;
+      wrap.appendChild(el(`<div class="card"><h2>🚫 Penalty Setting</h2>
+        <p class="muted" style="font-size:.76rem;margin:0 0 6px;">Ye settings sirf is series ke liye hain. Naye series me start par "Default" wali settings lagti hain.</p>
+        <h3 style="margin:10px 0 4px;">1️⃣ Current match absent players</h3>
+        <div class="grid2">
         <div><label>🏏 Batting penalty (balls)</label><input type="number" id="apb" value="${getAbsentPenaltyBalls('bat')}" min="1" max="24"></div>
         <div><label>⚾ Bowling penalty (balls)</label><input type="number" id="apw" value="${getAbsentPenaltyBalls('bowl')}" min="1" max="24"></div></div>
-        <p class="muted" style="font-size:.74rem;margin:8px 0 0;">Absent (uncovered) player ki itni balls season quota se katti hain aur Bonus Pool mein jaati hain.</p></div>`));
-      wrap.querySelector('#apb').onchange = e=>{ const v=Math.max(1,Math.round(Number(e.target.value))||6); s.absentPenaltyBat=v; saveState(); showToast(`✅ Batting absent penalty: ${v} balls`, true); };
-      wrap.querySelector('#apw').onchange = e=>{ const v=Math.max(1,Math.round(Number(e.target.value))||6); s.absentPenaltyBowl=v; saveState(); showToast(`✅ Bowling absent penalty: ${v} balls`, true); };
-    }
-    return wrap;
+        <p class="muted" style="font-size:.74rem;margin:6px 0 0;">Jo player is match me absent ho, uski batting aur bowling ki itni balls entry hoti hain (season quota se katti hain).</p>
+        <h3 style="margin:14px 0 0;">2️⃣ Series ke 3 matches me absent → half quota</h3>
+        ${sw('pA3',pc.a3,'ON / OFF','Series ke 3 (ya zyada) matches me jo player absent ho, uska batting + bowling quota khud half ho jata hai. OFF = normal.')}
+        <h3 style="margin:14px 0 0;">3️⃣ 4 matches me absent → block</h3>
+        ${sw('pA4',pc.a4,'ON / OFF','4 (ya zyada) matches me absent player batting aur bowling dono me block rehta hai. Batting sirf bilkul akhir me aati hai (jab baaki sab out ho jayen ya sab ka quota/overs ho chuke hon). Bowling nahi milegi.')}
+        <h3 style="margin:14px 0 0;">4️⃣ Monthly entry penalty</h3>
+        ${sw('pEnt',pc.ent,'ON / OFF','Jis player ki is mahine ki Monthly Entry paid nahi (ya record me nahi), uska quota khud half ho jata hai. Entry paid hote hi wapas normal.')}
+        <hr style="border:0;border-top:1px solid #ffffff22;margin:14px 0;">
+        <h3 style="margin:0 0 4px;">⚙️ Default settings (naye series ke liye)</h3>
+        ${sw('pKeep',keep,'Agli series me bhi yehi settings rakho','ON hone par ye settings (upar ki sab) har naye series me khud lag jayengi. OFF = naye series me purani default.')}
+        <button class="btn gold small" id="pSaveDef">💾 Ye settings Default bana do</button>
+        <button class="btn secondary small" id="pResetDef">↩ Default reset (sab OFF, 6/6)</button>
+      </div>`));
+      const saveDef = ()=>{ root.penDefaults = { pen:Object.assign({}, penCfg(s)), bat:getAbsentPenaltyBalls('bat'), bowl:getAbsentPenaltyBalls('bowl') }; };
+      const upd = ()=>{ _quotaUsageCache = null; if(root.penKeep) saveDef(); saveState(); };
+      const setP = (id,k)=> wrap.querySelector(id).onchange = e=>{ s.pen = Object.assign(penCfg(s), {[k]:e.target.checked}); upd(); showToast('✅ Penalty setting save', true); };
+      setP('#pA3','a3'); setP('#pA4','a4'); setP('#pEnt','ent');
+      wrap.querySelector('#pKeep').onchange = e=>{ root.penKeep = e.target.checked; if(root.penKeep) saveDef(); saveState(); showToast(root.penKeep?'✅ Agli series me bhi yehi settings lagengi':'✅ Auto-keep OFF', true); };
+      wrap.querySelector('#pSaveDef').onclick = ()=>{ saveDef(); saveState(); showToast('✅ Ye settings ab naye series ki default hain', true); };
+      wrap.querySelector('#pResetDef').onclick = ()=>{ delete root.penDefaults; root.penKeep=false; saveState(); showToast('✅ Default reset', true); render(); };
+      wrap.querySelector('#apb').onchange = e=>{ const v=Math.max(1,Math.round(Number(e.target.value))||6); s.absentPenaltyBat=v; upd(); showToast(`✅ Batting absent penalty: ${v} balls`, true); };
+      wrap.querySelector('#apw').onchange = e=>{ const v=Math.max(1,Math.round(Number(e.target.value))||6); s.absentPenaltyBowl=v; upd(); showToast(`✅ Bowling absent penalty: ${v} balls`, true); };
+    }    return wrap;
   }
   const backLabel = kind==='tour' ? '← Tournament' : kind==='ind' ? '← Individual Matches' : '← Series Manager';
   wrap.appendChild(back(backLabel, ecsHubBack));
@@ -11435,7 +11528,7 @@ function renderSetup(){
     ['basics','⚙️','Series Basics',`${s.totalMatches} matches · ${s.standardOvers} overs · Bat ${capBat()} / Bowl ${capBowl()}`,'hub-t1'],
     ['mode','🏏','Series Mode',s.standardMode?'Standard cricket: ON':'Standard cricket: OFF','hub-t2'],
     ['quota','🎯','Series Quota Selection',s.quotaMode==='fixed'?'FIXED (assigned)':'AUTO (equal share)','hub-t3'],
-    ['penalty','🚫','Set Absent Player Penalty',`Bat ${getAbsentPenaltyBalls('bat')} · Bowl ${getAbsentPenaltyBalls('bowl')} balls`,'hub-t4'],
+    ['penalty','🚫','Penalty Setting',`Bat ${getAbsentPenaltyBalls('bat')} · Bowl ${getAbsentPenaltyBalls('bowl')} balls`,'hub-t4'],
     ['match','🏏','Match Day',pend ? pend+' pending' : 'Naya match / schedule','hub-t5'],
     ['stats','📊','Player Stats','Is series ke stats','hub-t6'],
     ['lb','🏅','Leaderboard','Top scorers, wickets, MVP','hub-t7'],
@@ -12920,7 +13013,7 @@ ECS_PK.finance = { file:d=>'Entry_'+String(d.title).replace(/\W+/g,'_'), async d
   const sum = monthSummary(key), mem = f.members.filter(x=>x.active!==false), red = '#ff7b7b', grn = '#7be3a0';
   const rs = v=>'Rs '+Number(v||0).toLocaleString('en-US');
   const g1 = {name:'Month Summary', color:'#f0a02a', rows:[['Pichla bacha hua',rs(sum.opening),''],['Collection',rs(sum.collection),sum.paidCount+'/'+sum.totalMembers+' paid'],['Kharcha',rs(sum.expense),sum.expenseCount+' entries'],['Net baqi',rs(sum.closing),'']].map(r=>({cells:[{t:r[0]},{t:r[1],c:r[0]==='Kharcha'?red:grn},{t:r[2]}]}))};
-  const g2 = {name:'Players ki entry', color:null, rows:mem.map(m=>{ const a = Number((mo.paid[m.id]||{}).amount)||0; return {cells:[{t:m.name}, a?rs(a):'—', {t:a?'PAID':'NOT PAID', c:a?grn:red}]}; })};
+  const g2 = {name:'Players ki entry', color:null, rows:mem.map(m=>{ const r0=mo.paid[m.id]||{}, a = Number(r0.amount)||0, pd = a>0||!!r0.free; return {cells:[{t:m.name}, a?rs(a):(pd?'FREE':'—'), {t:pd?'PAID':'NOT PAID', c:pd?grn:red}]}; })};
   return {title:'Monthly Entry', sub:monthShort(key), kicker:'ENTRY MANAGEMENT', groups:[g1,g2], rowH:66, nameSize:28,
     cols:[{h:'Name',w:.46,al:'l'},{h:'Amount',w:.27,al:'r',sz:26},{h:'Status',w:.27,al:'r',sz:24}]}; }, make:ecsMakeTable };
 
@@ -15246,7 +15339,7 @@ ECS_PK.entrypay = { file:d=>'Entry_PaidStatus_'+String(d.title).replace(/\W+/g,'
     const f = ensureFinance(), key = sp.key, mo = getMonth(key); if(!mo){ alert('Pehle mahina shuru karein.'); return null; }
     const mem = f.members.filter(x=>x.active!==false), paid = [], unpaid = []; let sp1 = 0, sd = 0;
     mem.forEach(m=>{ const rec = mo.paid[m.id] || {}, a = Number(rec.amount)||0;
-      if(a>0){ paid.push({name:m.name, right:fmtMoney(a), sub:[rec.date, rec.note].filter(Boolean).join(' · ')}); sp1 += a; }
+      if(a>0 || rec.free){ paid.push({name:m.name, right:a>0?fmtMoney(a):'FREE', sub:[rec.date, rec.note].filter(Boolean).join(' · ')}); sp1 += a; }
       else { const due = categoryFeeForMember(m, mo); unpaid.push({name:m.name, sub: due>0 ? 'Baqi: '+fmtMoney(due) : ''}); sd += due; } });
     paid.sort((a,b)=>a.name.localeCompare(b.name)); unpaid.sort((a,b)=>a.name.localeCompare(b.name));
     return {title:monthLabel(key), sub:`${paid.length} paid · ${unpaid.length} not paid`, paid, unpaid, sumPaid:sp1, sumDue:sd};
@@ -15293,7 +15386,7 @@ ECS_PK.entrypayall = { file:d=>'Entry_PaidStatus_AllMonths', lay:['5 months ek p
     const f = ensureFinance(); if(!f.months.length){ alert('Abhi koi mahina shuru nahi hua.'); return null; }
     const today = monthKeyOf(); let ms = f.months.filter(mo=>mo.key<=today); if(!ms.length) ms = f.months;
     const mem = f.members.filter(x=>x.active!==false);
-    const rows = mem.map(m=>{ const cells = ms.map(mo=> Number((mo.paid[m.id]||{}).amount)||0); return {name:m.name, cells, total:cells.reduce((a,b)=>a+b,0), unpaidKeys:ms.filter((mo,i)=>!cells[i]).map(mo=>mo.key)}; });
+    const rows = mem.map(m=>{ const cells = ms.map(mo=> { const r0=mo.paid[m.id]||{}; return (Number(r0.amount)||0) || (r0.free?0.001:0); }); return {name:m.name, cells, total:cells.reduce((a,b)=>a+b,0), unpaidKeys:ms.filter((mo,i)=>!cells[i]).map(mo=>mo.key)}; });
     rows.sort((a,b)=> a.unpaidKeys.length-b.unpaidKeys.length || a.name.localeCompare(b.name));
     return {months:ms.map(mo=>({key:mo.key, label:monthShort(mo.key)})), rows};
   }, make:ecsMakeEntryAll };
@@ -15907,8 +16000,8 @@ function clBadge(){
   if(!b){ b=document.createElement('div'); b.id='clbd'; b.style.cssText='position:fixed;top:6px;right:6px;z-index:60;font-size:11px;font-weight:700;padding:3px 9px;border-radius:12px;opacity:.95;cursor:pointer'; b.onclick=()=>{ clPull(true); }; document.body.appendChild(b); }
   const ad=isAdm(); let t,bg;
   if(!ad){ t='👁 Viewer'; bg='#5b4a00'; }
-  else if(SM==='manual'){ t = DIRTY ? '✋ Sync baaqi - dabao' : '✋ Manual · synced ✓'; bg = DIRTY ? '#b3541e' : '#0a6b3f'; }
-  else { t = DIRTY ? '☁ Admin · ⏳' : '☁ Admin'; bg='#0a6b3f'; }
+  else if(SM==='manual'){ t = DIRTY ? '✋ '+ecsRoleWord()+' · Sync baaqi - dabao' : '✋ '+ecsRoleWord()+' · Manual synced ✓'; bg = DIRTY ? '#b3541e' : '#0a6b3f'; }
+  else { t = DIRTY ? '☁ '+ecsRoleWord()+' · ⏳' : '☁ '+ecsRoleWord(); bg='#0a6b3f'; }
   b.textContent=t; b.style.background=bg; b.style.color='#fff';
 }
 async function clToken(){
@@ -16039,7 +16132,7 @@ function clCard(){
   const ad=isAdm();
   const c = el(`<div class="card" id="clcard"><h3 style="margin:0 0 6px;">☁ Cloud Sync</h3>
     <p class="muted" style="font-size:.8rem;margin:0 0 6px;">Data online save hota hai aur kisi bhi device par khul jata hai. <b>Admin</b> badal sakte hain, baaqi sab sirf <b>dekh</b> sakte hain.</p>
-    <p style="font-size:.82rem;margin:0 0 8px;"><b>Status:</b> <span id="clst">${ecsEsc(clSt)}</span>${CL?`<br><b>Club:</b> ${ecsEsc(CL.club)}<br><b>Role:</b> ${ad?'🟢 Admin ('+ecsEsc(AD.email)+')':'🟡 Viewer (sirf dekhna)'}`:''}</p>
+    <p style="font-size:.82rem;margin:0 0 8px;"><b>Status:</b> <span id="clst">${ecsEsc(clSt)}</span>${CL?`<br><b>Club:</b> ${ecsEsc(CL.club)}<br><b>Role:</b> ${ad?'🟢 '+ecsRoleWord()+' ('+ecsEsc(AD.email)+')':'🟡 Viewer (sirf dekhna)'}`:''}</p>
     <div class="row" style="flex-wrap:wrap;gap:6px;"></div></div>`);
   const row=c.querySelector('.row');
   const add=(t,cls,fn)=>{ const b=el(`<button class="btn ${cls}" data-cl="1">${t}</button>`); b.onclick=fn; row.appendChild(b); };
@@ -16052,7 +16145,7 @@ function clCard(){
 const VSAFE = /pdf|poster|export|download|⬇|🖨|📄|🖼|📑|📚|📊|📈|📋|career|leaderboard|🏅|profile|scorecard|card|back|←|peeche|home|close|cancel|band karein|open|dekhein|👁|history|stats|image|csv|png|fit|zoom|background|photo chuno|colour swap|ai prompt|🏆|📜|⋮|records?|^\s*(ok|✕|×|done|[◀▶⇄]️?)\s*$/i;
 const VDENY = /delete|hatay|hatao|remove|reset|wipe|saaf|clear|undo|redo|import|restore|edit|badlein|amend|\+|➕|\badd\b|create|naya|nayi|\bnew\b|shuru|start|resume|pause|assign|apply|confirm|swap|shuffle|replace|credit|replay|declare|tied|retire|bonus|attendance|squad manager|quota system|password|save|✏|✎|🗑|🧹|🔁|🔄|🎲|⚖|✍|📝|📥|📤|⬆|🔑|manual|fix\b|special|gap bharein|batting order|innings shuru|\bplay\b/i;
 document.addEventListener('click', ev=>{
-  if(!VW()) return;
+  if(!VW() && !(typeof ADRO==='function' && ADRO())) return;
   const b = ev.target.closest && ev.target.closest('button,label.btn,summary');
   if(!b || b.hasAttribute('data-cl') || b.closest('#clcard') || b.classList.contains('ecs-tile') || b.id==='backHomeBtn' || b.id==='backSerBtn') return;
   const mo=b.closest('.modal-overlay'); if(mo && mo.querySelector('#pthr')) return; /* poster modal: sirf design/PDF/image */
@@ -16067,11 +16160,11 @@ document.addEventListener('click', ev=>{
 
 /* ---- Entry Management viewer se chhupa hua ---- */
 (function(){
-  const rn=renderNav; renderNav=function(){ const g=rn.apply(this,arguments); if(NOFIN()) g.querySelectorAll('.ecs-tile').forEach(b=>{ if(/Monthly Entry/.test(b.textContent)) b.remove(); }); return g; };
+  const rn=renderNav; renderNav=function(){ const g=rn.apply(this,arguments); if(NOFIN()) g.querySelectorAll('.ecs-tile').forEach(b=>{ if(/Monthly Entry/.test(b.textContent)){ b.onclick=ev=>{ if(ev) ev.stopPropagation(); ecsPosterOpen({kind:'entrypay', key:(getMonth(monthKeyOf())?monthKeyOf():((ensureFinance().months.slice(-1)[0]||{}).key||monthKeyOf())), pub:true}); }; const sm=b.querySelector('small'); if(sm) sm.textContent='Paid / Not Paid list'; } }); return g; };
   const ri=_renderInner; _renderInner=function(){ if(NOFIN() && activeTab==='finance') activeTab=null; return ri.apply(this,arguments); };
   const dn=duesNoteFor; duesNoteFor=function(){ return NOFIN()?"":dn.apply(this,arguments); };
   const dt=duesTagFor; duesTagFor=function(){ return NOFIN()?"":dt.apply(this,arguments); };
-  const po=ecsPosterOpen; ecsPosterOpen=function(spec){ if(NOFIN() && spec && /^(finance|financeAll|entrypay|entrypayall)$/.test(spec.kind||'')) return; return po.apply(this,arguments); };
+  const po=ecsPosterOpen; ecsPosterOpen=function(spec){ if(NOFIN() && spec && /^(finance|financeAll|entrypay|entrypayall)$/.test(spec.kind||'')){ if(spec.kind==='entrypay' && spec.pub) return po.apply(this,arguments); return; } return po.apply(this,arguments); };
   exportBackup=function(){
     let r=root; if(NOFIN()){ r=JSON.parse(JSON.stringify(root)); delete r.finance; delete r.editPassword; }
     const blob=new Blob([JSON.stringify(r,null,2)],{type:"application/json"}); const url=URL.createObjectURL(blob);
@@ -16096,6 +16189,8 @@ const RLK='ecs_role', DVK='ecs_dev', DGK='ecs_dig', LQK='ecs_logq', BKK='ecs_las
 let ROLE = null, _roleAt = 0, _digNow = null;
 try{ const r = JSON.parse(localStorage.getItem(RLK)||'null'); if(r && AD && r.email===AD.email) ROLE = r; }catch(x){}
 const lc = s => String(s||'').trim().toLowerCase();
+function ecsRoleWord(){ try{ if(ROLE && !ROLE.legacy){ if(ROLE.none) return 'Viewer'; if(ROLE.owner) return 'Owner'; return ({manager:'Manager',scorer:'Scorer'})[ROLE.role]||'Custom'; } }catch(x){} return 'Admin'; }
+setInterval(()=>{ try{ clBadge(); }catch(x){} }, 4000);
 const ekey = e => lc(e).replace(/\./g,',');
 function can(p){
   if(!CL || !isAdm()) return true;            /* local mode / viewer: viewer ka apna lock pehle se hai */
@@ -16272,24 +16367,26 @@ setInterval(()=>{ if(CL && isAdm()) ecsFlushLog(false); }, 90000);
 
 /* ---------- Permission gates ---------- */
 const TABNEED = {series:'score',tours:'score',indiv:'score',play:'score',setup:'score',match:'score',stats:'score',history:'score',lb:'score',teams:'teams',players:'players',rules:'settings',finance:'money',editmatch:'edit'};
-const TILENEED = [[/Series Manager|Tournament Manager|Individual Match|Play Match/,'score'],[/Teams Manager/,'teams'],[/Players List/,'players'],[/Rules & Regulations/,'settings'],[/Monthly Entry/,'money']];
+const TILENEED = [];
+const ADRO = ()=>{ try{ if(!(CL&&isAdm())) return false; const need=TABNEED[activeTab]; if(need && need!=='money' && !can(need)) return true; if(ecsSub && /^(basics|mode|quota|penalty)$/.test(ecsSub) && !can('settings')) return true; return false; }catch(e){ return false; } };
 const HUBSET = /Series Basics|Series Mode|Series Quota|Absent Player Penalty/;
 (function(){
   const rn = renderNav;
   renderNav = function(){ const g = rn.apply(this,arguments); if(CL && isAdm()) g.querySelectorAll('.ecs-tile').forEach(b=>{ const t=b.textContent; TILENEED.forEach(([re,p])=>{ if(re.test(t) && !can(p)) b.remove(); }); }); return g; };
   const rs = renderSetup;
-  renderSetup = function(){ const w = rs.apply(this,arguments); if(CL && isAdm() && !can('settings')) w.querySelectorAll('.ecs-tile').forEach(b=>{ if(HUBSET.test(b.textContent)) b.remove(); }); return w; };
+  renderSetup = function(){ return rs.apply(this,arguments); };
   const oq = openQuotaSystemModal;
-  openQuotaSystemModal = function(){ if(CL && isAdm() && !can('settings')) return ecsDeny(); return oq.apply(this,arguments); };
+  openQuotaSystemModal = function(){ return oq.apply(this,arguments); };
   const orr = render;
   render = function(){
     if(CL && isAdm()){
-      const need = TABNEED[activeTab]; if(need && !can(need)){ ecsDeny(); activeTab=null; ecsSub=null; }
-      if(ecsSub && /^(basics|mode|quota|penalty)$/.test(ecsSub) && !can('settings')){ ecsDeny(); ecsSub=null; }
+      if(activeTab==='finance' && !can('money')){ activeTab=null; ecsSub=null; }
       if(ecsNewSeries && !can('newseries')){ ecsDeny('Naya series banane ka haq nahi.'); ecsNewSeries=null; }
       if(ecsNewTour && !can('newseries')){ ecsDeny('Naya tournament banane ka haq nahi.'); ecsNewTour=null; }
     }
-    return orr.apply(this,arguments);
+    const r = orr.apply(this,arguments);
+    try{ if(ADRO()){ const ap=document.getElementById('app')||document.body; ap.querySelectorAll('input,select,textarea').forEach(n=>{ if(!n.closest('#clcard')) n.disabled=true; }); } }catch(e){}
+    return r;
   };
   const oc = window.confirm;
   window.confirm = function(m){
@@ -16522,6 +16619,9 @@ async function ecsBackupPanel(){
   async function refresh(){
     try{ _VC=await vAll(); const tomb=(root&&root.delUids)||{};
       for(const e of _VC){ if(!e.dismissed && tomb[e.uid]){ e.dismissed=true; await vPut(e); } }
+      for(const e of _VC){ if(!e.dismissed && /^f/.test(e.uid) && !present(e)){
+        const s=(root.seriesList||[]).find(x=>x.id===e.sid);
+        if(s && (s.matches||[]).some(m=>m.date===e.date && (m.status==='completed'||m.status==='live') && m.uid && !/^f/.test(m.uid))){ e.dismissed=true; await vPut(e); } } }
       _lost=_VC.filter(e=>(e.status==='completed'||e.status==='live') && !e.dismissed && !present(e)); }catch(e){ _VC=[]; _lost=[]; }
     lostUI(); try{ clBadge(); }catch(e){}
   }
@@ -16562,6 +16662,17 @@ async function ecsBackupPanel(){
   function dl(name,obj){ const b=new Blob([typeof obj==='string'?obj:JSON.stringify(obj)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{ try{URL.revokeObjectURL(a.href); a.remove();}catch(e){} },4000); }
   const entFile = e=>({ecsMatch:1, uid:e.uid, sid:e.sid, sname:e.sname, ser:e.ser, number:e.number, date:e.date, status:e.status, fp:e.fp, label:e.label, match:e.match});
   const fname = e=> 'ECS_match_'+(e.date||'')+'_M'+(e.number||'')+'.json';
+  /* v108 — match ka PDF (share / download) */
+  function capPdf(run){ const o=savePdfWithData; let got=null; savePdfWithData=function(doc,fn,payload){ try{ const u8=new Uint8Array(doc.output('arraybuffer')); const b=payload?embedJsonInPdfBytes(u8,payload):u8; got=new File([b],fn,{type:'application/pdf'}); }catch(x){} }; try{ run(); }catch(x){} savePdfWithData=o; return got; }
+  async function sharePdf(e){
+    const s0=root.seriesList.find(x=>x.id===e.sid), m=s0&&(s0.matches||[]).find(x=>x.uid===e.uid);
+    if(!m){ alert('Ye match abhi app me nahi hai - pehle "📥 Wapas jodo" karo, phir PDF banao.'); return; }
+    const prev=state; let f=null; try{ state=s0; _quotaUsageCache=null; f=capPdf(()=>exportMatchPdf(m)); } finally{ state=prev; _quotaUsageCache=null; }
+    if(!f){ alert('PDF nahi ban saki (internet / PDF library check karo).'); return; }
+    try{ if(navigator.canShare && navigator.canShare({files:[f]})){ await navigator.share({files:[f], title:e.label}); return; } }catch(x){ if(x&&x.name==='AbortError') return; }
+    const a=document.createElement('a'); a.href=URL.createObjectURL(f); a.download=f.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  }
+  window.ecsSharePdf=sharePdf;
   async function shareEnt(e){
     try{ const f=new File([JSON.stringify(entFile(e))], fname(e), {type:'application/json'});
       if(navigator.canShare && navigator.canShare({files:[f]})){ await navigator.share({files:[f], title:e.label}); return; } }catch(x){ if(x&&x.name==='AbortError') return; }
@@ -16570,8 +16681,9 @@ async function ecsBackupPanel(){
   function offer(e){
     try{
       const old=document.getElementById('ecsOffer'); if(old) old.remove();
-      const d=el(`<div id="ecsOffer" style="position:fixed;left:10px;right:10px;bottom:10px;z-index:99998;background:#0a3d6b;border:2px solid #5aa9ff;border-radius:14px;padding:10px 12px;color:#fff;font-size:.82rem;box-shadow:0 6px 24px rgba(0,0,0,.5)"><b>✅ Match poora hua — file ki copy rakh lo</b><div style="opacity:.85;margin:3px 0 8px">${esc(e.label)}</div><div style="display:flex;gap:8px"><button data-a="s" class="btn gold small" data-cl="1" style="flex:1">📤 Share / Save file</button><button data-a="x" class="btn secondary small" data-cl="1" style="flex:0">✕</button></div></div>`);
+      const d=el(`<div id="ecsOffer" style="position:fixed;left:10px;right:10px;bottom:10px;z-index:99998;background:#0a3d6b;border:2px solid #5aa9ff;border-radius:14px;padding:10px 12px;color:#fff;font-size:.82rem;box-shadow:0 6px 24px rgba(0,0,0,.5)"><b>✅ Match poora hua — PDF share / save kar lo</b><div style="opacity:.85;margin:3px 0 8px">${esc(e.label)}</div><div style="display:flex;gap:8px"><button data-a="p" class="btn gold small" data-cl="1" style="flex:1">📄 PDF share / save</button><button data-a="s" class="btn secondary small" data-cl="1" style="flex:0">JSON</button><button data-a="x" class="btn secondary small" data-cl="1" style="flex:0">✕</button></div></div>`);
       d.querySelector('[data-a=s]').onclick=()=>{ shareEnt(e); d.remove(); };
+      d.querySelector('[data-a=p]').onclick=()=>{ sharePdf(e); d.remove(); };
       d.querySelector('[data-a=x]').onclick=()=>d.remove();
       document.body.appendChild(d); setTimeout(()=>{ try{d.remove();}catch(x){} },90000);
     }catch(x){}
@@ -16592,6 +16704,7 @@ async function ecsBackupPanel(){
   async function scan(){
     if(!canV()||!root||!root.seriesList) return;
     try{
+      let _ch=false; root.seriesList.forEach(s=>(s.matches||[]).forEach(m=>{ if(!m.uid){ m.uid=uidNew(); _ch=true; } })); if(_ch){ try{ saveState(); }catch(x){} }
       const cur=new Set(); root.seriesList.forEach(s=>(s.matches||[]).forEach(m=>{ if(m.uid) cur.add(m.uid); }));
       /* khud (is device par) delete kiya gaya match = jaan-boojh kar: tombstone, taake gayab-alert na aaye aur doosre devices par bhi na aaye */
       if(_delSet && Date.now()-_userDel<120000){
@@ -16692,7 +16805,8 @@ async function ecsBackupPanel(){
           const c=el(`<div class="card" style="margin:6px 0;${(!here&&!e.dismissed&&e.status==='completed')?'border:2px solid #b00020;':''}"><div style="font-size:.8rem;"><b>${esc(e.label)}</b><br><span class="muted">${esc(e.sname)} · ${esc(e.date||'')} · ${tag}<br>Vault mein save: ${fmtT(e.savedAt)} · source: ${esc(e.src||'')}</span></div><div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap;"></div></div>`);
           const r2=c.querySelector('.row'); const add2=(t,cls,fn)=>{ const x=el(`<button class="btn ${cls} small" data-cl="1">${t}</button>`); x.onclick=fn; r2.appendChild(x); };
           if(!here) add2('📥 Wapas jodo','gold',()=>{ const res=insertEntry(e); if(res==='ok'){ showToast('✅ Match wapas aa gaya'); } else alert(res); draw(); });
-          add2('📤 File','secondary',()=>shareEnt(e));
+          add2('📄 PDF','gold',()=>sharePdf(e));
+          add2('📤 JSON','secondary',()=>shareEnt(e));
           if(!here&&!e.dismissed) add2('🙈 Chhupao','secondary',async()=>{ e.dismissed=true; await vPut(e); draw(); });
           b.appendChild(c);
         });
