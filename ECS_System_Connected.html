@@ -15485,10 +15485,15 @@ function ecsSsBuild(s){
           p('• Bonus: jaldi out hone, adhoora over, ya absent cover na hone se bachi balls team ke pool mein jati hain; gap bharne mein pehle bonus use hota hai.'),
           p('• Special: bonus khatam ho to gap bharne ke liye di jati hai — ye quota ya bonus mein nahi ginti aur ek stint/over ke baad khatam ho jati hai.')]});
       }
-      B.push({head:'ATTENDANCE & ENTRY RULES', icon:'⚠️', color:'#b3261e', items:[
-        p('• Jo player lagatar 2 din ya poori series ke 3 matches mein available nahi hoga, uska quota aadha kar diya jayega.'),
-        p('• Jo player 4 matches mein available nahi hoga, uska quota bilkul lock — wo is series mein nahi khel sakega.'),
-        p('• Captains ki zimmedari hai ke jin players ki entry jama hai unhein priority par khilayein.')]});
+      { const pc=penCfg(s), oo=v=>v?'ON':'OFF';
+        B.push({head:'PENALTY SETTINGS (ATTENDANCE & ENTRY)', icon:'⚠️', color:'#b3261e', items: std ? [p('Standard Cricket Mode ON hai — koi attendance / entry penalty lagu nahi.')] : [
+          kv('Current match absent — batting', getAbsentPenaltyBalls('bat')+' balls', true), kv('Current match absent — bowling', getAbsentPenaltyBalls('bowl')+' balls', true),
+          kv('3+ matches absent → HALF quota', oo(pc.a3), pc.a3), p(pc.a3 ? 'Series ke 3 (ya zyada) matches mein absent player ka batting + bowling quota khud half ho jata hai.' : 'Is series mein ye penalty band hai.'),
+          kv('4+ matches absent → BLOCK', oo(pc.a4), pc.a4), p(pc.a4 ? 'Player batting + bowling dono mein block. Batting sirf bilkul akhir mein (jab baaki sab out ya quota khatam), bowling nahi milegi.' : 'Is series mein ye penalty band hai.'),
+          kv('Monthly entry unpaid → HALF quota', oo(pc.ent), pc.ent), p(pc.ent ? 'Jis player ki is mahine ki Monthly Entry paid nahi, uska quota half. Paid hote hi wapas normal.' : 'Is series mein ye penalty band hai.'),
+          p('• Captains ki zimmedari hai ke jin players ki entry jama hai unhein priority par khilayein.')]});
+        const pe = window.ecsPenEvents ? window.ecsPenEvents(s) : [];
+        B.push({head:'QUOTA HALF / LOCK RECORD', icon:'📉', color:'#8e1b5a', items: pe.length ? pe.map(e=>kv(e.name+' ('+e.team+')', (e.kind==='lock'?'LOCK':'HALF')+' · '+(e.t||'-')+(e.m?' · M'+e.m:'')+' · '+e.why, true)) : [p('Abhi kisi player ka quota half / lock nahi hua.')]}); }
       return {title:sName(s), sub:`${nm[0]} vs ${nm[1]} · ${s.totalMatches} matches · ${s.standardOvers} overs`, blocks:B};
     });
 }
@@ -16421,7 +16426,7 @@ function ecsPanel(title, build){
   document.body.appendChild(ov); build(ov.querySelector('.pbody'), ov); return ov;
 }
 const fmtT = t=>{ try{ return new Date(t).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } };
-const fillRules = ()=>{ const o=AD&&AD.email||'OWNER@EMAIL.COM'; const own="auth != null && auth.token.email === '"+o+"'";
+const fillRules0 = ()=>{ const o=AD&&AD.email||'OWNER@EMAIL.COM'; const own="auth != null && auth.token.email === '"+o+"'";
   return JSON.stringify({rules:{
     rsl:{'.read':true,'.write':"auth != null && (auth.token.email === '"+o+"' || root.child('ecsmeta/RSL/roles/admins').child(auth.token.email.replace('.', ',')).exists())"},
     jsl:{'.read':true,'.write':"auth != null && (auth.token.email === '"+o+"' || root.child('ecsmeta/JSL/roles/admins').child(auth.token.email.replace('.', ',')).exists())"},
@@ -16936,7 +16941,7 @@ async function ecsBackupPanel(){
      ['📴 Offline nishan','Net na ho to badge "Offline · phone mein safe" — scoring phone mein save hoti rehti hai.']
     ].forEach(([a,d])=>b.appendChild(el(`<div class="card" style="margin:6px 0"><b>${a}</b><div style="font-size:.8rem;margin-top:3px">${d}</div></div>`)));
   }); };
-  const _cc4=clCard; clCard=function(){ const c=_cc4.apply(this,arguments); try{ if(canV()){ const row=c.querySelector('.row'); if(row){ const x=el(`<button class="btn secondary" data-cl="1">📖 Safety features kya hain?</button>`); x.onclick=()=>ecsHelpPanel(); row.appendChild(x); } } }catch(e){} return c; };
+  const _cc4=clCard; clCard=function(){ const c=_cc4.apply(this,arguments); try{ if(canV() && isOwner()){ const row=c.querySelector('.row'); if(row){ const x=el(`<button class="btn secondary" data-cl="1">📖 Safety features kya hain?</button>`); x.onclick=()=>ecsHelpPanel(); row.appendChild(x); } } }catch(e){} return c; };
   setTimeout(()=>{ try{ if(canV()) scan(); else refresh(); }catch(e){} }, 4500);
 })();
 
@@ -16986,9 +16991,9 @@ async function ecsBackupPanel(){
       b.appendChild(el(`<div class="card"><b>${ecsEsc(AD?AD.email:'')}</b><br>Role: <b>${ecsEsc(roleName(r))}</b>${r&&r.legacy?'<br><span style="color:#ffd45f;font-size:.78rem">⚠ Owner ne roles system abhi chalu nahi kiya, isliye filhal har admin ko poore haq hain.</span>':''}</div>`));
       if(typeof s==='object'){
         b.appendChild(el(`<div class="card" style="margin-top:8px"><b style="color:#3ddc84">✅ Aap kar sakte hain</b><div style="font-size:.8rem;margin-top:4px">${s.ok.length?s.ok.map(x=>'• '+ecsEsc(x)).join('<br>'):'(kuch nahi — sirf dekhna)'}</div></div>`));
-        if(s.bad.length) b.appendChild(el(`<div class="card" style="margin-top:8px"><b style="color:#ff6b6b">❌ Sirf Owner (ya jise Owner de)</b><div style="font-size:.8rem;margin-top:4px">${s.bad.map(x=>'• '+ecsEsc(x)).join('<br>')}</div></div>`));
+        if(s.bad.length && isOwner()) b.appendChild(el(`<div class="card" style="margin-top:8px"><b style="color:#ff6b6b">❌ Sirf Owner (ya jise Owner de)</b><div style="font-size:.8rem;margin-top:4px">${s.bad.map(x=>'• '+ecsEsc(x)).join('<br>')}</div></div>`));
       }
-      b.appendChild(el(`<div class="card" style="margin-top:8px"><b>🧭 Kis role se kia hoga</b>${ecsMatrix()}</div>`));
+      if(isOwner()) b.appendChild(el(`<div class="card" style="margin-top:8px"><b>🧭 Kis role se kia hoga</b>${ecsMatrix()}</div>`));
     });
   };
 
@@ -17105,5 +17110,258 @@ loadState();
 clBadge(); clPull();
 </script>
 <script>/*offline install (service worker)*/if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol)){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}</script>
+<script>
+/* v104 adapter — ECS */
+const fillRules = ()=>window.__v104rules(fillRules0());
+(function(){
+  const nm=s=>{try{return sName(s)}catch(e){return (s.teams.A.name+' vs '+s.teams.B.name)}};
+  const kd=s=>s.kind||'bi';
+  const blank=s=>{try{return sBlank(s)}catch(e){return false}};
+  const cnt=ss=>ss.reduce((a,s)=>a+(s.matches||[]).filter(m=>m.status==='completed').length,0);
+  const lastDone=ss=>{let L=null;ss.forEach(s=>(s.matches||[]).forEach(m=>{if(m.status==='completed')L={s,m}}));return L};
+  const seriesOf=(k,id)=>{ if(k==='tour') return root.seriesList.filter(s=>s.tourId===id); if(k==='ind') return root.seriesList.filter(s=>kd(s)==='ind'&&!blank(s)); return root.seriesList.filter(s=>s.id===id); };
+  const names=ss=>[...new Set(ss.flatMap(s=>[s.teams.A.name,s.teams.B.name]))];
+  const goto=(fn)=>{ try{ fn(); }catch(e){} try{ render(); }catch(e){} };
+  const finMonth=()=>{ try{ const f=ensureFinance(); const ms=(f.months||[]).filter(m=>(m.paid&&Object.keys(m.paid).length)||(m.expenses||[]).length); return ms.length?ms[ms.length-1].key:null }catch(e){ return null } };
+
+  /* ---- Quota half / lock record (derive: kis din, kya wajah) ---- */
+  window.ecsPenEvents=function(s){
+    const out=[]; let c; try{ c=penCfg(s); }catch(e){ return out; }
+    if(isStandardModeOf(s)) return out;
+    ['A','B'].forEach(tk=>{ const cnt={}; const T=s.teams[tk];
+      (s.matches||[]).forEach(m=>{ if(!m||m.status==='setup'||!m.attendance||!m.attendance[tk]) return;
+        Object.keys(m.attendance[tk]).forEach(pid=>{ if(m.attendance[tk][pid]!==false) return;
+          cnt[pid]=(cnt[pid]||0)+1; const pl=(T.players||[]).find(p=>p.id===pid), nm=pl?pl.name:pid;
+          if(cnt[pid]===3&&c.a3) out.push({t:m.date||'',m:m.number,team:T.name,name:nm,kind:'half',why:'Series ke 3 matches mein absent'});
+          if(cnt[pid]===4&&c.a4) out.push({t:m.date||'',m:m.number,team:T.name,name:nm,kind:'lock',why:'4 matches mein absent'}); }); }); });
+    if(c.ent){ try{ withSeries(s,()=>{ const mk=monthKeyOf(); ['A','B'].forEach(tk=>(s.teams[tk].players||[]).forEach(pl=>{ if(penEntryUnpaid(tk,pl.id)) out.push({t:mk,m:0,team:s.teams[tk].name,name:pl.name,kind:'half',why:'Monthly entry paid nahi ('+mk+') - paid hote hi wapas normal',now:true}); })); }); }catch(e){} }
+    return out;
+  };
+  function isStandardModeOf(s){ try{ return !!withSeries(s,()=>isStandardMode()); }catch(e){ return false; } }
+  window.ecsPenRecordOpen=function(s){
+    const ev=window.ecsPenEvents(s); const esc2=x=>String(x==null?'':x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const o=document.createElement('div'); o.className='v104-box'; o.style.zIndex=150;
+    o.innerHTML='<div class="v104-md" style="max-width:480px"><div style="font-weight:900;font-size:1.05rem;margin-bottom:4px">📉 Quota Half / Lock Record</div><div style="font-size:.76rem;opacity:.8;margin-bottom:10px">'+esc2(nm(s))+' — kis player ka quota kis din half ya lock hua aur wajah kya thi.</div>'+
+      (ev.length?ev.map(e=>'<div style="border:1px solid '+(e.kind==='lock'?'#c0392b':'#d98e04')+';border-radius:12px;padding:9px 11px;margin:7px 0"><b>'+(e.kind==='lock'?'🔒 LOCK':'½ HALF')+'</b> · '+esc2(e.name)+' <span style="opacity:.75">('+esc2(e.team)+')</span><div style="font-size:.8rem;margin-top:3px">📅 '+esc2(e.t||'—')+(e.m?' · Match '+e.m:'')+'<br>Wajah: '+esc2(e.why)+'</div></div>').join(''):'<div style="padding:10px;text-align:center;opacity:.85">Abhi kisi player ka quota half / lock nahi hua.</div>')+
+      '<button data-cl="1" style="width:100%;margin-top:10px;background:#d63b58;border:0;border-radius:11px;padding:11px;color:#fff;font-weight:800">Band karo</button></div>';
+    o.querySelector('button').onclick=()=>o.remove(); document.body.appendChild(o);
+  };
+
+  window.__W104={ p:'ecs',
+    AD:()=>AD, setAD:a=>{AD=a;_tok=null;try{localStorage.setItem(EAK,JSON.stringify(a))}catch(e){}},
+    isAdm:()=>isAdm(), name:()=>(ROLE&&ROLE.name)||(AD&&AD.email), roleWord:()=>ecsRoleWord(), dev:()=>ecsDev(), ua:()=>ecsUA(),
+    logout:()=>{ AD=null;_tok=null;ROLE=null; try{localStorage.removeItem(EAK);localStorage.removeItem(RLK)}catch(e){} clSt='👁 Viewer'; try{clBadge()}catch(e){} try{ if(_lastJ) clApply(_lastJ) }catch(e){} try{render()}catch(e){} },
+    refresh:()=>{try{render()}catch(e){}}, toast:(m,ok)=>showToast(m,ok!==false),
+    panel:(t,fn)=>ecsPanel(t,(b,ov)=>fn(b,ov)),
+    wrapLogout:fn=>{ const o=clAdminLogout; clAdminLogout=function(){ return fn(()=>o.apply(this,[])) }; },
+    pv:{ def:'bi', canAuto:()=>!activeTab,
+      kinds:[['bi','📅','Series Preview','Abhi koi series nahi chal rahi.'],['tour','🏆','Tournament Preview','Isme abhi koi tournament nahi hai.'],['ind','⚡','Individual Match Preview','Isme abhi koi individual match nahi hua.']],
+      acts(k){
+        if(k==='bi'){ const L=root.seriesList.filter(s=>kd(s)==='bi'&&!blank(s)).slice().reverse(); const a=L.findIndex(s=>s.id===root.activeSeriesId); if(a>0) L.unshift(L.splice(a,1)[0]); return L.map(s=>({id:s.id,name:nm(s),sub:cnt([s])+' match complete'})); }
+        if(k==='tour') return (root.tours||[]).slice().reverse().map(t=>({id:t.id,name:t.name||'Tournament',sub:cnt(seriesOf('tour',t.id))+' match complete'}));
+        const I=seriesOf('ind'); return I.length?[{id:'all',name:'Individual Matches',sub:cnt(I)+' match complete'}]:[];
+      },
+      btns(k,id){
+        const S=seriesOf(k,id); const ld=lastDone(S); const t0=k==='tour'?(root.tours||[]).find(x=>x.id===id):null; const s0=k==='bi'?S[0]:(ld?ld.s:(S[S.length-1]||null));
+        const what={bi:'series',tour:'tournament',ind:'individual match'}[k];
+        const title=k==='bi'?nm(S[0]||{teams:{A:{name:''},B:{name:''}}}):k==='tour'?(t0&&t0.name):'Individual Matches';
+        const fm=finMonth();
+        return [
+          {ic:'🏏',t:'Last Completed Match',sub:ld?('Match '+ld.m.number+' · '+(ld.m.resultText||'')).slice(0,70):'',bg:'linear-gradient(135deg,#e8590c,#f08c00)',on:!!ld,why:'Is '+what+' mein abhi koi match complete nahi hua.',run:()=>ecsPosterOpen({kind:'scorecard',s:ld.s,m:ld.m})},
+          {ic:'🎯',t:'Current Quota Information',sub:'Dono teams ka batting + bowling quota (card / PDF)',bg:'linear-gradient(135deg,#0b7285,#1098ad)',on:!!(s0&&(s0.teams.A.players.length||s0.teams.B.players.length)),why:'Is '+what+' mein abhi quota / players set nahi hue.',run:()=>ecsPosterOpen({kind:'quota',s:s0})},
+          {ic:'📚',t:k==='bi'?'View Complete Series Details':k==='tour'?'View Complete Tournament Details':'View Individual Match History',sub:'Saare matches ek ek karke (history)',bg:'linear-gradient(135deg,#5f3dc4,#7048e8)',on:S.length>0,why:'Abhi koi detail nahi.',run:cl=>{cl();goto(()=>{ if(k==='tour'){ ecsTourOpen=id; activeTab='tours'; } else if(k==='ind'){ activeTab='indiv'; } else { root.activeSeriesId=id; state=S[0]; activeTab='history'; } })}},
+          {ic:'🏅',t:'Series Leaderboard',sub:'Top scorers · wickets · sixes · MVP',bg:'linear-gradient(135deg,#2b8a3e,#37b24d)',on:!!ld,why:'Leaderboard ke liye pehle koi match complete hona chahiye.',run:cl=>{cl();ecsOpenLb({title:title||'Leaderboard',ids:S.map(x=>x.id),teams:names(S),back:{tab:null}})}},
+          {ic:'💰',t:'View Monthly Entry',sub:'Paid / Unpaid card',bg:'linear-gradient(135deg,#c2255c,#e64980)',on:k==='bi'&&!!fm,why:k==='bi'?'Is series mein abhi koi entry system nahi / entry nahi hui.':'Is '+what+' ka koi entry system nahi hai.',run:()=>ecsPosterOpen({kind:'entrypay',key:fm,pub:true})},
+          {ic:'📉',t:'Quota Half / Lock Record',sub:'Kis player ka quota kab aur kyun half / lock hua',bg:'linear-gradient(135deg,#8e1b5a,#c2255c)',on:!!s0&&!!(s0.pen&&(s0.pen.a3||s0.pen.a4||s0.pen.ent)),why:'Is series mein penalty setting ON nahi hai, is liye koi half / lock nahi.',run:()=>window.ecsPenRecordOpen(s0)},
+          {ic:'⚙️',t:'Series Basics Settings',sub:'Quota · penalty · caps · rules ka poster',bg:'linear-gradient(135deg,#364fc7,#4c6ef5)',on:!!s0,why:'Settings abhi available nahi.',run:()=>ecsPosterOpen({kind:'sset',s:s0})},
+          {ic:'📜',t:'View Rules & Regulations',sub:'Sab ke liye',bg:'linear-gradient(135deg,#a61e4d,#d6336c)',on:true,run:()=>ecsPosterOpen({kind:'rules'})}
+        ];
+      } }
+  };
+  /* Owner button: Logged-in Devices */
+  const _cc=clCard; clCard=function(){ const c=_cc.apply(this,arguments); try{ if(CL&&isAdm()&&isOwner()){ const row=c.querySelector('.row'); if(row){ const b=el(`<button class="btn gold" data-cl="1">📱 Logged-in Devices</button>`); b.onclick=()=>window.__v104sessions(); row.appendChild(b); } } }catch(e){} return c; };
+})();
+
+</script>
+<script>
+/* ===================== v104 — Session control (auto-logout, Owner device manager) + Startup Preview ===================== */
+(function(){
+if(window.__v104) return; window.__v104=1;
+const W=window.__W104; if(!W) return;
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const mk=h=>{const d=document.createElement('div');d.innerHTML=h.trim();return d.firstChild};
+const ls={g:k=>{try{return localStorage.getItem(k)}catch(e){return null}},s:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},d:k=>{try{localStorage.removeItem(k)}catch(e){}}};
+const DEVK=W.p+'_devid', HELDK=W.p+'_admin_held', ACKK=W.p+'_ctl_ack', LOGK=W.p+'_login_at';
+const devId=()=>{let d=ls.g(DEVK);if(!d){d=Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-4);ls.s(DEVK,d)}return d};
+const ago=t=>{if(!t)return '—';const m=Math.round((Date.now()-t)/60000);if(m<1)return 'abhi';if(m<60)return m+' min pehle';const h=Math.round(m/60);if(h<48)return h+' ghante pehle';return Math.round(h/24)+' din pehle'};
+const fT=t=>{try{return new Date(t).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}catch(e){return ''}};
+const ctlUrl=id=>CL.url.replace(/\/+$/,'')+'/ecsmeta/'+encodeURIComponent(CL.club)+'/ctl/'+id+'.json';
+
+/* ---------- css ---------- */
+const st=document.createElement('style');st.textContent=`
+.v104-box{position:fixed;inset:0;z-index:260;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;padding:14px}
+.v104-md{background:#14203f;border:2px solid #3c57b0;border-radius:16px;padding:16px;max-width:430px;width:100%;color:#eef3ff;font-size:.92rem;max-height:90vh;overflow:auto}
+.v104-md button{font:inherit;font-weight:800;border:0;border-radius:11px;padding:11px 14px;color:#fff;cursor:pointer}
+.pv104{position:fixed;inset:0;z-index:120;background:rgba(3,8,22,.92);overflow:auto;padding:10px;font-family:inherit;color:#eef3ff}
+.pv104 .in{max-width:520px;margin:0 auto;background:linear-gradient(160deg,#101b3a,#0b1226);border:1px solid #2f4a9a;border-radius:20px;padding:14px 14px 18px;box-shadow:0 10px 40px #000a}
+.pv104 .hd{display:flex;align-items:center;gap:8px;margin-bottom:10px}.pv104 .hd h2{margin:0;font-size:1.15rem;flex:1}
+.pv104 .x{border:0;background:#2a3768;color:#fff;font-size:1.2rem;font-weight:900;width:38px;height:38px;border-radius:50%;cursor:pointer}
+.pv104 .tabs{display:flex;gap:6px;margin-bottom:10px}.pv104 .tab{flex:1;border:2px solid #34498f;background:#16224a;color:#cfe0ff;border-radius:12px;padding:8px 4px;font:inherit;font-weight:800;font-size:.74rem;cursor:pointer;line-height:1.25}
+.pv104 .tab.on{background:linear-gradient(135deg,#4f7bff,#7a4dff);border-color:#9bb5ff;color:#fff}
+.pv104 .act{width:100%;margin:0 0 10px;padding:10px;border-radius:12px;background:#16224a;color:#fff;border:1px solid #34498f;font:inherit;font-weight:700}
+.pv104 .note{background:#1b2a58;border-radius:12px;padding:14px;text-align:center;color:#b8c8f0;font-size:.88rem}
+.pv104 .bt{display:flex;align-items:center;gap:11px;width:100%;text-align:left;border:0;border-radius:14px;padding:13px 14px;margin:0 0 9px;color:#fff;font:inherit;font-weight:800;font-size:.95rem;cursor:pointer}
+.pv104 .bt .ic{font-size:1.5rem}.pv104 .bt small{display:block;font-weight:500;opacity:.85;font-size:.72rem;margin-top:2px}
+.pv104 .bt.off{opacity:.45;filter:grayscale(.6)}
+.pv104 .cl{width:100%;margin-top:8px;border:0;border-radius:14px;padding:13px;background:#e0445f;color:#fff;font:inherit;font-weight:900;font-size:.98rem;cursor:pointer}
+#pv104chip{position:fixed;top:6px;left:6px;z-index:59;font-size:11px;font-weight:800;padding:3px 9px;border-radius:12px;background:#3b2d8c;color:#fff;cursor:pointer;border:1px solid #8c7bff}
+`;document.head.appendChild(st);
+
+/* ---------- tiny dialogs (hamesha sab se upar) ---------- */
+function say(title,msg,okTxt){return new Promise(res=>{const o=mk(`<div class="v104-box"><div class="v104-md"><div style="font-weight:900;font-size:1.02rem;margin-bottom:8px">${esc(title)}</div><div style="white-space:pre-wrap;margin-bottom:12px">${esc(msg)}</div><button data-cl="1" style="width:100%;background:#2f7d55">${esc(okTxt||'OK')}</button></div></div>`);o.querySelector('button').onclick=()=>{o.remove();res()};document.body.appendChild(o)})}
+function ask(title,msg,yes,no){return new Promise(res=>{const o=mk(`<div class="v104-box"><div class="v104-md"><div style="font-weight:900;font-size:1.02rem;margin-bottom:8px">${esc(title)}</div><div style="white-space:pre-wrap;margin-bottom:12px">${esc(msg)}</div><div style="display:flex;gap:10px"><button data-cl="1" data-n style="flex:1;background:#27386f">${esc(no||'Nahi')}</button><button data-cl="1" data-y style="flex:1;background:#d63b58">${esc(yes||'Haan')}</button></div></div></div>`);o.querySelector('[data-n]').onclick=()=>{o.remove();res(false)};o.querySelector('[data-y]').onclick=()=>{o.remove();res(true)};document.body.appendChild(o)})}
+window.__v104say=say;
+
+/* ---------- fetch: timeout + dead-account detection ---------- */
+const DEAD=/USER_NOT_FOUND|TOKEN_EXPIRED|USER_DISABLED|INVALID_REFRESH_TOKEN|CREDENTIAL_TOO_OLD|INVALID_GRANT_TYPE|MISSING_REFRESH_TOKEN/;
+const _f=window.fetch.bind(window);
+window.fetch=function(u,o){
+  const url=typeof u==='string'?u:(u&&u.url)||'';
+  let p;
+  if(/googleapis\.com|firebaseio\.com|firebasedatabase\.app/.test(url) && !(o&&o.signal) && typeof AbortController!=='undefined'){
+    const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),/firebaseio|firebasedatabase/.test(url)?70000:25000);
+    p=_f(u,Object.assign({},o,{signal:ac.signal})).finally(()=>clearTimeout(tm));
+  } else p=_f(u,o);
+  if(/securetoken\.googleapis\.com/.test(url)) p.then(r=>{ if(r.status===400||r.status===401) r.clone().json().then(j=>{const m=(j&&j.error&&j.error.message)||'';if(DEAD.test(m)) dead(m)}).catch(()=>{}) }).catch(()=>{});
+  return p;
+};
+let _deadBusy=false;
+async function dead(m){
+  if(_deadBusy||!W.AD()) return; _deadBusy=true;
+  const em=W.AD().email; ls.d(HELDK);
+  W.logout(); try{await beatOut(em)}catch(e){}
+  await say('🔒 Admin login khatam ho gaya','Account ('+em+') ab Firebase mein valid nahi - Owner ne hata diya ya password badal diya.\n\nIs device ko Viewer bana diya gaya hai, ab app normal chalegi. Dobara admin banna ho to Import/Export → Cloud Sync → Admin login karein.');
+  setTimeout(()=>{_deadBusy=false},4000);
+}
+async function beatOut(){} /* account hi nahi raha - record likhne ka haq nahi */
+
+/* ---------- logout / remote logout / re-login ---------- */
+async function trySync(){ try{ if(DIRTY && typeof clPush==='function'){ await Promise.race([clPush(),new Promise(r=>setTimeout(r,9000))]); } }catch(e){} }
+async function softOut(by){
+  const a=W.AD(); if(!a) return;
+  await trySync();
+  ls.s(HELDK,JSON.stringify(a)); W.logout();
+  say('🚪 Owner ne is device ko logout kar diya','Ab ye device Viewer hai'+(by?' ('+by+' ne kiya)':'')+'. Owner dobara "Login" dabayein to ye device khud admin ban jayegi - aap ko kuch nahi karna.');
+}
+async function restoreHeld(){
+  const h=ls.g(HELDK); if(!h||W.AD()) return false;
+  let a=null; try{a=JSON.parse(h)}catch(e){} if(!a||!a.rt){ls.d(HELDK);return false}
+  W.setAD(a); ls.d(HELDK);
+  try{ await clToken(); }catch(e){ W.logout(); say('Login wapas nahi ho saka','Is account ki purani login ab valid nahi. Khud dobara login karein.'); return false; }
+  try{ await clPull(true); if(typeof ecsLoadRole==='function') await ecsLoadRole(); else if(typeof loadRole==='function') await loadRole(); }catch(e){}
+  W.refresh(); beat(true); W.toast('🔑 Owner ne login wapas kar diya - aap Admin ho gaye'); return true;
+}
+let _polling=false;
+async function poll(){
+  if(!CL||_polling) return; _polling=true;
+  try{
+    const r=await fetch(ctlUrl(devId())); if(!r.ok) return; const j=await r.json(); if(!j||!j.t) return;
+    const ack=+ls.g(ACKK)||0; if(j.t<=ack) return;
+    if(j.state==='out' && W.AD()){ ls.s(ACKK,String(j.t)); await softOut(j.by); }
+    else if(j.state==='in' && !W.AD() && ls.g(HELDK)){ ls.s(ACKK,String(j.t)); await restoreHeld(); }
+  }catch(e){} finally{_polling=false}
+}
+async function baseline(){ try{ const r=await fetch(ctlUrl(devId())); const j=r.ok?await r.json():null; ls.s(ACKK,String((j&&j.t)||0)); }catch(e){} }
+setInterval(()=>{ if(CL&&!document.hidden) poll(); },30000);
+document.addEventListener('visibilitychange',()=>{ if(CL&&!document.hidden) poll(); });
+window.addEventListener('focus',()=>{ if(CL) poll(); });
+setTimeout(()=>{ if(CL) poll(); },2500);
+
+/* ---------- heartbeat (Owner ko device list dikhane ke liye) ---------- */
+let _sessFail=false;
+async function beat(login){
+  if(!CL||!W.isAdm()) return;
+  try{
+    const a=W.AD(), body={email:a.email,name:W.name(),role:W.roleWord(),dev:W.dev()||'(naam nahi)',ua:W.ua(),seen:{'.sv':'timestamp'},out:0};
+    if(login) body.login={'.sv':'timestamp'};
+    const r=await metaReq('PATCH','sessions/'+devId(),body); _sessFail=!r.ok;
+  }catch(e){}
+}
+setInterval(()=>{ if(CL&&W.isAdm()&&!document.hidden) beat(false); },60000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) beat(false); });
+setTimeout(()=>beat(false),4000);
+
+/* login ke baad: baseline + heartbeat */
+(function(){ const o=window.clLogin; if(typeof o!=='function') return;
+  window.clLogin=async function(){ const was=!!W.AD(); const r=await o.apply(this,arguments); if(!was&&W.AD()){ ls.d(HELDK); await baseline(); beat(true); } return r; };
+  try{ clLogin=window.clLogin }catch(e){}
+})();
+
+/* logout button: unsynced badlao par atkna nahi chahiye */
+W.wrapLogout(async function(orig){
+  if(DIRTY){ await trySync(); }
+  if(DIRTY){ const ok=await ask('⚠ Kuch badlao sync nahi hue','Is device ke kuch badlao abhi cloud par nahi gaye (net / account masla).\n\nPhir bhi logout karein? Ye badlao is device ki safe copy mein rahenge magar cloud par nahi jayenge.','Haan, logout','Nahi'); if(!ok) return; ls.d(HELDK); W.logout(); return; }
+  return orig();
+});
+
+/* ---------- Owner: Logged-in Devices ---------- */
+function sessionsPanel(){
+  W.panel('📱 Logged-in Devices',async(b,ov)=>{
+    const me=devId(); let alive=true;
+    const draw=async()=>{
+      let S=null,roles=null;
+      try{ const r=await metaReq('GET','sessions'); if(!r.ok) throw new Error(r.status); S=await r.json()||{}; }
+      catch(x){ b.innerHTML='';b.appendChild(mk(`<div class="card"><b>⚠ Devices list load nahi hui (${esc(x.message)})</b><div style="font-size:.82rem;margin-top:6px">Ya internet nahi, ya Firebase Rules abhi update nahi hue. Firebase Rules button se naye rules copy karke Firebase Console → Rules mein Publish karein (ek dafa).</div></div>`)); return; }
+      const ids=Object.keys(S).sort((a,c)=>(S[c].seen||0)-(S[a].seen||0)); b.innerHTML='';
+      const on=ids.filter(i=>!S[i].out&&Date.now()-(S[i].seen||0)<180000).length;
+      b.appendChild(mk(`<div style="font-size:.85rem;margin-bottom:8px">🟢 Abhi online: <b>${on}</b> · Total devices: <b>${ids.length}</b><br><span style="opacity:.75;font-size:.75rem">Device tab dikhti hai jab admin login karke app khole. Logout karne par device Viewer ban jati hai; "Login wapas" dabane par khud dobara Admin ban jati hai.</span></div>`));
+      if(!ids.length) b.appendChild(mk(`<div class="card" style="opacity:.8">Abhi koi device record nahi. Admins jab app kholenge tab yahan aa jayenge.</div>`));
+      ids.forEach(id=>{ const x=S[id]; const live=!x.out&&Date.now()-(x.seen||0)<180000; const mine=id===me;
+        const c=mk(`<div class="card" style="margin:8px 0;border:1px solid ${x.out?'#a33':live?'#2f9a63':'#34498f'}"><div><span style="color:${x.out?'#ff6b6b':live?'#3ddc84':'#999'}">●</span> <b>${esc(x.name||x.email)}</b> <span style="font-size:.72rem;opacity:.8">· ${esc(x.role||'')}</span>${mine?' <span class="tag">ye device</span>':''}${x.out?' <span class="tag" style="background:#a33">LOGOUT</span>':''}</div><div style="font-size:.76rem;opacity:.85;margin-top:3px">${esc(x.email||'')}<br>📱 ${esc(x.dev||'')} · ${esc(x.ua||'')}<br>Login: ${x.login?fT(x.login):'—'} · Aakhri activity: ${ago(x.seen)}</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"></div></div>`);
+        const row=c.lastChild; const btn=(t,bg,fn)=>{const q=mk(`<button style="background:${bg};padding:8px 12px;font-size:.82rem;border:0;border-radius:10px;color:#fff;font-weight:800" data-cl="1">${t}</button>`);q.onclick=fn;row.appendChild(q)};
+        if(!mine){
+          if(!x.out) btn('🚪 Logout karo','#d63b58',async()=>{ if(!await ask('Logout karein?',(x.name||x.email)+' ('+(x.dev||'device')+') ko logout karein? Wo Viewer ban jayega.','Haan','Nahi')) return;
+            try{ const r1=await metaReq('PUT','ctl/'+id,{state:'out',t:{'.sv':'timestamp'},by:W.AD().email}); if(!r1.ok) throw new Error(r1.status); await metaReq('PATCH','sessions/'+id,{out:1}); W.toast('🚪 Logout bhej diya (device ko agle 30 second mein pahunchega)'); draw(); }catch(e){ say('Logout nahi bheja ja saka','Firebase Rules update karke Publish karein, phir dobara try karein. ('+e.message+')'); } });
+          else btn('🔑 Login wapas','#2f7d55',async()=>{ try{ const r1=await metaReq('PUT','ctl/'+id,{state:'in',t:{'.sv':'timestamp'},by:W.AD().email}); if(!r1.ok) throw new Error(r1.status); await metaReq('PATCH','sessions/'+id,{out:0}); W.toast('🔑 Login wapas bhej diya - device khud admin ban jayegi'); draw(); }catch(e){ say('Nahi bheja ja saka',e.message); } });
+        }
+        btn('🗑 Record hatao','#3b4570',async()=>{ if(!await ask('Record hatayein?','Ye sirf is list se entry hatata hai, device ko logout nahi karta.','Haan','Nahi')) return; try{ await metaReq('DELETE','sessions/'+id); draw(); }catch(e){} });
+        b.appendChild(c); });
+    };
+    await draw(); const t=setInterval(()=>{ if(!b.isConnected){clearInterval(t);return} draw(); },15000);
+  });
+}
+window.__v104sessions=sessionsPanel;
+
+/* ---------- Firebase Rules: sessions + ctl add ---------- */
+window.__v104rules=function(txt){ try{ const j=JSON.parse(txt); const m=j.rules.ecsmeta['$club']; const own=(m.roles&&m.roles['.write'])||"false"; m.sessions={'.read':own,'$id':{'.write':'auth != null'}}; m.ctl={'$id':{'.read':true,'.write':own}}; return JSON.stringify(j,null,2) }catch(e){ return txt } };
+if(typeof rulesTxt==='function'){ const o=rulesTxt; try{ rulesTxt=function(){ return window.__v104rules(o.apply(this,arguments)) } }catch(e){} }
+
+/* =====================  STARTUP PREVIEW  ===================== */
+const PV=W.pv; let pvEl=null, pvKind=null, pvAct={};
+function pvClose(){ if(pvEl){pvEl.remove();pvEl=null} }
+function pvOpen(kind){
+  pvClose(); const kinds=PV.kinds; kind=kind||pvKind||PV.def; pvKind=kind;
+  const K=kinds.find(k=>k[0]===kind)||kinds[0]; const acts=PV.acts(K[0])||[];
+  let sel=pvAct[K[0]]; if(!acts.find(a=>a.id===sel)) sel=acts.length?acts[0].id:null; pvAct[K[0]]=sel;
+  const o=mk(`<div class="pv104"><div class="in"><div class="hd"><h2>📰 Current Activities</h2><button data-cl="1" class="x" aria-label="Close">✕</button></div><div class="tabs"></div><div class="body"></div><button data-cl="1" class="cl">✕ Close Preview</button></div></div>`);
+  o.querySelector('.x').onclick=o.querySelector('.cl').onclick=pvClose;
+  const tabs=o.querySelector('.tabs'); kinds.forEach(k=>{ const t=mk(`<button data-cl="1" class="tab ${k[0]===K[0]?'on':''}">${k[1]}<br>${esc(k[2])}</button>`); t.onclick=()=>pvOpen(k[0]); tabs.appendChild(t) });
+  const body=o.querySelector('.body');
+  if(!acts.length){ body.appendChild(mk(`<div class="note">${esc(K[3]||'Isme abhi koi activity nahi hui.')}<br><span style="font-size:.78rem;opacity:.8">Jab ye shuru hoga to yahan sab buttons aa jayenge.</span></div>`)); }
+  else{
+    if(acts.length>1){ const s=mk(`<select data-cl="1" class="act">${acts.map(a=>`<option value="${esc(a.id)}" ${a.id===sel?'selected':''}>${esc(a.name)}${a.sub?' — '+esc(a.sub):''}</option>`).join('')}</select>`); s.onchange=()=>{pvAct[K[0]]=s.value;pvOpen(K[0])}; body.appendChild(s); }
+    else body.appendChild(mk(`<div class="note" style="margin-bottom:10px;font-weight:800;color:#fff">${K[1]} ${esc(acts[0].name)}${acts[0].sub?'<br><span style="font-weight:500;font-size:.78rem;opacity:.85">'+esc(acts[0].sub)+'</span>':''}</div>`));
+    (PV.btns(K[0],sel)||[]).forEach(d=>{ const b=mk(`<button data-cl="1" class="bt ${d.on?'':'off'}" style="background:${d.on?d.bg:'#2a3560'}"><span class="ic">${d.ic}</span><span>${esc(d.t)}<small>${esc(d.on?(d.sub||''):(d.why||'Abhi available nahi'))}</small></span></button>`);
+      b.onclick=()=>{ if(!d.on){ W.toast('ℹ '+(d.why||'Abhi available nahi'),false); return; } try{ d.run(pvClose) }catch(e){ console.error(e); W.toast('Ye abhi khul nahi saka',false) } }; body.appendChild(b); });
+  }
+  document.body.appendChild(o); pvEl=o; o.scrollTop=0;
+}
+window.__v104preview=pvOpen;
+function chip(){ if(document.getElementById('pv104chip')) return; const c=document.createElement('div'); c.id='pv104chip'; c.textContent='📰 Preview'; c.onclick=()=>pvOpen(); document.body.appendChild(c); }
+setTimeout(chip,1200); setInterval(chip,5000);
+setTimeout(()=>{ try{ if(sessionStorage.getItem(W.p+'_pv_done')) return; sessionStorage.setItem(W.p+'_pv_done','1'); if(!PV.canAuto||PV.canAuto()) pvOpen(PV.def); }catch(e){} },1800);
+})();
+
+</script>
 </body>
 </html>
