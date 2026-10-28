@@ -4774,6 +4774,11 @@ setTimeout(()=>{try{if(canV())scan();else refresh()}catch(x){}},4500);
   const mOf=(k,id)=>db.matches.filter(m=>k==='i'?m.cat==='i':m.comp===id);
   const lastDone=(k,id)=>{let L=null;mOf(k,id).forEach(m=>{if(m.status==='completed')L=m});return L};
   const dn=(k,id)=>mOf(k,id).filter(m=>m.status==='completed').length;
+
+  const idOf=x=>typeof x==='string'?x:(x&&x.id);
+  const squadsOf=(k,id)=>{ let ids=[]; if(k==='i'){ const s={}; db.matches.filter(m=>m.cat==='i').forEach(m=>{s[m.a]=1;s[m.b]=1}); ids=Object.keys(s); } else { const c=comps(k).find(x=>x.id===id); ids=((c&&c.teams)||[]).map(idOf); if(!ids.length){ const s={}; mOf(k,id).forEach(m=>{s[m.a]=1;s[m.b]=1}); ids=Object.keys(s); } }
+    return ids.map(i=>db.teams.find(t=>t.id===i)).filter(Boolean).map(t=>({name:t.name,color:/^#[0-9a-f]{6}$/i.test(t.color||'')?t.color:'#2d7ff9',cap:t.captain||null,vc:t.vc||null,players:(t.players||[]).map(p=>({id:p.id,name:p.name}))})); };
+
   window.__W104={ p:P_,
     AD:()=>AD, setAD:a=>{AD=a;_tok=null;try{localStorage.setItem(AK,JSON.stringify(a))}catch(e){}},
     isAdm:()=>isAdm(), name:()=>(ROLE&&ROLE.name)||(AD&&AD.email), roleWord:()=>window.roleWord?window.roleWord():'Admin', dev:()=>devN(), ua:()=>(function(){const u=navigator.userAgent||'';const os=/Android/.test(u)?'Android':/iPhone|iPad/.test(u)?'iOS':/Windows/.test(u)?'Windows':/Mac/.test(u)?'Mac':'Other';const br=/Edg\//.test(u)?'Edge':/Chrome\//.test(u)?'Chrome':/Safari\//.test(u)?'Safari':/Firefox\//.test(u)?'Firefox':'Browser';return os+' '+br})(),
@@ -4781,7 +4786,7 @@ setTimeout(()=>{try{if(canV())scan();else refresh()}catch(x){}},4500);
     refresh:()=>{try{R()}catch(e){}}, toast:(m,ok)=>toast(m,ok!==false),
     panel:(t,fn)=>gPanel(t,(b,ov)=>fn(b,ov)),
     wrapLogout:fn=>{ const o=A.cao; A.cao=function(){ return fn(()=>o.apply(this,arguments)) }; },
-    pv:{ def:'t', canAuto:()=>view!=='play',
+    pv:{ def:'t', canAuto:()=>view!=='play', where:()=>String(view), home:()=>{ try{ go('home') }catch(e){} },
       kinds:[['t','🏆','Tournament Preview','Isme abhi koi tournament nahi hai.'],['s','📅','Series Preview','Isme abhi koi series nahi hai.'],['i','⚡','Individual Match Preview','Isme abhi koi individual match nahi hua.']],
       acts(k){
         if(k==='i'){ const n=db.matches.filter(m=>m.cat==='i'&&m.status!=='live').length; return n?[{id:'all',name:'Individual Matches',sub:dn('i')+' match complete'}]:[]; }
@@ -4798,6 +4803,7 @@ setTimeout(()=>{try{if(canV())scan();else refresh()}catch(x){}},4500);
         B.push({ic:'📚',t:k==='t'?'View Complete Tournament Details':k==='s'?'View Complete Series Details':'View Individual Match History',sub:'Saare matches ek ek karke (history)',bg:'linear-gradient(135deg,#5f3dc4,#7048e8)',on:dn(k,id)>0||k!=='i',why:'Abhi koi match history nahi.',run:cl=>{cl();go('hist',{h:k,hc:k==='i'?'':id})}});
         B.push({ic:'🏅',t:(k==='t'?'Tournament':k==='s'?'Series':'Individual')+' Leaderboard',sub:'Top scorers · wickets · sixes · MVP',bg:'linear-gradient(135deg,#2b8a3e,#37b24d)',on:dn(k,id)>0,why:'Leaderboard ke liye pehle koi match complete hona chahiye.',run:cl=>{cl();k==='i'?go('lb',{lb:{k:'i',tab:'bat'}}):go('lb',{lb:{k,id,tab:'bat'}})}});
         B.push({ic:'💰',t:'View Monthly Entry',sub:'Paid / Unpaid card',bg:'linear-gradient(135deg,#c2255c,#e64980)',on:hasEntry,why:'Is '+what+' mein abhi koi entry system nahi / entry nahi hui.',run:cl=>{cl();go('entry',{e:{cat:k,comp:k==='i'?null:id}})}});
+        B.push({ic:'👥',t:'View Current Teams Squad',sub:'Teams ka squad aur players',bg:'linear-gradient(135deg,#0c8599,#15aabf)',on:squadsOf(k,id).length>0,why:'Abhi koi team nahi.',run:()=>window.__v104squad(squadsOf(k,id))});
         B.push({ic:'📜',t:'View Rules & Regulations',sub:'Sab ke liye',bg:'linear-gradient(135deg,#a61e4d,#d6336c)',on:true,run:cl=>{cl();go('rules')}});
         return B;
       } }
@@ -4824,19 +4830,20 @@ const st=document.createElement('style');st.textContent=`
 .v104-box{position:fixed;inset:0;z-index:260;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;padding:14px}
 .v104-md{background:#14203f;border:2px solid #3c57b0;border-radius:16px;padding:16px;max-width:430px;width:100%;color:#eef3ff;font-size:.92rem;max-height:90vh;overflow:auto}
 .v104-md button{font:inherit;font-weight:800;border:0;border-radius:11px;padding:11px 14px;color:#fff;cursor:pointer}
-.pv104{position:fixed;inset:0;z-index:120;background:rgba(3,8,22,.92);overflow:auto;padding:10px;font-family:inherit;color:#eef3ff}
-.pv104 .in{max-width:520px;margin:0 auto;background:linear-gradient(160deg,#101b3a,#0b1226);border:1px solid #2f4a9a;border-radius:20px;padding:14px 14px 18px;box-shadow:0 10px 40px #000a}
-.pv104 .hd{display:flex;align-items:center;gap:8px;margin-bottom:10px}.pv104 .hd h2{margin:0;font-size:1.15rem;flex:1}
-.pv104 .x{border:0;background:#2a3768;color:#fff;font-size:1.2rem;font-weight:900;width:38px;height:38px;border-radius:50%;cursor:pointer}
-.pv104 .tabs{display:flex;gap:6px;margin-bottom:10px}.pv104 .tab{flex:1;border:2px solid #34498f;background:#16224a;color:#cfe0ff;border-radius:12px;padding:8px 4px;font:inherit;font-weight:800;font-size:.74rem;cursor:pointer;line-height:1.25}
+.pv104{position:fixed;inset:0;z-index:120;background:rgba(3,8,22,.72);display:flex;align-items:center;justify-content:center;padding:10px;font-family:inherit;color:#eef3ff}
+.pv104 .in{width:100%;max-width:360px;max-height:94vh;overflow:auto;background:linear-gradient(160deg,#101b3a,#0b1226);border:1px solid #2f4a9a;border-radius:18px;padding:11px 11px 12px;box-shadow:0 10px 40px #000c}
+.pv104 .hd{display:flex;align-items:center;gap:8px;margin-bottom:8px}.pv104 .hd h2{margin:0;font-size:1rem;flex:1}
+.pv104 .x{border:0;background:#2a3768;color:#fff;font-size:1rem;font-weight:900;width:32px;height:32px;border-radius:50%;cursor:pointer;padding:0}
+.pv104 .tabs{display:flex;gap:5px;margin-bottom:8px}.pv104 .tab{flex:1;border:2px solid #34498f;background:#16224a;color:#cfe0ff;border-radius:10px;padding:5px 2px;font:inherit;font-weight:800;font-size:.66rem;cursor:pointer;line-height:1.2}
 .pv104 .tab.on{background:linear-gradient(135deg,#4f7bff,#7a4dff);border-color:#9bb5ff;color:#fff}
-.pv104 .act{width:100%;margin:0 0 10px;padding:10px;border-radius:12px;background:#16224a;color:#fff;border:1px solid #34498f;font:inherit;font-weight:700}
-.pv104 .note{background:#1b2a58;border-radius:12px;padding:14px;text-align:center;color:#b8c8f0;font-size:.88rem}
-.pv104 .bt{display:flex;align-items:center;gap:11px;width:100%;text-align:left;border:0;border-radius:14px;padding:13px 14px;margin:0 0 9px;color:#fff;font:inherit;font-weight:800;font-size:.95rem;cursor:pointer}
-.pv104 .bt .ic{font-size:1.5rem}.pv104 .bt small{display:block;font-weight:500;opacity:.85;font-size:.72rem;margin-top:2px}
-.pv104 .bt.off{opacity:.45;filter:grayscale(.6)}
-.pv104 .cl{width:100%;margin-top:8px;border:0;border-radius:14px;padding:13px;background:#e0445f;color:#fff;font:inherit;font-weight:900;font-size:.98rem;cursor:pointer}
-#pv104chip{position:fixed;top:6px;left:6px;z-index:59;font-size:11px;font-weight:800;padding:3px 9px;border-radius:12px;background:#3b2d8c;color:#fff;cursor:pointer;border:1px solid #8c7bff}
+.pv104 .act{width:100%;margin:0 0 8px;padding:7px;border-radius:10px;background:#16224a;color:#fff;border:1px solid #34498f;font:inherit;font-weight:700;font-size:.8rem}
+.pv104 .note{background:#1b2a58;border-radius:10px;padding:10px;text-align:center;color:#b8c8f0;font-size:.82rem}.pv104 .note.one{margin-bottom:8px;color:#fff;padding:7px;font-size:.8rem}
+.pv104 .gr{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.pv104 .bt{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:0;border-radius:13px;padding:9px 3px;height:74px;color:#fff;font:inherit;font-weight:800;font-size:.68rem;cursor:pointer;line-height:1.15;text-align:center}
+.pv104 .bt .ic{font-size:1.45rem;line-height:1}.pv104 .bt.off{opacity:.45;filter:grayscale(.6)}
+.pv104 .nt{min-height:16px;margin:7px 2px 0;font-size:.74rem;color:#ffd48a;text-align:center}
+.pv104 .cl{width:100%;margin-top:4px;border:0;border-radius:11px;padding:9px;background:#e0445f;color:#fff;font:inherit;font-weight:900;font-size:.85rem;cursor:pointer}
+#pv104chip{position:fixed;top:40px;right:8px;z-index:59;font-size:11px;font-weight:800;padding:3px 9px;border-radius:12px;background:#3b2d8c;color:#fff;cursor:pointer;border:1px solid #8c7bff}
 `;document.head.appendChild(st);
 
 /* ---------- tiny dialogs (hamesha sab se upar) ---------- */
@@ -4900,15 +4907,18 @@ window.addEventListener('focus',()=>{ if(CL) poll(); });
 setTimeout(()=>{ if(CL) poll(); },2500);
 
 /* ---------- heartbeat (Owner ko device list dikhane ke liye) ---------- */
+const ekey=()=>String((W.AD()&&W.AD().email)||'').toLowerCase().replace(/\./g,',');
+const skey=()=>devId()+'~'+ekey();
 let _sessFail=false;
 async function beat(login){
   if(!CL||!W.isAdm()) return;
   try{
     const a=W.AD(), body={email:a.email,name:W.name(),role:W.roleWord(),dev:W.dev()||'(naam nahi)',ua:W.ua(),seen:{'.sv':'timestamp'},out:0};
     if(login) body.login={'.sv':'timestamp'};
-    const r=await metaReq('PATCH','sessions/'+devId(),body); _sessFail=!r.ok;
+    const r=await metaReq('PATCH','sessions/'+skey(),body); _sessFail=!r.ok;
   }catch(e){}
 }
+async function selfOut(){ try{ if(CL&&W.AD()) await Promise.race([metaReq('PATCH','sessions/'+skey(),{out:2,seen:{'.sv':'timestamp'}}),new Promise(r=>setTimeout(r,5000))]); }catch(e){} }
 setInterval(()=>{ if(CL&&W.isAdm()&&!document.hidden) beat(false); },60000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) beat(false); });
 setTimeout(()=>beat(false),4000);
@@ -4922,31 +4932,35 @@ setTimeout(()=>beat(false),4000);
 /* logout button: unsynced badlao par atkna nahi chahiye */
 W.wrapLogout(async function(orig){
   if(DIRTY){ await trySync(); }
-  if(DIRTY){ const ok=await ask('⚠ Kuch badlao sync nahi hue','Is device ke kuch badlao abhi cloud par nahi gaye (net / account masla).\n\nPhir bhi logout karein? Ye badlao is device ki safe copy mein rahenge magar cloud par nahi jayenge.','Haan, logout','Nahi'); if(!ok) return; ls.d(HELDK); W.logout(); return; }
-  return orig();
+  if(DIRTY){ const ok=await ask('⚠ Kuch badlao sync nahi hue','Is device ke kuch badlao abhi cloud par nahi gaye (net / account masla).\n\nPhir bhi logout karein? Ye badlao is device ki safe copy mein rahenge magar cloud par nahi jayenge.','Haan, logout','Nahi'); if(!ok) return; await selfOut(); ls.d(HELDK); W.logout(); return; }
+  await selfOut(); return orig();
 });
 
 /* ---------- Owner: Logged-in Devices ---------- */
 function sessionsPanel(){
   W.panel('📱 Logged-in Devices',async(b,ov)=>{
-    const me=devId(); let alive=true;
+    const me=devId(); const myEmail=()=>String((W.AD()&&W.AD().email)||'').toLowerCase();
     const draw=async()=>{
-      let S=null,roles=null;
+      let S=null;
       try{ const r=await metaReq('GET','sessions'); if(!r.ok) throw new Error(r.status); S=await r.json()||{}; }
       catch(x){ b.innerHTML='';b.appendChild(mk(`<div class="card"><b>⚠ Devices list load nahi hui (${esc(x.message)})</b><div style="font-size:.82rem;margin-top:6px">Ya internet nahi, ya Firebase Rules abhi update nahi hue. Firebase Rules button se naye rules copy karke Firebase Console → Rules mein Publish karein (ek dafa).</div></div>`)); return; }
-      const ids=Object.keys(S).sort((a,c)=>(S[c].seen||0)-(S[a].seen||0)); b.innerHTML='';
-      const on=ids.filter(i=>!S[i].out&&Date.now()-(S[i].seen||0)<180000).length;
-      b.appendChild(mk(`<div style="font-size:.85rem;margin-bottom:8px">🟢 Abhi online: <b>${on}</b> · Total devices: <b>${ids.length}</b><br><span style="opacity:.75;font-size:.75rem">Device tab dikhti hai jab admin login karke app khole. Logout karne par device Viewer ban jati hai; "Login wapas" dabane par khud dobara Admin ban jati hai.</span></div>`));
+      const live=x=>!x.out&&Date.now()-(x.seen||0)<180000;
+      const ids=Object.keys(S).sort((a,c)=>(live(S[c])-live(S[a]))||((S[c].seen||0)-(S[a].seen||0))); b.innerHTML='';
+      const on=ids.filter(i=>live(S[i])).length;
+      b.appendChild(mk(`<div style="font-size:.86rem;margin-bottom:8px">🟢 Online: <b>${on}</b> · 🔴 Offline / Logout: <b>${ids.length-on}</b> · Total: <b>${ids.length}</b><br><span style="opacity:.75;font-size:.75rem">Jo device ek dafa admin se connect ho gayi wo yahan hamesha rahegi (Record hatao tak). Offline device ko bhi Logout / Login kar sakte hain - wo app kholte hi lagu ho jayega. Sirf Owner kisi ko login / logout kar sakta hai.</span></div>`));
       if(!ids.length) b.appendChild(mk(`<div class="card" style="opacity:.8">Abhi koi device record nahi. Admins jab app kholenge tab yahan aa jayenge.</div>`));
-      ids.forEach(id=>{ const x=S[id]; const live=!x.out&&Date.now()-(x.seen||0)<180000; const mine=id===me;
-        const c=mk(`<div class="card" style="margin:8px 0;border:1px solid ${x.out?'#a33':live?'#2f9a63':'#34498f'}"><div><span style="color:${x.out?'#ff6b6b':live?'#3ddc84':'#999'}">●</span> <b>${esc(x.name||x.email)}</b> <span style="font-size:.72rem;opacity:.8">· ${esc(x.role||'')}</span>${mine?' <span class="tag">ye device</span>':''}${x.out?' <span class="tag" style="background:#a33">LOGOUT</span>':''}</div><div style="font-size:.76rem;opacity:.85;margin-top:3px">${esc(x.email||'')}<br>📱 ${esc(x.dev||'')} · ${esc(x.ua||'')}<br>Login: ${x.login?fT(x.login):'—'} · Aakhri activity: ${ago(x.seen)}</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"></div></div>`);
-        const row=c.lastChild; const btn=(t,bg,fn)=>{const q=mk(`<button style="background:${bg};padding:8px 12px;font-size:.82rem;border:0;border-radius:10px;color:#fff;font-weight:800" data-cl="1">${t}</button>`);q.onclick=fn;row.appendChild(q)};
+      ids.forEach(id=>{ const x=S[id]; const dv=id.split('~')[0]; const on1=live(x); const mine=dv===me&&String(x.email||'').toLowerCase()===myEmail();
+        const stTxt=x.out===1?'🔴 Owner ne logout kiya':x.out===2?'🔴 Khud logout kiya':on1?'🟢 Online':'🔴 Offline';
+        const col=on1?'#3ddc84':'#ff6b6b';
+        const c=mk(`<div class="card" style="margin:8px 0;border:1px solid ${on1?'#2f9a63':'#a33'}"><div><span style="color:${col}">●</span> <b>${esc(x.name||x.email)}</b> <span style="font-size:.72rem;opacity:.8">· ${esc(x.role||'')}</span>${mine?' <span class="tag">ye device</span>':''}</div><div style="font-size:.8rem;margin-top:3px;font-weight:700;color:${col}">${stTxt}</div><div style="font-size:.76rem;opacity:.85;margin-top:3px">${esc(x.email||'')}<br>📱 ${esc(x.dev||'')} · ${esc(x.ua||'')}<br>Login: ${x.login?fT(x.login):'—'} · Aakhri activity: ${ago(x.seen)}</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"></div></div>`);
+        const row=c.lastChild; const btn=(t,bg,fn)=>{const q=mk(`<button data-cl="1" style="background:${bg};padding:8px 12px;font-size:.82rem;border:0;border-radius:10px;color:#fff;font-weight:800">${t}</button>`);q.onclick=fn;row.appendChild(q)};
         if(!mine){
-          if(!x.out) btn('🚪 Logout karo','#d63b58',async()=>{ if(!await ask('Logout karein?',(x.name||x.email)+' ('+(x.dev||'device')+') ko logout karein? Wo Viewer ban jayega.','Haan','Nahi')) return;
-            try{ const r1=await metaReq('PUT','ctl/'+id,{state:'out',t:{'.sv':'timestamp'},by:W.AD().email}); if(!r1.ok) throw new Error(r1.status); await metaReq('PATCH','sessions/'+id,{out:1}); W.toast('🚪 Logout bhej diya (device ko agle 30 second mein pahunchega)'); draw(); }catch(e){ say('Logout nahi bheja ja saka','Firebase Rules update karke Publish karein, phir dobara try karein. ('+e.message+')'); } });
-          else btn('🔑 Login wapas','#2f7d55',async()=>{ try{ const r1=await metaReq('PUT','ctl/'+id,{state:'in',t:{'.sv':'timestamp'},by:W.AD().email}); if(!r1.ok) throw new Error(r1.status); await metaReq('PATCH','sessions/'+id,{out:0}); W.toast('🔑 Login wapas bhej diya - device khud admin ban jayegi'); draw(); }catch(e){ say('Nahi bheja ja saka',e.message); } });
+          if(!x.out) btn('🚪 Logout karo','#d63b58',async()=>{ if(!await ask('Logout karein?',(x.name||x.email)+' ('+(x.dev||'device')+') ko logout karein? Wo Viewer ban jayega'+(on1?'.':' (device offline hai - app kholte hi lagu hoga).'),'Haan','Nahi')) return;
+            try{ const r1=await metaReq('PUT','ctl/'+dv,{state:'out',t:{'.sv':'timestamp'},by:W.AD().email}); if(!r1.ok) throw new Error(r1.status); await metaReq('PATCH','sessions/'+id,{out:1}); W.toast('🚪 Logout bhej diya'); draw(); }catch(e){ say('Logout nahi bheja ja saka','Firebase Rules update karke Publish karein, phir dobara try karein. ('+e.message+')'); } });
+          else if(x.out===1) btn('🔑 Login wapas','#2f7d55',async()=>{ try{ const r1=await metaReq('PUT','ctl/'+dv,{state:'in',t:{'.sv':'timestamp'},by:W.AD().email}); if(!r1.ok) throw new Error(r1.status); await metaReq('PATCH','sessions/'+id,{out:0}); W.toast('🔑 Login wapas bhej diya - device khud admin ban jayegi'); draw(); }catch(e){ say('Nahi bheja ja saka',e.message); } });
+          else row.appendChild(mk(`<div style="font-size:.76rem;opacity:.8">Is admin ne khud logout kiya - dobara login wo khud karega.</div>`));
+          btn('🗑 Record hatao','#3b4570',async()=>{ if(!await ask('Record hatayein?','Ye sirf is list se entry hatata hai, device ko logout nahi karta.','Haan','Nahi')) return; try{ await metaReq('DELETE','sessions/'+id); draw(); }catch(e){} });
         }
-        btn('🗑 Record hatao','#3b4570',async()=>{ if(!await ask('Record hatayein?','Ye sirf is list se entry hatata hai, device ko logout nahi karta.','Haan','Nahi')) return; try{ await metaReq('DELETE','sessions/'+id); draw(); }catch(e){} });
         b.appendChild(c); });
     };
     await draw(); const t=setInterval(()=>{ if(!b.isConnected){clearInterval(t);return} draw(); },15000);
@@ -4955,30 +4969,66 @@ function sessionsPanel(){
 window.__v104sessions=sessionsPanel;
 
 /* ---------- Firebase Rules: sessions + ctl add ---------- */
-window.__v104rules=function(txt){ try{ const j=JSON.parse(txt); const m=j.rules.ecsmeta['$club']; const own=(m.roles&&m.roles['.write'])||"false"; m.sessions={'.read':own,'$id':{'.write':'auth != null'}}; m.ctl={'$id':{'.read':true,'.write':own}}; return JSON.stringify(j,null,2) }catch(e){ return txt } };
+window.__v104rules=function(txt){ try{ const j=JSON.parse(txt); const m=j.rules.ecsmeta['$club']; const own=(m.roles&&m.roles['.write'])||"false"; m.sessions={'.read':own,'$id':{'.write':'('+own+") || (auth != null && $id.endsWith('~' + auth.token.email.toLowerCase().replace('.', ',')))"}}; m.ctl={'$id':{'.read':true,'.write':own}}; return JSON.stringify(j,null,2) }catch(e){ return txt } };
 if(typeof rulesTxt==='function'){ const o=rulesTxt; try{ rulesTxt=function(){ return window.__v104rules(o.apply(this,arguments)) } }catch(e){} }
 
-/* =====================  STARTUP PREVIEW  ===================== */
-const PV=W.pv; let pvEl=null, pvKind=null, pvAct={};
-function pvClose(){ if(pvEl){pvEl.remove();pvEl=null} }
+/* =====================  STARTUP PREVIEW (popup)  ===================== */
+const PV=W.pv; let pvEl=null, pvKind=null, pvAct={}, pvRet=false, pvTimer=null;
+const OVSEL='.modal-overlay,.ov,.ecs-ov,.v104-box';
+const ovc=()=>document.querySelectorAll(OVSEL).length;
+const SHORT={'Last Completed Match':'Last Match','Current Quota Information':'Quota Info','View Complete Series Details':'Series Details','View Complete Tournament Details':'Tournament Details','View Individual Match History':'Match History','Series Leaderboard':'Leaderboard','Tournament Leaderboard':'Leaderboard','Individual Leaderboard':'Leaderboard','View Monthly Entry':'Monthly Entry','Quota Half / Lock Record':'Half / Lock Record','Series Basics Settings':'Series Settings','View Rules & Regulations':'Rules','View Current Teams Squad':'Teams Squad'};
+function pvClose(){ if(pvTimer){clearInterval(pvTimer);pvTimer=null} if(pvEl){pvEl.remove();pvEl=null} if(pvRet){ pvRet=false; try{ PV.home&&PV.home() }catch(e){} } }
 function pvOpen(kind){
-  pvClose(); const kinds=PV.kinds; kind=kind||pvKind||PV.def; pvKind=kind;
+  if(pvTimer){clearInterval(pvTimer);pvTimer=null}
+  if(pvEl){pvEl.remove();pvEl=null}
+  const kinds=PV.kinds; kind=kind||pvKind||PV.def; pvKind=kind;
   const K=kinds.find(k=>k[0]===kind)||kinds[0]; const acts=PV.acts(K[0])||[];
   let sel=pvAct[K[0]]; if(!acts.find(a=>a.id===sel)) sel=acts.length?acts[0].id:null; pvAct[K[0]]=sel;
-  const o=mk(`<div class="pv104"><div class="in"><div class="hd"><h2>📰 Current Activities</h2><button data-cl="1" class="x" aria-label="Close">✕</button></div><div class="tabs"></div><div class="body"></div><button data-cl="1" class="cl">✕ Close Preview</button></div></div>`);
+  const o=mk(`<div class="pv104"><div class="in"><div class="hd"><h2>📰 Current Activities</h2><button data-cl="1" class="x" aria-label="Close">✕</button></div><div class="tabs"></div><div class="body"></div><div class="nt"></div><button data-cl="1" class="cl">✕ Close Preview</button></div></div>`);
   o.querySelector('.x').onclick=o.querySelector('.cl').onclick=pvClose;
-  const tabs=o.querySelector('.tabs'); kinds.forEach(k=>{ const t=mk(`<button data-cl="1" class="tab ${k[0]===K[0]?'on':''}">${k[1]}<br>${esc(k[2])}</button>`); t.onclick=()=>pvOpen(k[0]); tabs.appendChild(t) });
-  const body=o.querySelector('.body');
-  if(!acts.length){ body.appendChild(mk(`<div class="note">${esc(K[3]||'Isme abhi koi activity nahi hui.')}<br><span style="font-size:.78rem;opacity:.8">Jab ye shuru hoga to yahan sab buttons aa jayenge.</span></div>`)); }
+  const tabs=o.querySelector('.tabs'); kinds.forEach(k=>{ const t=mk(`<button data-cl="1" class="tab ${k[0]===K[0]?'on':''}">${k[1]}<br>${esc(k[2].replace(' Preview',''))}</button>`); t.onclick=()=>pvOpen(k[0]); tabs.appendChild(t) });
+  const body=o.querySelector('.body'), nt=o.querySelector('.nt');
+  if(!acts.length){ body.appendChild(mk(`<div class="note">${esc(K[3]||'Isme abhi koi activity nahi hui.')}<br><span style="font-size:.76rem;opacity:.8">Jab ye shuru hoga to yahan buttons aa jayenge.</span></div>`)); }
   else{
     if(acts.length>1){ const s=mk(`<select data-cl="1" class="act">${acts.map(a=>`<option value="${esc(a.id)}" ${a.id===sel?'selected':''}>${esc(a.name)}${a.sub?' — '+esc(a.sub):''}</option>`).join('')}</select>`); s.onchange=()=>{pvAct[K[0]]=s.value;pvOpen(K[0])}; body.appendChild(s); }
-    else body.appendChild(mk(`<div class="note" style="margin-bottom:10px;font-weight:800;color:#fff">${K[1]} ${esc(acts[0].name)}${acts[0].sub?'<br><span style="font-weight:500;font-size:.78rem;opacity:.85">'+esc(acts[0].sub)+'</span>':''}</div>`));
-    (PV.btns(K[0],sel)||[]).forEach(d=>{ const b=mk(`<button data-cl="1" class="bt ${d.on?'':'off'}" style="background:${d.on?d.bg:'#2a3560'}"><span class="ic">${d.ic}</span><span>${esc(d.t)}<small>${esc(d.on?(d.sub||''):(d.why||'Abhi available nahi'))}</small></span></button>`);
-      b.onclick=()=>{ if(!d.on){ W.toast('ℹ '+(d.why||'Abhi available nahi'),false); return; } try{ d.run(pvClose) }catch(e){ console.error(e); W.toast('Ye abhi khul nahi saka',false) } }; body.appendChild(b); });
+    else body.appendChild(mk(`<div class="note one">${K[1]} <b>${esc(acts[0].name)}</b>${acts[0].sub?' · '+esc(acts[0].sub):''}</div>`));
+    const g=mk('<div class="gr"></div>');
+    (PV.btns(K[0],sel)||[]).forEach(d=>{ const lab=SHORT[d.t]||d.t; const b=mk(`<button data-cl="1" class="bt ${d.on?'':'off'}" style="background:${d.on?d.bg:'#2a3560'}" title="${esc(d.t)}"><span class="ic">${d.ic}</span><span class="tx">${esc(lab)}</span></button>`);
+      b.onclick=()=>{ if(!d.on){ nt.textContent='ℹ '+(d.why||'Abhi available nahi'); return; } nt.textContent=''; runBtn(d); }; g.appendChild(b); });
+    body.appendChild(g);
   }
   document.body.appendChild(o); pvEl=o; o.scrollTop=0;
 }
+/* button chalane par: data upar khule, preview chhup jaye, band hote hi preview wapas */
+function runBtn(d){
+  const before=ovc(); let nav=false; const loc0=PV.where?PV.where():null;
+  const hide=()=>{ nav=true; if(pvEl) pvEl.style.display='none'; };
+  try{ d.run(hide); }catch(e){ console.error(e); if(pvEl){ const n=pvEl.querySelector('.nt'); if(n) n.textContent='⚠ Ye abhi khul nahi saka'; } return; }
+  if(nav){ /* poori page khuli: jab user wapas jaye (location badle) to preview wapas */
+    setTimeout(()=>{ if(!pvEl) return; const loc1=PV.where?PV.where():null; let moved=0; pvRet=true;
+      pvTimer=setInterval(()=>{ if(!pvEl){clearInterval(pvTimer);pvTimer=null;return}
+        const cur=PV.where?PV.where():null; if(cur!==loc1){ moved++; if(moved>=2){ clearInterval(pvTimer);pvTimer=null; pvOpen(pvKind); } } else moved=0; },350); },500);
+    return;
+  }
+  /* poster / popup: bante hi preview chhupa do, band hote hi wapas dikhao */
+  let tries=0; const w=setInterval(()=>{ if(!pvEl){clearInterval(w);return}
+    if(ovc()>before){ clearInterval(w); pvEl.style.display='none'; const t=setInterval(()=>{ if(!pvEl){clearInterval(t);return} if(ovc()<=before){ clearInterval(t); pvEl.style.display=''; } },250); }
+    else if(++tries>28){ clearInterval(w); const n=pvEl.querySelector('.nt'); if(n) n.textContent='ℹ Kuch khula nahi - dobara try karein'; } },150);
+}
 window.__v104preview=pvOpen;
+
+/* ---------- Teams Squad ---------- */
+window.__v104squad=function(teams){
+  const o=mk('<div class="v104-box"><div class="v104-md" style="max-width:400px"></div></div>'); const md=o.firstChild; const close=()=>o.remove();
+  const list=()=>{ md.innerHTML=`<div style="font-weight:900;font-size:1.05rem;margin-bottom:4px">👥 Teams Squad</div><div style="font-size:.76rem;opacity:.8;margin-bottom:10px">${teams.length} teams · kisi team par tap karein</div>`;
+    teams.forEach(t=>{ const b=mk(`<button data-cl="1" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;margin:6px 0;background:#1d2b57;border:1px solid #3c57b0;border-radius:12px;padding:11px 12px"><span style="width:12px;height:30px;border-radius:6px;background:${esc(t.color)}"></span><span style="flex:1"><b>${esc(t.name)}</b><br><span style="font-size:.74rem;opacity:.8">${(t.players||[]).length} players</span></span><span>›</span></button>`); b.onclick=()=>card(t); md.appendChild(b); });
+    md.appendChild(mk('<button data-cl="1" style="width:100%;margin-top:8px;background:#d63b58">Band karo</button>')).onclick=close; };
+  const card=t=>{ const pl=t.players||[]; md.innerHTML=`<div style="background:${esc(t.color)};border-radius:12px;padding:12px;margin-bottom:10px;color:#fff;text-shadow:0 1px 3px #0008"><div style="font-weight:900;font-size:1.1rem">${esc(t.name)}</div><div style="font-size:.78rem">${pl.length} players</div></div>`+
+      pl.map((p,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid #2a3a73"><span style="opacity:.6;width:22px">${i+1}</span><span style="flex:1;font-weight:700">${esc(p.name)}</span>${t.cap===p.id?'<span style="background:#f2b632;color:#231a02;border-radius:8px;padding:1px 8px;font-size:.72rem;font-weight:900">C</span>':''}${t.vc===p.id?'<span style="background:#9bb5ff;color:#0b1226;border-radius:8px;padding:1px 8px;font-size:.72rem;font-weight:900">VC</span>':''}</div>`).join('')||'<div style="opacity:.8;padding:8px">Is team mein abhi koi player nahi.</div>';
+    const row=mk('<div style="display:flex;gap:8px;margin-top:10px"><button data-cl="1" data-b style="flex:1;background:#27386f">← Teams</button><button data-cl="1" data-c style="flex:1;background:#d63b58">Band karo</button></div>'); row.querySelector('[data-b]').onclick=list; row.querySelector('[data-c]').onclick=close; md.appendChild(row); };
+  list(); document.body.appendChild(o);
+};
+
 function chip(){ if(document.getElementById('pv104chip')) return; const c=document.createElement('div'); c.id='pv104chip'; c.textContent='📰 Preview'; c.onclick=()=>pvOpen(); document.body.appendChild(c); }
 setTimeout(chip,1200); setInterval(chip,5000);
 setTimeout(()=>{ try{ if(sessionStorage.getItem(W.p+'_pv_done')) return; sessionStorage.setItem(W.p+'_pv_done','1'); if(!PV.canAuto||PV.canAuto()) pvOpen(PV.def); }catch(e){} },1800);
