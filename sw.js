@@ -1,7 +1,7 @@
 /* Cricket Apps - offline support (service worker).
    Pehli dafa net ke saath khulne par saari apps phone mein save ho jati hain;
    uske baad bina internet ke bhi khulti hain. Firebase/login ki requests ko ye chhoota nahi. */
-const V = 'cricket-v10';
+const V = 'cricket-v12';
 const CORE = [
   'index.html',
   'RSL_Scoring_App_Connected.html', 'JSL_Scoring_App_Connected.html', 'ECS_System_Connected.html',
@@ -59,4 +59,13 @@ self.addEventListener('fetch', e => {
   // photo cut-out (mediapipe) files: pehli dafa online use hone par save ho jati hain
   if (u.hostname === 'cdn.jsdelivr.net' && u.pathname.includes('/@mediapipe/')) { e.respondWith(cacheFirst(r)); return; }
   // baaqi sab (Firebase, login, etc.) seedha network par
+});
+
+/* Notification par tap: app khol do / aage le aao */
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(list => {
+    for (const c of list) { if ('focus' in c) return c.focus(); }
+    return self.clients.openWindow('./');
+  }));
 });

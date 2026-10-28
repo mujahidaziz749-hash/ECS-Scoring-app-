@@ -4769,6 +4769,19 @@ setTimeout(()=>{try{if(canV())scan();else refresh()}catch(x){}},4500);
     refresh:()=>{try{R()}catch(e){}}, toast:(m,ok)=>toast(m,ok!==false),
     panel:(t,fn)=>gPanel(t,(b,ov)=>fn(b,ov)),
     wrapLogout:fn=>{ const o=A.cao; A.cao=function(){ return fn(()=>o.apply(this,arguments)) }; },
+
+    live:{
+      cur(){ try{ const m=db.matches.find(x=>x.status==='live'&&x.inns&&x.inns.length); if(!m) return null; const i=m.inns[m.inns.length-1];
+        const stat=id=>{ let r=0,b=0; i.balls.forEach(x=>{ if(x.b!==id||x.ex==='wd') return; if(x.ex!=='b'&&x.ex!=='lb') r+=x.r||0; b++; }); return r+'('+b+')'; };
+        const lab=x=>x.wk?['W','#e5484d']:x.ex==='wd'?['Wd','#e8a51a']:x.ex==='nb'?['Nb','#e8a51a']:(x.r||0)===0?['•','#5b6b82']:[String(x.r),x.r===4?'#2f7bf0':x.r===6?'#8a4be0':'#2fa866'];
+        let chase=''; if(m.inns.length>1){ const f=m.inns[0]; const need=(f.runs||0)+1-(i.runs||0); const left=(m.overs||0)*6-(i.lb||0); chase=need>0?('Target '+((f.runs||0)+1)+' · Need '+need+' from '+left+' balls'):'Target paar!'; }
+        const lb=i.lb||0; const nm=id=>id?(PN(i.bat,id)+' '+stat(id)):'';
+        return {id:m.id,title:T_(m.a)+' vs '+T_(m.b)+(m.no?' · Match '+m.no:''),status:'live',bat:T_(i.bat),score:(i.runs||0)+'/'+(i.wk||0),ovs:Math.floor(lb/6)+'.'+(lb%6)+'/'+(m.overs||0),chase,st:nm(i.st)+(i.st?'*':''),ns:nm(i.ns),bw:i.bw?PN(i.bowl,i.bw):'',last:i.balls.slice(-6).map(lab)}; }catch(e){ return null; } },
+      completed(){ return db.matches.filter(m=>m.status==='completed').map(m=>({id:m.id,title:T_(m.a)+' vs '+T_(m.b)+(m.no?' · Match '+m.no:''),res:m.result||''})); },
+      open(id){ pOpenEcs({kind:'scorecard',mid:id}); },
+      resOf(id){ const m=db.matches.find(x=>x.id===id); return m?(m.result||''):''; },
+      scoring:()=>view==='play'
+    },
     pv:{ def:'t', canAuto:()=>view!=='play', where:()=>String(view), home:()=>{ try{ go('home') }catch(e){} },
       kinds:[['t','🏆','Tournament Preview','Isme abhi koi tournament nahi hai.'],['s','📅','Series Preview','Isme abhi koi series nahi hai.'],['i','⚡','Individual Match Preview','Isme abhi koi individual match nahi hua.']],
       acts(k){
@@ -4815,7 +4828,7 @@ const st=document.createElement('style');st.textContent=`
 .v104-md button{font:inherit;font-weight:800;border:0;border-radius:11px;padding:11px 14px;color:#fff;cursor:pointer}
 .pv104{position:fixed;inset:0;z-index:120;background:rgba(3,8,22,.72);display:flex;align-items:center;justify-content:center;padding:10px;font-family:inherit;color:#eef3ff}
 .pv104 .in{width:100%;max-width:390px;max-height:94vh;overflow:auto;background:linear-gradient(160deg,#101b3a,#0b1226);border:1px solid #2f4a9a;border-radius:18px;padding:11px 11px 12px;box-shadow:0 10px 40px #000c}
-.pv104 .hd{display:flex;align-items:center;gap:8px;margin-bottom:8px}.pv104 .hd h2{margin:0;font-size:1rem;flex:1}
+.pv104 .hd{display:flex;align-items:center;gap:8px;margin-bottom:8px}.pv104 .hd h2{margin:0;font-size:.9rem;line-height:1.2;flex:1}
 .pv104 .x{border:0;background:#2a3768;color:#fff;font-size:1rem;font-weight:900;width:32px;height:32px;border-radius:50%;cursor:pointer;padding:0}
 .pv104 .tabs{display:flex;gap:5px;margin-bottom:8px}.pv104 .tab{flex:1;border:2px solid #34498f;background:#16224a;color:#cfe0ff;border-radius:10px;padding:5px 2px;font:inherit;font-weight:800;font-size:.66rem;cursor:pointer;line-height:1.2}
 .pv104 .tab.on{background:linear-gradient(135deg,#4f7bff,#7a4dff);border-color:#9bb5ff;color:#fff}
@@ -4974,7 +4987,7 @@ function pvOpen(kind){
   const kinds=PV.kinds; kind=kind||pvKind||PV.def; pvKind=kind;
   const K=kinds.find(k=>k[0]===kind)||kinds[0]; const acts=PV.acts(K[0])||[];
   let sel=pvAct[K[0]]; if(!acts.find(a=>a.id===sel)) sel=acts.length?acts[0].id:null; pvAct[K[0]]=sel;
-  const o=mk(`<div class="pv104"><div class="in"><div class="hd"><h2>📰 Current Activities</h2><button data-cl="1" class="x" aria-label="Close">✕</button></div><div class="tabs"></div><div class="body"></div><div class="nt"></div><button data-cl="1" class="cl">✕ Close Preview</button></div></div>`);
+  const o=mk(`<div class="pv104"><div class="in"><div class="hd"><h2>📰 Current Activities Preview Section</h2><button data-cl="1" class="x" aria-label="Close">✕</button></div><div class="tabs"></div><div class="body"></div><div class="nt"></div><button data-cl="1" class="cl">✕ Close Preview</button></div></div>`);
   o.querySelector('.x').onclick=o.querySelector('.cl').onclick=pvClose;
   const tabs=o.querySelector('.tabs'); kinds.forEach(k=>{ const t=mk(`<button data-cl="1" class="tab ${k[0]===K[0]?'on':''}">${k[1]}<br>${esc(k[2].replace(' Preview',''))}</button>`); t.onclick=()=>pvOpen(k[0]); tabs.appendChild(t) });
   const body=o.querySelector('.body'), nt=o.querySelector('.nt');
@@ -5035,6 +5048,88 @@ function placeChip(){ const c=document.getElementById('pv104chip'); if(!c) retur
 function chip(){ if(!document.getElementById('pv104chip')){ const c=document.createElement('div'); c.id='pv104chip'; c.textContent='📰 Preview'; c.onclick=()=>pvOpen(); document.body.appendChild(c); } placeChip(); }
 setTimeout(chip,1200); setInterval(chip,1500); window.addEventListener('resize',placeChip);
 setTimeout(()=>{ try{ if(sessionStorage.getItem(W.p+'_pv_done')) return; sessionStorage.setItem(W.p+'_pv_done','1'); if(!PV.canAuto||PV.canAuto()) pvOpen(PV.def); }catch(e){} },1800);
+
+/* =====================  LIVE STRIP + MATCH COMPLETE POPUP + NOTIFICATION  ===================== */
+(function(){
+  const LV=W.live; if(!LV) return;
+  const liveUrl=()=>clUrl().replace(/\.json$/,'_live.json');
+  const NOTK=W.p+'_notif', SEENK=W.p+'_seen_done';
+  const lcss=document.createElement('style'); lcss.textContent=`
+#lv104{position:fixed;left:50%;transform:translateX(-50%);bottom:8px;width:calc(100% - 16px);max-width:420px;z-index:100;background:linear-gradient(160deg,#10224d,#0a1430);border:1px solid #3c57b0;border-radius:16px;padding:9px 11px 10px;color:#eef3ff;font-size:.8rem;box-shadow:0 8px 30px #000b}
+#lv104 .h{display:flex;align-items:center;gap:6px;font-weight:800;font-size:.76rem}#lv104 .h .t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#lv104 .h button{border:0;background:#26376e;color:#fff;border-radius:50%;width:26px;height:26px;font-size:.8rem;padding:0;cursor:pointer}
+#lv104 .sc{font-size:1.15rem;font-weight:900;margin:5px 0 1px}#lv104 .sc small{font-size:.74rem;font-weight:700;opacity:.8}
+#lv104 .ch{font-size:.74rem;color:#ffd48a;margin-bottom:3px}#lv104 .pl{font-size:.76rem;opacity:.95;line-height:1.45}
+#lv104 .bl{display:flex;gap:5px;margin-top:6px;align-items:center}#lv104 .bl b{width:25px;height:25px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.72rem;color:#fff}
+.dn104{position:fixed;inset:0;z-index:280;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;padding:14px}
+.dn104 .c{width:100%;max-width:360px;background:linear-gradient(160deg,#12305e,#0b1226);border:2px solid #3c57b0;border-radius:18px;padding:16px;color:#eef3ff;text-align:center}
+.dn104 button{font:inherit;font-weight:800;border:0;border-radius:11px;padding:11px 14px;color:#fff;cursor:pointer;width:100%;margin-top:8px}`;
+  document.head.appendChild(lcss);
+  let strip=null, seenKey=null, lastChange=0, dismissedId=null, lastJ=null, pushed={}, lastSig='', lastP=null, busy=false;
+  const notifOn=()=>ls.g(NOTK)==='1' && typeof Notification!=='undefined' && Notification.permission==='granted';
+  async function notify(title,body,tag,renotify){
+    if(!notifOn()) return;
+    try{ const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration(); const o={body,tag,renotify:!!renotify,silent:!renotify,icon:'icon-192.png',badge:'icon-192.png'};
+      if(reg&&reg.showNotification) await reg.showNotification(title,o); else new Notification(title,o); }catch(e){}
+  }
+  const lbl=(P)=>(P.last||[]).map(x=>x[0]).join(' ');
+  function line(j){ return j.bat+' '+j.score+' ('+j.ovs+')'+(j.chase?' · '+j.chase:''); }
+  function drawStrip(j){
+    if(!strip){ strip=document.createElement('div'); strip.id='lv104'; document.body.appendChild(strip); }
+    const bell=typeof Notification!=='undefined';
+    strip.innerHTML=`<div class="h"><span style="color:#ff5a5a">● LIVE</span><span class="t">${esc(j.title)}</span>${bell?`<button data-cl="1" id="lvb" title="Notification">${notifOn()?'🔔':'🔕'}</button>`:''}<button data-cl="1" id="lvx" title="Band">✕</button></div>
+<div class="sc">${esc(j.bat)} ${esc(j.score)} <small>(${esc(j.ovs)})</small></div>${j.chase?`<div class="ch">${esc(j.chase)}</div>`:''}
+<div class="pl">🏏 ${esc(j.st||'-')}${j.ns?' · '+esc(j.ns):''}<br>⚾ ${esc(j.bw||'-')}</div>
+<div class="bl">${(j.last||[]).map(x=>`<b style="background:${esc(x[1]||'#5b6b82')}">${esc(x[0])}</b>`).join('')}</div>`;
+    strip.querySelector('#lvx').onclick=()=>{ dismissedId=j.id; hideStrip(); };
+    const bb=strip.querySelector('#lvb'); if(bb) bb.onclick=async()=>{
+      if(ls.g(NOTK)==='1'){ ls.s(NOTK,'0'); } else { try{ const p=await Notification.requestPermission(); if(p==='granted'){ ls.s(NOTK,'1'); W.toast('🔔 Notification chalu - app khuli / background mein ho to khabar aayegi'); } else W.toast('Phone ne notification ki ijazat nahi di (settings se allow karein)',false); }catch(e){} }
+      drawStrip(lastJ||j); };
+  }
+  function hideStrip(){ if(strip){ strip.remove(); strip=null; } }
+  function onLive(j){
+    lastJ=j; const first=seenKey===null; const key=j.id+'|'+(j.t||0);
+    if(key!==seenKey){ seenKey=key; lastChange=Date.now();
+      if(!first && j.status==='live' && document.hidden) notify('🔴 '+j.title, line(j)+'\n🏏 '+(j.st||'')+' · ⚾ '+(j.bw||'')+'\n'+lbl(j),'v104-live',false); }
+    if(LV.cur&&LV.cur()){ hideStrip(); return; }
+    const stale=Date.now()-lastChange>30*60000;
+    if(j.status==='live' && !stale && dismissedId!==j.id) drawStrip(j); else hideStrip();
+    if(j.status==='done'&&!first){ setTimeout(async()=>{ try{ if(typeof clPull==='function'&&!W.isAdm()) await clPull(false); }catch(e){} checkDone(); },1500); }
+  }
+  async function livePoll(){ if(!CL) return; try{ const r=await fetch(liveUrl()); if(!r.ok) return; const j=await r.json(); if(j&&j.id) onLive(j); else if(strip) hideStrip(); }catch(e){} }
+  setInterval(()=>{ livePoll(); },6000); setTimeout(livePoll,2500);
+
+  /* ---- scorer side: tiny live node likho ---- */
+  async function livePush(){
+    if(!CL||!W.isAdm()||busy) return; const p=LV.cur?LV.cur():null; let body=null;
+    if(p){ const sig=JSON.stringify(p); if(sig===lastSig) return; lastSig=sig; lastP=p; pushed[p.id]=1; body=Object.assign({},p,{t:{'.sv':'timestamp'}}); }
+    else if(lastP&&lastP.status==='live'){ body=Object.assign({},lastP,{status:'done',res:(LV.resOf&&LV.resOf(lastP.id))||'',t:{'.sv':'timestamp'}}); lastP=Object.assign({},body,{t:0}); lastSig='done'; }
+    else return;
+    busy=true; try{ const t=await clToken(); await fetch(liveUrl()+'?auth='+encodeURIComponent(t),{method:'PUT',body:JSON.stringify(body)}); }catch(e){} busy=false;
+  }
+  setInterval(()=>{ if(!document.hidden) livePush(); },2500);
+
+  /* ---- match complete popup ---- */
+  const seenSet=()=>{ try{ return JSON.parse(ls.g(SEENK)||'null') }catch(e){ return null } };
+  function showDone(x){
+    const o=document.createElement('div'); o.className='dn104';
+    o.innerHTML=`<div class="c"><div style="font-size:2rem">🏁</div><div style="font-weight:900;font-size:1.05rem;margin:4px 0">Match Complete</div><div style="font-size:.86rem;opacity:.9">${esc(x.title)}</div><div style="font-weight:800;color:#ffd48a;margin:8px 0 2px">${esc(x.res||'')}</div><button data-cl="1" data-s style="background:#e8590c">📄 Poora Scorecard / PDF</button><button data-cl="1" data-c style="background:#34498f">Band karo</button></div>`;
+    o.querySelector('[data-c]').onclick=()=>o.remove();
+    o.querySelector('[data-s]').onclick=()=>{ o.remove(); try{ LV.open(x.id); }catch(e){} };
+    document.body.appendChild(o);
+    notify('🏁 Match complete', x.title+'\n'+(x.res||''),'v104-done',true);
+  }
+  function checkDone(){
+    let L=[]; try{ L=LV.completed()||[]; }catch(e){ return; } let S=seenSet();
+    if(!S){ ls.s(SEENK,JSON.stringify(L.map(x=>x.id))); return; }
+    const fresh=L.filter(x=>!S.includes(x.id)); if(!fresh.length) return;
+    ls.s(SEENK,JSON.stringify(L.map(x=>x.id)));
+    const x=fresh[fresh.length-1]; if(pushed[x.id]) return; if(LV.cur&&LV.cur()) return; if(LV.scoring&&LV.scoring()) return;
+    showDone(x);
+  }
+  setInterval(checkDone,5000); setTimeout(checkDone,3000);
+})();
+
 })();
 
 })();
