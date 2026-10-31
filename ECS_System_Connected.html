@@ -5438,7 +5438,7 @@ function renderPickBatters(matchIdx, innIdx){
       const have = Math.min(r.dayLeft, r.plainRemaining);
       const gapNow = Math.max(0, capBat() - have);
       const b = el(`<button class="choice-btn" style="cursor:default;">${r.p.name} <span class="tag" style="background:#2d6cdf;color:#fff;">FRESH</span>${gapNow>0?` <span class="tag" style="background:#0a8a55;color:#eafff2;">GAP ${gapNow}</span>`:''}
-        <span class="meta">Bachi: ${realLeftTxt(r.plainRemaining, have)}${gapNow>0?` · gap ${gapNow} bonus/special se`:''} · ${careerLine(r.p.id)}</span>
+        <span class="meta">Left: ${realLeftTxt(r.plainRemaining, have)}${gapNow>0?` · gap ${gapNow} bonus/special se`:''} · ${careerLine(r.p.id)}</span>
       </button>`);
       list.appendChild(b);
       makeTappable(b, r.p.id, have, 'fresh');
@@ -5531,7 +5531,7 @@ function renderPickBatters(matchIdx, innIdx){
       if(usedIds.includes(r.p.id)) return;
       const have = Math.min(r.dayLeft, r.plainRemaining);
       const b = el(`<button class="choice-btn" style="border-color:#c0392b;cursor:default;">${r.p.name} <span class="tag" style="background:#c0392b;color:#fff;">⛔ PENALTY — AKHIR MEIN</span>
-        <span class="meta">4+ matches absent — baaki sab ke baad hi batting. Bachi: ${realLeftTxt(r.plainRemaining, have)} · ${careerLine(r.p.id)}</span>
+        <span class="meta">4+ matches absent — baaki sab ke baad hi batting. Left: ${realLeftTxt(r.plainRemaining, have)} · ${careerLine(r.p.id)}</span>
       </button>`);
       list.appendChild(b);
       makeTappable(b, r.p.id, have, have>0?'fresh':'locked');
@@ -5566,7 +5566,7 @@ function renderPickBatters(matchIdx, innIdx){
     list.appendChild(el(`<p class="muted" style="font-size:0.82rem;">Is step mein koi batsman available nahi hai.</p>`));
   }
 
-  ecsDropdownUI(card, list, ecsBC, !inn.strikerId ? 'Striker chuno' : (!inn.nonStrikerId ? (isReplacement?'Naya batsman chuno':'Non-striker chuno') : 'Batsman chuno'));
+  ecsDropdownUI(card, list, ecsBC, !inn.strikerId ? 'Select striker' : (!inn.nonStrikerId ? (isReplacement?'Select new batter':'Select non-striker') : 'Select batter'));
 
   
   const urRow = renderUndoRedoRow(matchIdx, {undoLabel:'agar galat wicket/entry ki wajah se ye screen aa gayi'});
@@ -5675,7 +5675,7 @@ function renderPickBowler(matchIdx, innIdx){
   seq.open.forEach(r=>{
     if(r.isLastOver){ lockedLastOver(r); return; }
     const b = el(`<button class="choice-btn">${r.p.name} <span class="tag" style="background:#2d6cdf;color:#fff;">OPEN</span>
-      <span class="meta">Bachi: <b style="color:var(--gold);">${r.rem}</b> · ${careerLine(r.p.id, r.dayUsed)}</span>
+      <span class="meta">Left: <b style="color:var(--gold);">${r.rem}</b> · ${careerLine(r.p.id, r.dayUsed)}</span>
     </button>`);
     b.onclick = ()=> pickBowler(r.p.id); ecsBW.push({label:r.p.name+' · '+r.rem+' bachi', go:()=>pickBowler(r.p.id)});
     list.appendChild(b);
@@ -5743,7 +5743,7 @@ function renderPickBowler(matchIdx, innIdx){
     list.appendChild(el(`<p class="muted" style="font-size:0.82rem;">Koi bowler available nahi — sab ka quota/2-over limit poora ho chuka hai aur bonus pool bhi khali hai.</p>`));
   }
 
-  ecsDropdownUI(card, list, ecsBW, 'Bowler chuno');
+  ecsDropdownUI(card, list, ecsBW, 'Select bowler');
 
   
   const urRow = renderUndoRedoRow(matchIdx);
@@ -10018,7 +10018,7 @@ function openFinanceMembersModal(){
     <h3 style="margin-top:0;">🧑‍🤝‍🧑 Members</h3>
     <p class="muted" style="font-size:0.74rem;">Inactive karne se member aaj se aage ke mahinon mein nahi ginega, magar purana record mehfooz rahega.</p>
     <div id="fmList" style="max-height:48vh;overflow-y:auto;margin:8px 0;"></div>
-    <button class="btn secondary" id="fmClose" style="width:100%;">Band karein</button>
+    <button class="btn secondary" id="fmClose" style="width:100%;">Close</button>
   </div></div>`);
   const list = overlay.querySelector('#fmList');
   const draw = ()=>{
@@ -10057,7 +10057,7 @@ function openFinanceCategoriesModal(){
     <p class="muted" style="font-size:0.74rem;">Har category ki apni monthly fee hoti hai. Players ko category "🧑‍🤝‍🧑 Members manage karein" mein assign karein — fee automatic apply ho jaegi.</p>
     <div id="fcList" style="margin:8px 0;"></div>
     <button class="btn gold small" id="fcAdd" style="width:100%;margin-bottom:8px;">+ Nayi category</button>
-    <button class="btn secondary" id="fcClose" style="width:100%;">Band karein</button>
+    <button class="btn secondary" id="fcClose" style="width:100%;">Close</button>
   </div></div>`);
   const list = overlay.querySelector('#fcList');
   const draw = ()=>{
@@ -10592,8 +10592,8 @@ function ecsPlayerForm(r){
     <label>Bowling style</label>${sel('fb',['Fast','Medium','Spin','None'],x.bowl)}
     <label>Batting position</label>${sel('fp',['Opener','Top order','Middle order','Finisher','Lower order'],x.pos)}
     <label>Note (optional)</label><input id="fo" value="${(x.note||'').replace(/"/g,'&quot;')}">
-    <label>Photo (optional — poster / profile mein dikhegi)</label><div class="row"><div id="fph" style="width:56px;height:56px;border-radius:50%;background:#0b1d33;border:2px solid var(--border);overflow:hidden;flex:0 0 56px;display:flex;align-items:center;justify-content:center;">${phHtml(photoVal)}</div><label class="btn secondary small" style="flex:0 0 auto;margin:0;">📷 Photo chuno<input type="file" id="fphIn" accept="image/*" style="display:none;"></label><button class="btn secondary small" id="fphX" style="flex:0 0 auto;" type="button">✕ Hatao</button></div>
-    <label>Full-length photo (optional — poster mein captain ki kit-wali figure ki jagah dikhegi)</label><div class="row"><div id="fphF" style="width:44px;height:72px;border-radius:8px;background:#0b1d33;border:2px solid var(--border);overflow:hidden;flex:0 0 44px;display:flex;align-items:center;justify-content:center;">${x.photoFull?`<img src="${x.photoFull}" style="width:100%;height:100%;object-fit:cover;">`:'<span>🧍</span>'}</div><label class="btn secondary small" style="flex:0 0 auto;margin:0;">🧍 Full photo chuno<input type="file" id="fphFIn" accept="image/*" style="display:none;"></label><button class="btn secondary small" id="fphFX" style="flex:0 0 auto;" type="button">✕</button></div>
+    <label>Photo (optional — poster / profile mein dikhegi)</label><div class="row"><div id="fph" style="width:56px;height:56px;border-radius:50%;background:#0b1d33;border:2px solid var(--border);overflow:hidden;flex:0 0 56px;display:flex;align-items:center;justify-content:center;">${phHtml(photoVal)}</div><label class="btn secondary small" style="flex:0 0 auto;margin:0;">📷 Choose photo<input type="file" id="fphIn" accept="image/*" style="display:none;"></label><button class="btn secondary small" id="fphX" style="flex:0 0 auto;" type="button">✕ Hatao</button></div>
+    <label>Full-length photo (optional — poster mein captain ki kit-wali figure ki jagah dikhegi)</label><div class="row"><div id="fphF" style="width:44px;height:72px;border-radius:8px;background:#0b1d33;border:2px solid var(--border);overflow:hidden;flex:0 0 44px;display:flex;align-items:center;justify-content:center;">${x.photoFull?`<img src="${x.photoFull}" style="width:100%;height:100%;object-fit:cover;">`:'<span>🧍</span>'}</div><label class="btn secondary small" style="flex:0 0 auto;margin:0;">🧍 Choose full photo<input type="file" id="fphFIn" accept="image/*" style="display:none;"></label><button class="btn secondary small" id="fphFX" style="flex:0 0 auto;" type="button">✕</button></div>
     <div class="row" style="margin-top:10px;"><button class="btn gold" id="fs">💾 Save</button><button class="btn secondary" id="fx">Cancel</button></div></div></div>`);
   ov.querySelector('#fx').onclick = ()=> document.body.removeChild(ov);
   ov.querySelector('#fphFX').onclick = ()=>{ photoFullVal = ''; photoMaskVal = ''; ov.querySelector('#fphF').innerHTML = '<span>🧍</span>'; };
@@ -10931,7 +10931,7 @@ function renderTeamsMgr(){
     });
     return wrap;
   }
-  const sel = (id,v)=>`<select id="${id}"><option value="">-- chuno --</option>${t.players.map(p=>`<option value="${p.id}" ${v===p.id?'selected':''}>${ecsEsc(p.name)}</option>`).join('')}</select>`;
+  const sel = (id,v)=>`<select id="${id}"><option value="">-- Select --</option>${t.players.map(p=>`<option value="${p.id}" ${v===p.id?'selected':''}>${ecsEsc(p.name)}</option>`).join('')}</select>`;
   const c = el(`<div class="card" style="border-left:6px solid ${t.color}"><h2>✏️ ${ecsEsc(t.name)} - Squad</h2>
     <label>Team ka naam</label><input id="tn" value="${ecsEsc(t.name)}">
     <label>Team colour (flag)</label><div id="tcols" style="margin:4px 0 8px;">${ECS_COLORS.map(x=>`<span class="ecs-sw ${t.color===x?'on':''}" data-c="${x}" style="background:${x};width:32px;height:32px;"></span>`).join('')}<input id="tcc" type="color" value="${/^#[0-9a-f]{6}$/i.test(t.color)?t.color:'#3d7bf5'}" style="width:60px;height:36px;padding:0;display:inline-block;vertical-align:middle;"></div>
@@ -10946,7 +10946,7 @@ function renderTeamsMgr(){
   wrap.appendChild(c);
   const sq = el(`<div class="card"><h3 style="margin:0 0 6px;color:var(--gold);">Squad (${t.players.length} players)</h3><div id="sqList"></div>
     <div class="row" style="margin-top:10px;"><input id="np" list="ecsAllP" placeholder="Saved ya naya player ka naam" style="flex:3"><button class="btn danger" id="npBtn" style="flex:1">+ Add</button></div>
-    <button class="btn gold" id="pickMulti" style="width:100%;margin-top:8px;">📋 Players list se chuno (multi-select)</button><datalist id="ecsAllP">${root.playersReg.map(r=>`<option value="${ecsEsc(r.name)}">`).join('')}</datalist></div>`);
+    <button class="btn gold" id="pickMulti" style="width:100%;margin-top:8px;">📋 Choose from players list (multi-select)</button><datalist id="ecsAllP">${root.playersReg.map(r=>`<option value="${ecsEsc(r.name)}">`).join('')}</datalist></div>`);
   const list = sq.querySelector('#sqList');
   t.players.forEach(p=>{
     const r = root.playersReg.find(x=>_rk(x.name)===_rk(p.name)) || {};
@@ -10962,7 +10962,7 @@ function renderTeamsMgr(){
   const addName = n=>{ n = ecsCleanName(n); if(!n) return false; if(t.players.some(p=>_rk(p.name)===_rk(n))){ alert(n+' is team mein pehle se hai.'); return false; } const _cl = ecsLibClash(t, n); if(_cl){ alert(_cl); return false; } const r = ecsRegAdd(n); t.players.push({id:uid(), name:r.name}); return true; };
   sq.querySelector('#npBtn').onclick = ()=>{ if(addName(sq.querySelector('#np').value)){ saveState(); render(); } };
   sq.querySelector('#pickMulti').onclick = ()=>{
-    const ov = el(`<div class="modal-overlay"><div class="modal" style="max-width:520px;"><h3 style="margin:0 0 8px;">Players chuno</h3><input id="pkq" placeholder="🔎 search" style="margin-bottom:8px;"><div id="pkl" style="max-height:50vh;overflow:auto;"></div><div class="row" style="margin-top:10px;"><button class="btn gold" id="pkok">Add</button><button class="btn secondary" id="pkx">Cancel</button></div></div></div>`);
+    const ov = el(`<div class="modal-overlay"><div class="modal" style="max-width:520px;"><h3 style="margin:0 0 8px;">Select players</h3><input id="pkq" placeholder="🔎 search" style="margin-bottom:8px;"><div id="pkl" style="max-height:50vh;overflow:auto;"></div><div class="row" style="margin-top:10px;"><button class="btn gold" id="pkok">Add</button><button class="btn secondary" id="pkx">Cancel</button></div></div></div>`);
     const L = ov.querySelector('#pkl'), have = new Set(t.players.map(p=>_rk(p.name)));
     root.playersReg.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(r=> L.appendChild(el(`<label class="pkr" data-n="${_rk(r.name)}" style="display:flex;gap:8px;align-items:center;padding:6px 0;"><input type="checkbox" value="${ecsEsc(r.name)}" ${have.has(_rk(r.name))?'checked disabled':''} style="width:auto;margin:0;">${ecsEsc(r.name)}</label>`)));
     ov.querySelector('#pkq').oninput = e=>{ const q=_rk(e.target.value); L.querySelectorAll('.pkr').forEach(x=>x.style.display = x.dataset.n.includes(q)?'flex':'none'); };
@@ -11352,7 +11352,7 @@ function ecsPickerHtml(n, count){
     const others = n.picks.filter((p,j)=>j!==i && p).map(_rk);
     const opts = root.teamsLib.filter(t=>!others.includes(_rk(t.name))).map(t=>`<option value="${ecsEsc(t.name)}">${t.players.length} players</option>`).join('');
     const tm = ecsFindTeamByName(n.picks[i]);
-    h += `<label>Team ${i+1}</label><input class="pickbox" list="pkdl${i}" data-pk="${i}" value="${ecsEsc(n.picks[i]||'')}" placeholder="Team ${i+1} — list se chuno ya naam likho" autocomplete="off"><datalist id="pkdl${i}">${opts}</datalist>
+    h += `<label>Team ${i+1}</label><input class="pickbox" list="pkdl${i}" data-pk="${i}" value="${ecsEsc(n.picks[i]||'')}" placeholder="Team ${i+1} — choose from list or type a name" autocomplete="off"><datalist id="pkdl${i}">${opts}</datalist>
       <div class="pickinfo">${tm?`<span class="hub-chip" style="--c:${tm.color}"><i></i>${ecsEsc(tm.name)} · ${tm.players.length} players</span>`:(n.picks[i]?'<span style="color:var(--warn)">⚠ Is naam ki koi team nahi mili</span>':'')}</div>`;
   }
   return h;
@@ -11704,7 +11704,7 @@ function renderLb(){
   const wrap = el(`<div></div>`);
   const L = ecsLb;
   if(!L){ activeTab = null; return wrap; }
-  const back = el(`<button class="btn secondary" style="margin-bottom:10px;">← Peeche</button>`);
+  const back = el(`<button class="btn secondary" style="margin-bottom:10px;">← Back</button>`);
   back.onclick = ()=>{ const b = L.scope.back || {tab:'series'}; if(b.tour!==undefined) ecsTourOpen = b.tour; activeTab = b.tab; render(); };
   wrap.appendChild(back);
   const tab = ECS_LB[L.tab] ? L.tab : 'bat';
@@ -12257,7 +12257,7 @@ function ecsResumeBanner(cat){
   return box;
 }
 function ecsPlaySelect(label, opts, cur, onch){
-  const d = el(`<div class="card"><label>${label}</label><select><option value="">— chuno —</option>${opts.map(o=>`<option value="${o[0]}" ${o[0]===cur?'selected':''}>${ecsEsc(o[1])}</option>`).join('')}</select></div>`);
+  const d = el(`<div class="card"><label>${label}</label><select><option value="">— Select —</option>${opts.map(o=>`<option value="${o[0]}" ${o[0]===cur?'selected':''}>${ecsEsc(o[1])}</option>`).join('')}</select></div>`);
   d.querySelector('select').onchange = e=>{ onch(e.target.value); };
   return d;
 }
@@ -12272,7 +12272,7 @@ function renderPlay(){
     return wrap;
   }
   const P = ecsPlay;
-  const b = el(`<button class="btn secondary" style="margin-bottom:10px;">← Peeche</button>`); b.onclick = ()=>{ ecsPlay=null; render(); }; wrap.appendChild(b); wrap.appendChild(ecsResumeBanner(P.cat));
+  const b = el(`<button class="btn secondary" style="margin-bottom:10px;">← Back</button>`); b.onclick = ()=>{ ecsPlay=null; render(); }; wrap.appendChild(b); wrap.appendChild(ecsResumeBanner(P.cat));
   if(P.cat==='t'){
     wrap.appendChild(el(`<h3 style="color:#fff;margin:0 0 6px;">🏆 Play Tournament Match</h3>`));
     if(!root.tours.length){ wrap.appendChild(el(`<div class="card muted">Abhi koi tournament nahi — Tournament Manager se banao.</div>`)); return wrap; }
@@ -14979,7 +14979,7 @@ function ecsFlNew2(d, th, v){
 }
 (function(){ const o = ECS_PK.fixtures.make; ECS_PK.fixtures.make = (d,th,v)=> v>=6 ? ecsFlNew2(d,th,v) : o(d,th,v); ECS_PK.fixtures.lay = ECS_PK.fixtures.lay.slice(0,6).concat(['Calendar Tiles','Schedule + Photo']); })();
 
-/* ===================== v97 — direct SELECT list, Innings shuru (3 players), completed-match posters, JSL squad designs ===================== */
+/* ===================== v97 — direct SELECT list, Start innings (3 players), completed-match posters, JSL squad designs ===================== */
 /* profile popup: size fit + skip when queued */
 ecsConfirmPick = async function(o){
   if(root.noPickProfile || window.__ecsSkip){ o.onOk(); return; }
@@ -15010,15 +15010,15 @@ function ecsOpenSheet(headTitle, btns, tk, onPick, exclude){
 function ecsBtnName(b){ const t = [...b.childNodes].find(n=>n.nodeType===3 && n.textContent.trim()); return (t ? t.textContent : b.textContent).replace(/\s+/g,' ').trim().replace(/^[🔒⚠️\s]+/,'').slice(0,40); }
 function ecsRunBtn(b){ if(b.onclick) b.onclick(new Event('click')); else b.click(); }
 
-/* ---- Innings shuru: striker / non-striker / bowler ek saath ---- */
+/* ---- Start innings: striker / non-striker / bowler ek saath ---- */
 function ecsInningsStart(batBtns, m, innIdx, matchIdx){
   const inn = m.innings[innIdx]; let bowlBtns = [];
   window.__ecsHarvest = []; try{ renderPickBowler(matchIdx, innIdx); }catch(e){} bowlBtns = window.__ecsHarvest || []; window.__ecsHarvest = null;
   const S = {s:null, n:null, b:null};
-  const ov = el(`<div class="modal-overlay"><div class="modal" style="max-width:440px;max-height:92vh;overflow:auto;"><h3 style="margin:0 0 8px;">🏏 Innings shuru</h3>
-    <div class="muted" style="font-size:.78rem;">Striker (facing)</div><button type="button" class="ecs-pk-field" data-f="s"><span>— chuno —</span><span>▾</span></button>
-    <div class="muted" style="font-size:.78rem;margin-top:8px;">Non-striker</div><button type="button" class="ecs-pk-field" data-f="n"><span>— chuno —</span><span>▾</span></button>
-    <div class="muted" style="font-size:.78rem;margin-top:8px;">Bowler</div><button type="button" class="ecs-pk-field" data-f="b"><span>— chuno —</span><span>▾</span></button>
+  const ov = el(`<div class="modal-overlay"><div class="modal" style="max-width:440px;max-height:92vh;overflow:auto;"><h3 style="margin:0 0 8px;">🏏 Start innings</h3>
+    <div class="muted" style="font-size:.78rem;">Striker (facing)</div><button type="button" class="ecs-pk-field" data-f="s"><span>— Select —</span><span>▾</span></button>
+    <div class="muted" style="font-size:.78rem;margin-top:8px;">Non-striker</div><button type="button" class="ecs-pk-field" data-f="n"><span>— Select —</span><span>▾</span></button>
+    <div class="muted" style="font-size:.78rem;margin-top:8px;">Bowler</div><button type="button" class="ecs-pk-field" data-f="b"><span>— Select —</span><span>▾</span></button>
     <div class="row" style="margin-top:14px;"><button class="btn secondary" id="isX">Cancel</button><button class="btn gold" id="isN">▶ Start innings</button></div></div></div>`);
   const field = k=> ov.querySelector(`[data-f="${k}"]`);
   const pick = (k, title, list, tk, excl)=> ecsOpenSheet(title, list, tk, (b,nm)=>{ S[k] = {b, nm, tk}; field(k).firstChild.textContent = nm; }, excl, k==='b'?'bowl':'bat');
@@ -15052,7 +15052,7 @@ function ecsDropdownUI(card, list, cands, title){
   const isBowl = /owler/.test(title);
   const m = state.matches.find(x=>x.status==='live'), innIdx = m ? activeInningsIndex(m) : 0, inn = m && m.innings[innIdx];
   btns.forEach(b=>{ b.style.display = 'none'; });
-  // queue (Innings shuru ke baad auto-select)
+  // queue (Start innings ke baad auto-select)
   const Q = window.__ecsQ;
   if(Q && Q.length){ const nx = Q[0]; if((nx.kind==='bowl')===isBowl){ const b = btns.find(b=> ecsBtnName(b).startsWith(nx.name) || nx.name.startsWith(ecsBtnName(b))); if(b){ Q.shift(); if(!Q.length) setTimeout(()=>{ window.__ecsSkip = false; window.__ecsQ = null; }, 400); const h2q = card.querySelector('h2'); if(h2q) h2q.style.display = 'none'; setTimeout(()=> ecsRunBtn(b), 30); return; } } window.__ecsQ = null; window.__ecsSkip = false; }
   const first = inn && inn.balls.length===0, opening = !isBowl && inn && !inn.strikerId && !inn.nonStrikerId && first;
@@ -15060,7 +15060,7 @@ function ecsDropdownUI(card, list, cands, title){
   const h2 = card.querySelector('h2'); if(h2) h2.style.display = 'none';
   const open = ()=> ecsOpenSheet(head, btns, isBowl ? inn.bowlingTeam : inn.battingTeam, (b)=> ecsRunBtn(b));
   if(opening){ const reopen = ()=> ecsInningsStart(btns, m, innIdx, state.matches.indexOf(m));
-    const fb = el(`<div style="margin:6px 0;"><button class="btn gold" style="width:100%;padding:14px;font-size:1.05rem;">🏏 Innings shuru — players chuno</button></div>`); fb.querySelector('button').onclick = reopen; fb.querySelector('button').setAttribute('data-ecs-sel','1'); card.insertBefore(fb, card.firstChild);
+    const fb = el(`<div style="margin:6px 0;"><button class="btn gold" style="width:100%;padding:14px;font-size:1.05rem;">🏏 Start innings — select players</button></div>`); fb.querySelector('button').onclick = reopen; fb.querySelector('button').setAttribute('data-ecs-sel','1'); card.insertBefore(fb, card.firstChild);
     if(!window.__ecsInnCancel) setTimeout(reopen, 60); return; }
   const fb = el(`<div style="margin:6px 0;"><div style="font-weight:800;font-size:1rem;margin-bottom:8px;">${ecsEsc(head)}</div><button class="btn gold" style="width:100%;padding:14px;font-size:1.05rem;">${isBowl?'⚾ Select new bowler':'🏏 Select new batsman'}</button></div>`);
   fb.querySelector('button').onclick = open; fb.querySelector('button').setAttribute('data-ecs-sel','1'); card.insertBefore(fb, card.firstChild);
@@ -15186,7 +15186,7 @@ function ecsReplacePlayerModal(t, p){
   const ov = el(`<div class="modal-overlay"><div class="modal" style="max-width:460px;max-height:88vh;overflow:auto;">
     <h3 style="margin:0 0 6px;">⇄ Player replace</h3>
     <p class="muted" style="font-size:.8rem;margin:0 0 8px;">#${idx+1} <b>${ecsEsc(p.name)}</b> ki jagah (usi number par) kaun aayega?</p>
-    <input type="text" id="rpn" placeholder="🔎 naam likho ya neeche se chuno" autocomplete="off">
+    <input type="text" id="rpn" placeholder="🔎 Type a name or choose below" autocomplete="off">
     <div id="rpm" style="font-size:.76rem;margin:6px 0;min-height:16px;line-height:1.4;"></div>
     <div id="rpl" style="max-height:34vh;overflow:auto;"></div>
     <div class="row" style="margin-top:10px;"><button class="btn gold" id="rpok">✅ Replace karo</button><button class="btn secondary" id="rpx">Cancel</button></div></div></div>`);
@@ -15237,7 +15237,7 @@ function ecsHarvestPick(kind){
 ecsOpenSheet = function(headTitle, btns, tk, onPick, exclude, kind){
   const ov = el(`<div class="modal-overlay"><div class="modal ecs-pk-sheet" style="max-width:440px;max-height:88vh;overflow:auto;padding:0;">
     <div style="background:#004d40;color:#fff;text-align:center;font-weight:800;font-size:1.05rem;padding:15px 10px;letter-spacing:.03em;">${ecsEsc(headTitle)}</div>
-    <div style="padding:10px 10px 0;"><input type="text" id="shQ" placeholder="🔎 Naam likho — search ya naya player" autocomplete="off" style="width:100%;font-size:1rem;">
+    <div style="padding:10px 10px 0;"><input type="text" id="shQ" placeholder="🔎 Type a name — search or add new player" autocomplete="off" style="width:100%;font-size:1rem;">
       <div id="shMsg" style="font-size:.78rem;margin:6px 2px 0;line-height:1.4;"></div>
       <button class="btn gold" id="shAdd" style="display:none;width:100%;margin-top:8px;"></button></div>
     <div id="shList" style="padding:10px;"></div>
@@ -15314,7 +15314,7 @@ ecsDropdownUI = function(card, list, cands, title){
   }, null, kind);
   if(opening){
     const reopen = ()=> ecsInningsStart(btns, m, innIdx, state.matches.indexOf(m));
-    const fb = el(`<div style="margin:6px 0;"><button class="btn gold" style="width:100%;padding:14px;font-size:1.05rem;">🏏 Innings shuru — players chuno</button></div>`);
+    const fb = el(`<div style="margin:6px 0;"><button class="btn gold" style="width:100%;padding:14px;font-size:1.05rem;">🏏 Start innings — select players</button></div>`);
     fb.querySelector('button').onclick = reopen; fb.querySelector('button').setAttribute('data-ecs-sel','1'); card.insertBefore(fb, card.firstChild);
     if(!window.__ecsInnCancel) requestAnimationFrame(reopen);
     return;
@@ -17241,19 +17241,19 @@ const fillRules = ()=>window.__v104rules(fillRules0());
           const crr=lb?(inn.score/(lb/6)).toFixed(2):'0.00';
           let tgt=0,need=0,rrr='',f1='';
           if(ai>=1&&m.innings[0]){ const f=m.innings[0]; tgt=f.score+1; need=Math.max(0,tgt-inn.score); rrr=left?(need/(left/6)).toFixed(2):'-'; f1=ecsMNm(s,f.battingTeam)+' 1st innings: '+f.score+'/'+f.wickets+' ('+fmtOvers(f.legalBalls)+' ov)'; }
-          const serBat=id=>{ let r=0,b=0,n=0; (s.matches||[]).forEach(mm=>(mm.innings||[]).forEach(ii=>{ let fc=false; (ii.balls||[]).forEach(x=>{ if(x.batterId!==id||x.extraType==='wide') return; fc=true; if(x.extraType!=='bye'&&x.extraType!=='legbye') r+=x.runs||0; if(x.extraType!=='noball') b++; }); if(fc) n++; })); return n?('Is series mein: '+r+' runs ('+b+' balls) · '+n+' innings'):'Is series mein pehli batting'; };
-          const serBowl=id=>{ let w=0,rn=0,lg=0; (s.matches||[]).forEach(mm=>(mm.innings||[]).forEach(ii=>(ii.balls||[]).forEach(x=>{ if(x.bowlerId!==id) return; if(x.isLegal) lg++; rn+=bowlerCharge(x); if(x.isWicket&&x.wicketType!=='runout') w++; }))); return lg?('Is series mein: '+w+' wickets · economy '+(rn/(lg/6)).toFixed(1)):'Is series mein pehli bowling'; };
+          const serBat=id=>{ let r=0,b=0,n=0; (s.matches||[]).forEach(mm=>(mm.innings||[]).forEach(ii=>{ let fc=false; (ii.balls||[]).forEach(x=>{ if(x.batterId!==id||x.extraType==='wide') return; fc=true; if(x.extraType!=='bye'&&x.extraType!=='legbye') r+=x.runs||0; if(x.extraType!=='noball') b++; }); if(fc) n++; })); return n?('This series: '+r+' runs ('+b+' balls) · '+n+' innings'):'First batting this series'; };
+          const serBowl=id=>{ let w=0,rn=0,lg=0; (s.matches||[]).forEach(mm=>(mm.innings||[]).forEach(ii=>(ii.balls||[]).forEach(x=>{ if(x.bowlerId!==id) return; if(x.isLegal) lg++; rn+=bowlerCharge(x); if(x.isWicket&&x.wicketType!=='runout') w++; }))); return lg?('This series: '+w+' wickets · economy '+(rn/(lg/6)).toFixed(1)):'First bowling this series'; };
           const bu=inn.battersUsed||[]; const nbid=bu.length>2?bu[bu.length-1]:null;
           let ev=null; { let tot=0; (m.innings||[]).forEach(i=>{ tot+=(i.balls||[]).length; }); if(lastB){ const l=ecsBallLab(lastB); const k=lastB.isWicket?'W':lastB.extraType==='wide'?'Wd':lastB.extraType==='noball'?'Nb':lastB.runs===4?'4':lastB.runs===6?'6':(lastB.runs?'R':'0'); ev={n:tot,k,r:lastB.runs||0,col:l[1]}; } }
           const ext=balls.reduce((a,b)=>a+((b.extraType==='wide'||b.extraType==='noball')?Math.max(1,(b.extraType==='noball'?1:b.runs||1)):(b.extraType==='bye'||b.extraType==='legbye'?(b.runs||0):0)),0);
           const kdv=s.kind||'bi', tourO=(root.tours||[]).find(x=>x.id===s.tourId); const capN=k=>{ const T=s.teams[k]; const c=(T.players||[]).find(x=>x.id===T.captainId); return c?c.name:''; };
           const outs=inn.outBatters||[], lo=outs.length?outs[outs.length-1]:null, rl=inn.retireLog||[], lr=rl.length?rl[rl.length-1]:null;
-          const retWhy=r=>{ const w=r.why; if(w==='quota') return 'Quota / limit poori ho gayi'; if(w==='daycap') return 'Aaj ki limit poori ('+(r.dayTotal||0)+' balls, limit '+(r.cap||'')+')'; if(w==='voluntary') return 'Captain ka faisla'; if(w==='emergency') return 'Emergency retire'+((r.emergency&&r.emergency.reason)?' — '+r.emergency.reason:''); if(w==='edit') return 'Edit se retired'; return 'Retired'; };
+          const retWhy=r=>{ const w=r.why; if(w==='quota') return 'Quota / limit completed'; if(w==='daycap') return 'Today\'s limit completed ('+(r.dayTotal||0)+' balls, limit '+(r.cap||'')+')'; if(w==='voluntary') return 'Captain ka faisla'; if(w==='emergency') return 'Emergency retire'+((r.emergency&&r.emergency.reason)?' — '+r.emergency.reason:''); if(w==='edit') return 'Edit se retired'; return 'Retired'; };
           return {id:m.uid||(s.id+'#'+m.number),v:2,status:'live',title:ecsMNm(s,'A')+' vs '+ecsMNm(s,'B'),series:kdv==='ind'?'':(kdv==='tour'?(s.groupName||(tourO&&tourO.name)||''):sName(s)),
             cat:kdv==='tour'?'Tournament':kdv==='ind'?'Individual Match':'Series',rd:kdv==='tour'?(s.fixRd||''):'',of:kdv==='bi'?(s.totalMatches||''):'',date:m.date||'',ground:m.ground||'',caps:(capN('A')&&capN('B'))?(capN('A')+' · '+capN('B')):'',sid:s.id,tk:tk,ib:balls.length,
             out:lo?{i:ai*100+outs.length,n:playerName(tk,lo),how:dismissalTextFor(inn,lo)}:null,rt:lr?{i:ai*100+rl.length,n:playerName(tk,lr.pid),why:retWhy(lr),sb:lr.stintBalls||0}:null,
             no:kdv==='tour'?(s.fixNo||m.number):m.number,
-            toss:(m.tossWinner&&s.teams[m.tossWinner])?(ecsMNm(s,m.tossWinner)+' ne toss jeeta · '+(m.tossDecision==='bowl'?'bowling':'batting')+' chuni'):'',
+            toss:(m.tossWinner&&s.teams[m.tossWinner])?(ecsMNm(s,m.tossWinner)+' won the toss · chose '+(m.tossDecision==='bowl'?'bowling':'batting')+''):'',
             innL:ai===0?'1st INNINGS':'2nd INNINGS',bat:ecsMNm(s,tk),batCol:ecsMCol(s,tk),r:inn.score||0,w:inn.wickets||0,ovs:fmtOvers(lb),max:ovMax,crr,tgt,need,left,rrr,f1,ext,
             st:mk(inn.strikerId),ns:mk(inn.nonStrikerId),
             bw:bid?{id:bid,n:playerName(bk,bid),fig:bwr?(bwr.overs+'-'+bwr.maidens+'-'+bwr.runs+'-'+bwr.wkts):'0-0-0-0',p:serBowl(bid)}:{id:'',n:'',fig:''},
@@ -17628,18 +17628,18 @@ setTimeout(()=>{ try{ if(sessionStorage.getItem(W.p+'_pv_done')) return; session
 ${j.toss?`<div class="L4toss">🪙 ${E(j.toss)}</div>`:''}
 <div class="L4tm"><div><div class="L4lb">${E(j.innL||'')}</div><div class="L4nm">${E(j.bat)}</div></div><div class="L4big">${E(j.r)}/${E(j.w)}<small>(${E(j.ovs)}/${E(j.max)})</small></div></div>
 <div class="L4rt"><span>CRR <b>${E(j.crr)}</b></span>${j.tgt?`<span>RRR <b>${E(j.rrr)}</b></span><span>Target <b>${E(j.tgt)}</b></span>`:''}${j.ext?`<span>Extras <b>${E(j.ext)}</b></span>`:''}</div>
-${j.tgt?`<div class="L4ch">${j.need>0?`Jeetne ke liye <b>${E(j.need)}</b> runs · <b>${E(j.left)}</b> balls baaqi`:'Target paar! 🎉'}</div>`:''}
+${j.tgt?`<div class="L4ch">${j.need>0?`Need <b>${E(j.need)}</b> runs from <b>${E(j.left)}</b> balls`:'Target paar! 🎉'}</div>`:''}
 ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
 <table>${ths}${batRow(j.st,true)}${batRow(j.ns,false)}</table>
 <table><tr><th>Bowler</th><th style="text-align:right">O-M-R-W</th></tr><tr><td>⚾ ${E(j.bw&&j.bw.n||'-')}</td><td>${E(j.bw&&j.bw.fig||'')}</td></tr></table>
-<div class="L4ov"><div class="L4ol">IS OVER / PICHLI BALLS</div><div class="L4bl">${(j.last||[]).map(x=>`<b style="background:${E(x[1]||'#5b6b82')}">${E(x[0])}</b>`).join('')}</div></div>`;
+<div class="L4ov"><div class="L4ol">THIS OVER</div><div class="L4bl">${(j.last||[]).map(x=>`<b style="background:${E(x[1]||'#5b6b82')}">${E(x[0])}</b>`).join('')}</div></div>`;
     cd.innerHTML=body; fx.forEach(f=>cd.appendChild(f));
     cd.querySelector('#lvx').onclick=()=>{ dismissed[j.id]=1; closeBox(); drawChip(j); };
     const bb=cd.querySelector('#lvb'); if(bb) bb.onclick=toggleBell;
   }
   async function toggleBell(){
-    if(ls.g(NOTK)==='1'){ ls.s(NOTK,'0'); W.toast('🔕 Notification band'); }
-    else { try{ const p=(Notification.permission==='granted')?'granted':await Notification.requestPermission(); if(p==='granted'){ ls.s(NOTK,'1'); W.toast('🔔 Notification chalu — app background mein ho to bhi khabar aayegi'); notify('🔔 Live notification chalu','Ab match ki khabar yahan aayegi','lv-test',false); } else W.toast('Phone ne notification ki ijazat nahi di (settings se allow karein)',false); }catch(e){ W.toast('Is browser mein notification nahi chal sakti',false); } }
+    if(ls.g(NOTK)==='1'){ ls.s(NOTK,'0'); W.toast('🔕 Notifications OFF'); }
+    else { try{ const p=(Notification.permission==='granted')?'granted':await Notification.requestPermission(); if(p==='granted'){ ls.s(NOTK,'1'); W.toast('🔔 Notifications ON — you will be alerted even when the app is in the background'); notify('🔔 Live notifications ON','Match updates will appear here','lv-test',false); } else W.toast('Notification permission denied (allow it in phone settings)',false); }catch(e){ W.toast('Notifications are not supported in this browser',false); } }
     const b=document.getElementById('lvb'); if(b) b.textContent=notifOn()?'🔔':'🔕';
   }
   function closeBox(){ if(box){ box.remove(); box=null; fxQ=[]; fxBusy=false; } }
@@ -17654,7 +17654,12 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
     hideChip(); render(j);
   }
   /* ---- animation: ball bubble + nayi batter / bowler ka profile ---- */
-  function pushFx(f){ fxQ.push(f); if(fxQ.length>9) fxQ=fxQ.slice(-7); runFx(); }
+  const recentP={};
+  function pushFx(f){ if(f.type==='prof'){ const k=f.kind+'|'+f.n, t=Date.now(); if(recentP[k]&&t-recentP[k]<90000) return; recentP[k]=t; } fxQ.push(f); if(fxQ.length>9) fxQ=fxQ.slice(-7); runFx(); }
+  function fitCards(el){
+    const go=()=>{ try{ const pb=el.querySelector('.L4pb'), sc=el.querySelector('.L4sc'); if(!pb||!sc||!el.parentNode) return; pb.style.transform=''; pb.style.marginBottom=''; const avail=el.clientHeight-20, pbH=pb.scrollHeight, other=sc.scrollHeight-pbH; let k=Math.min(1,(avail-other-8)/pbH); if(k<0.3) k=0.3; if(k<1){ pb.style.transformOrigin='top center'; pb.style.transform='scale('+k.toFixed(3)+')'; pb.style.marginBottom=(-(pbH*(1-k))).toFixed(0)+'px'; } }catch(e){} };
+    go(); [200,600,1500].forEach(t=>setTimeout(go,t));
+  }
   function runFx(){
     if(fxBusy||!box) return; const f=fxQ.shift(); if(!f) return; fxBusy=true; const cd=box.querySelector('.L4cd'); let el;
     if(f.type==='ball'){
@@ -17664,46 +17669,51 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
       cd.appendChild(el); setTimeout(()=>{ el.remove(); fxBusy=false; runFx(); },2300);
     } else if(f.type==='trio'){
       el=document.createElement('div'); el.className='L4pf'; const done=()=>{ if(!el.parentNode) return; el.style.transition='opacity .35s'; el.style.opacity='0'; setTimeout(()=>{ el.remove(); fxBusy=false; runFx(); },360); };
-      el.innerHTML=`<div class="L4sc"><div class="L4hd">🏏 INNINGS SHURU — OPENERS</div><div class="L4pb" style="text-align:center;opacity:.7;min-height:120px">Profiles aa rahi hain…</div><button class="L4cl" data-cl="1">Band karo</button></div>`;
+      el.innerHTML=`<div class="L4sc"><div class="L4hd">🏏 INNINGS START — OPENERS</div><div class="L4pb" style="text-align:center;opacity:.7;min-height:120px">Loading profiles…</div><button class="L4cl" data-cl="1">Close</button></div>`;
       el.onclick=e=>{ if(e.target.closest('.L4cl')||e.target===el) done(); }; box.appendChild(el);
-      Promise.all(f.items.map(x=>Promise.resolve().then(()=>LV.profile?LV.profile(x.kind,x.n,f.j,x.tag):'').catch(()=>''))).then(hs=>{ const pb=el.querySelector('.L4pb'); if(pb){ pb.style.opacity='1'; pb.style.minHeight=''; pb.innerHTML=f.items.map((x,k)=>`<div style="text-align:left"><span class="L4pill">${E(x.tag)}</span></div>`+(hs[k]||('<div style="font-size:1.2rem;font-weight:900;padding:10px">'+E(x.n)+'</div>'))).join(''); } });
+      Promise.all(f.items.map(x=>Promise.resolve().then(()=>LV.profile?LV.profile(x.kind,x.n,f.j,x.tag):'').catch(()=>''))).then(hs=>{ const pb=el.querySelector('.L4pb'); if(pb){ pb.style.opacity='1'; pb.style.minHeight=''; pb.innerHTML=f.items.map((x,k)=>`<div style="text-align:left"><span class="L4pill" style="margin:4px 0 2px">${E(x.tag)}</span></div>`+(hs[k]||('<div style="font-size:1.2rem;font-weight:900;padding:10px">'+E(x.n)+'</div>'))).join(''); fitCards(el); } });
       setTimeout(done,14000);
     } else if(f.type==='prof'||f.type==='info'){
       el=document.createElement('div'); el.className='L4pc'; const done=()=>{ if(!el.parentNode) return; el.style.transition='opacity .35s'; el.style.opacity='0'; setTimeout(()=>{ el.remove(); fxBusy=false; runFx(); },360); };
       el.onclick=done;
       if(f.type==='info'){
-        el.innerHTML=`<div class="L4ic"><div class="L4e">${f.k==='ret'?'🚶':'☝️'}</div><div class="L4hd" style="font-weight:900;letter-spacing:.1em;color:#ffd48a;font-size:.8rem">${f.k==='ret'?'BATTER RETIRE HUA':'WICKET! BATTER OUT'}</div><div class="L4n">${E(f.n)}</div><div class="L4rs">${E(f.t||'')}</div><div class="L4tap" style="font-size:.62rem;opacity:.55;margin-top:8px">tap karke band karein</div></div>`;
+        el.innerHTML=`<div class="L4ic"><div class="L4e">${f.k==='ret'?'🚶':'☝️'}</div><div class="L4hd" style="font-weight:900;letter-spacing:.1em;color:#ffd48a;font-size:.8rem">${f.k==='ret'?'BATTER RETIRED':'WICKET! BATTER OUT'}</div><div class="L4n">${E(f.n)}</div><div class="L4rs">${E(f.t||'')}</div><div class="L4tap" style="font-size:.62rem;opacity:.55;margin-top:8px">tap to close</div></div>`;
         cd.appendChild(el); setTimeout(done,3400);
       } else {
         el.remove(); el=document.createElement('div'); el.className='L4pf'; el.onclick=e=>{ if(e.target.closest('.L4cl')||e.target===el) done(); };
-        el.innerHTML=`<div class="L4sc"><div class="L4hd">${E(f.tag)}</div><div class="L4pb" style="min-height:120px;text-align:center;opacity:.7">Profile aa rahi hai…</div><button class="L4cl" data-cl="1">Band karo</button></div>`;
+        el.innerHTML=`<div class="L4sc"><div class="L4hd">${E(f.tag)}</div><div class="L4pb" style="min-height:120px;text-align:center;opacity:.7">Loading profile…</div><button class="L4cl" data-cl="1">Close</button></div>`;
         box.appendChild(el);
-        Promise.resolve().then(()=>LV.profile?LV.profile(f.kind,f.n,f.j,f.tag):'').then(h=>{ const pb=el.querySelector('.L4pb'); if(pb){ pb.style.opacity='1'; pb.style.minHeight=''; pb.innerHTML=h||('<div style="font-size:1.3rem;font-weight:900">'+E(f.n)+'</div>'); } }).catch(()=>{});
+        Promise.resolve().then(()=>LV.profile?LV.profile(f.kind,f.n,f.j,f.tag):'').then(h=>{ const pb=el.querySelector('.L4pb'); if(pb){ pb.style.opacity='1'; pb.style.minHeight=''; pb.innerHTML=h||('<div style="font-size:1.3rem;font-weight:900">'+E(f.n)+'</div>'); fitCards(el); } }).catch(()=>{});
         setTimeout(done,f.ms||5000);
       }
     } else {
       el=document.createElement('div'); el.className='L4pc';
       const ini=String(f.n||'?').trim().split(/\s+/).map(x=>x[0]).slice(0,2).join('').toUpperCase();
-      el.innerHTML=`<div class="L4in"><div class="L4av" style="background:${E(f.col||'#3d7bf5')}">${E(ini)}</div><div class="L4k">${f.type==='bat'?'🏏 NAYA BATTER KREEZ PAR':'⚾ NAYA BOWLER ATTACK MEIN'}</div><div class="L4n">${E(f.n)}</div><div class="L4p">${E(f.p||'')}</div></div>`;
+      el.innerHTML=`<div class="L4in"><div class="L4av" style="background:${E(f.col||'#3d7bf5')}">${E(ini)}</div><div class="L4k">${f.type==='bat'?'🏏 NEW BATTER AT THE CREASE':'⚾ NEW BOWLER IN THE ATTACK'}</div><div class="L4n">${E(f.n)}</div><div class="L4p">${E(f.p||'')}</div></div>`;
       cd.appendChild(el); setTimeout(()=>{ el.style.transition='opacity .4s'; el.style.opacity='0'; setTimeout(()=>{ el.remove(); fxBusy=false; runFx(); },420); },3600);
     }
   }
   const FXS={};
   function detectFx(j,show){
     const id=j.id, S=FXS[id]||(FXS[id]={}), q=[]; const names=[j.st&&j.st.n,j.ns&&j.ns.n].filter(Boolean), key=id+'|'+(j.innL||'');
+    /* purana (stale) payload: sirf thori der pehle ka -> fx na banao (varna purane players ke profile dobara aate hain) */
+    if(j.t){ if(S.t&&j.t<S.t&&(S.t-j.t)<20000) return; if(!S.t||j.t>S.t) S.t=j.t; }
     const ev=j.ev; if(ev){ const p=lastEv[id]; if(p!=null && ev.n>p && ev.n-p<=3) q.push(Object.assign({type:'ball'},ev)); lastEv[id]=ev.n; }
     if(S.out==null) S.out=j.out?j.out.i:0; if(S.rt==null) S.rt=j.rt?j.rt.i:0; if(!S.open) S.open={};
+    const sb=(S.sb||(S.sb={}))[key]||(S.sb[key]={}), sw=(S.sw||(S.sw={}))[key]||(S.sw[key]={});
     const prof=(kind,n,tag)=>({type:'prof',kind,n,tag,j});
     if(j.st&&j.ns&&j.bw&&j.bw.id&&!S.open[key]){
-      S.open[key]=1; if((j.ib||0)<=1){ q.push({type:'trio',j,items:[{kind:'bat',n:j.st.n,tag:'STRIKER'},{kind:'bat',n:j.ns.n,tag:'NON-STRIKER'},{kind:'bowl',n:j.bw.n,tag:'BOWLER'}]}); }
+      S.open[key]=1; names.forEach(n=>{ sb[n]=1; }); sw[j.bw.id]=1;
+      if((j.ib||0)<=1){ q.push({type:'trio',j,items:[{kind:'bat',n:j.st.n,tag:'STRIKER'},{kind:'bat',n:j.ns.n,tag:'NON-STRIKER'},{kind:'bowl',n:j.bw.n,tag:'BOWLER'}]}); }
       S.out=j.out?j.out.i:S.out; S.rt=j.rt?j.rt.i:S.rt;
     } else if(S.open[key]){
       if(j.out&&j.out.i>S.out) q.push({type:'info',k:'out',n:j.out.n,t:j.out.how});
-      if(j.rt&&j.rt.i>S.rt) q.push({type:'info',k:'ret',n:j.rt.n,t:(j.rt.why||'')+(j.rt.sb?' · '+j.rt.sb+' balls kheli':'')});
-      if(S.names) names.filter(n=>!S.names.includes(n)).forEach(n=>q.push(prof('bat',n,'🏏 NEXT BATTER PREVIEW')));
-      if(S.bw&&j.bw&&j.bw.id&&S.bw!==j.bw.id) q.push(prof('bowl',j.bw.n,'⚾ NEW BOWLER'));
+      if(j.rt&&j.rt.i>S.rt) q.push({type:'info',k:'ret',n:j.rt.n,t:(j.rt.why||'')+(j.rt.sb?' · '+j.rt.sb+' balls played':'')});
+      /* profile SIRF tab jab koi bilkul naya batter / bowler aaye (jo is innings mein pehle kabhi nahi dikha) */
+      names.forEach(n=>{ if(!sb[n]){ sb[n]=1; q.push(prof('bat',n,'🏏 NEXT BATTER')); } });
+      if(j.bw&&j.bw.id&&!sw[j.bw.id]){ sw[j.bw.id]=1; q.push(prof('bowl',j.bw.n,'⚾ NEW BOWLER')); }
       S.out=j.out?Math.max(S.out,j.out.i):S.out; S.rt=j.rt?Math.max(S.rt,j.rt.i):S.rt;
-    }
+    } else { names.forEach(n=>{ sb[n]=1; }); }
     if(names.length||S.open[key]) S.names=names.slice(); if(j.bw&&j.bw.id) S.bw=j.bw.id;
     if(show) q.forEach(pushFx);
   }
@@ -17718,7 +17728,7 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
     const prev=lastJ&&lastJ.id===j.id?lastJ:null; lastJ=j;
     if(j.status==='done'){ if(j.t) doneT[j.id]=j.t; hideChip(); closeBox(); setTimeout(async()=>{ try{ if(typeof clPull==='function'&&!W.isAdm()) await clPull(false); }catch(e){} checkDone(true); },1200); return; }
     if(j.status!=='live'||stale(j)){ hideChip(); closeBox(); return; }
-    if(!prev&&!firstSeen[j.id]){ firstSeen[j.id]=1; if(document.hidden) notify('🔴 Match shuru: '+j.title,(j.series||'')+(j.toss?'\n'+j.toss:''),'lv-start',true); }
+    if(!prev&&!firstSeen[j.id]){ firstSeen[j.id]=1; if(document.hidden) notify('🔴 Match started: '+j.title,(j.series||'')+(j.toss?'\n'+j.toss:''),'lv-start',true); }
     refresh(); detectFx(j,!!box); backgroundAlerts(j,prev);
   }
   function refresh(){
@@ -17761,7 +17771,7 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
   function showDone(x){
     const o=document.createElement('div'); o.className='dn104';
     const row=(t,w)=>t?`<div class="L4row ${w&&w===t.name?'L4w':''}"><span>${E(t.name)}</span><b>${E(t.score)} <small style="font-weight:600;opacity:.75">${E(t.ovs||'')}</small></b></div>`:'';
-    o.innerHTML=`<div class="L4c"><div style="font-size:2.2rem">🏁</div><div class="L4tt">MATCH COMPLETE</div><div class="L4sr">${E(x.series||'')}${x.no?' · Match '+E(x.no):''}</div>${row(x.a,x.win)}${row(x.b,x.win)}<div class="L4rs">${E(x.res||'')}</div><div class="L4dt">📅 ${E(x.date||'')}${x.time?' · '+E(x.time):''}</div><button data-cl="1" data-s style="background:linear-gradient(135deg,#e8590c,#f08c00)">📋 Poora Match Card dekhein</button><button data-cl="1" data-c style="background:#34498f">Band karo</button></div>`;
+    o.innerHTML=`<div class="L4c"><div style="font-size:2.2rem">🏁</div><div class="L4tt">MATCH COMPLETE</div><div class="L4sr">${E(x.series||'')}${x.no?' · Match '+E(x.no):''}</div>${row(x.a,x.win)}${row(x.b,x.win)}<div class="L4rs">${E(x.res||'')}</div><div class="L4dt">📅 ${E(x.date||'')}${x.time?' · '+E(x.time):''}</div><button data-cl="1" data-s style="background:linear-gradient(135deg,#e8590c,#f08c00)">📋 View full scorecard</button><button data-cl="1" data-c style="background:#34498f">Close</button></div>`;
     o.querySelector('[data-c]').onclick=()=>o.remove();
     o.querySelector('[data-s]').onclick=()=>{ o.remove(); try{ LV.open(x.id); }catch(e){} };
     document.body.appendChild(o);

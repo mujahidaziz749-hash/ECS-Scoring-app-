@@ -679,7 +679,7 @@ V.home=()=>{const c=cur(),T9=[['tour','c1','🏆','Tournament Manager',db.tours.
 /* ---------- TEAMS ---------- */
 const TCOLS=['#d2452f','#3d7bf5','#33b25a','#e8b23a','#9b6fd6','#3fc9c9','#e070a0','#f0f0f0'];
 V.teams=()=>{
- if(ctx.t){const t=T(ctx.t),pl=t.players,sel=(id,v)=>`<select id="${id}"><option value="">-- chuno --</option>${pl.map(p=>`<option value="${p.id}" ${v===p.id?'selected':''}>${e(p.name)}</option>`).join('')}</select>`;
+ if(ctx.t){const t=T(ctx.t),pl=t.players,sel=(id,v)=>`<select id="${id}"><option value="">-- Select --</option>${pl.map(p=>`<option value="${p.id}" ${v===p.id?'selected':''}>${e(p.name)}</option>`).join('')}</select>`;
   return `<div class="card" style="border-left:6px solid ${t.color}"><h2>✏️ ${e(t.name)} - Squad</h2>
   <label>Team ka naam</label><input id="tn" value="${e(t.name)}">
   <label>Team colour (flag)</label><div style="margin:4px 0 8px">${TCOLS.map(c=>`<span data-a="tcol" data-v="${c}" style="display:inline-block;width:32px;height:32px;border-radius:50%;background:${c};margin:3px;border:3px solid ${t.color===c?'#fff':'#ffffff44'};cursor:pointer"></span>`).join('')}<input id="tc" type="color" value="${_hx(t.color)}" style="width:60px;height:36px;padding:0;display:inline-block;vertical-align:middle"></div>
@@ -687,7 +687,7 @@ V.teams=()=>{
   <button class="b g" data-a="ts">💾 Save</button><button class="b s" data-a="tb">← Teams</button><button class="b s" data-a="tp" data-v="${t.id}">🖨 Team PDF</button><button class="b sm" data-a="pgo" data-v="team|${t.id}">🖼 Poster</button></div>
   <div class="card"><h3>Squad (${pl.length} players)</h3>${pl.map(p=>`<div class="row" style="margin:6px 0"><span style="flex:3">${e(p.name)} ${t.captain===p.id?'<span class="chip" style="background:var(--g);color:#231a02">C</span>':''}${t.vc===p.id?'<span class="chip" style="background:#3fc9c9;color:#06302e">VC</span>':''}<div class="m">${[ri(p.name).type,ri(p.name).hand].filter(Boolean).map(e).join(' · ')}</div></span><button class="b s sm" data-a="pc" data-v="${p.id}" style="flex:0">C</button><button class="b s sm" data-a="pv" data-v="${p.id}" style="flex:0">VC</button><button class="b s sm" data-a="prep" data-v="${p.id}" style="flex:0" title="Replace">⇄</button><button class="b s sm" data-a="pr" data-v="${p.id}" style="flex:0">✎</button><button class="b d sm" data-a="pd" data-v="${p.id}" style="flex:0">✕</button></div>`).join('')||'<div class="m">Abhi koi player nahi.</div>'}
   <div class="row"><input id="np" list="allp" placeholder="Saved ya naya player ka naam" style="flex:3"><button class="b" data-a="pa" style="flex:1">+ Add</button></div>
-  <button class="b g wide" data-a="tpk">📋 Players list se chuno (multi-select)</button>${dlist('allp')}</div>`}
+  <button class="b g wide" data-a="tpk">📋 Choose from players list (multi-select)</button>${dlist('allp')}</div>`}
  return `<h2 style="margin-top:12px">👥 Teams Manager</h2>
  <div class="card"><div class="row"><input id="ntn" placeholder="Nayi team ka naam" style="flex:3"><button class="b g" data-a="ta" style="flex:1">+ Team</button></div><div class="m">Team ka naam likho, phir uska squad banao (players, captain, vice captain).</div></div>${ioBar('tm','Sari teams / squads')}<button class="b g wide" data-a="pgo" data-v="teams|all">🖼 Sab teams ka poster</button>
  ${db.teams.map(t=>`<div class="card" style="border-left:6px solid ${t.color}"><div data-a="te" data-v="${t.id}" style="cursor:pointer"><b style="font-size:1.08rem;color:${tcol(t.color,0)}">${e(t.name)}</b> <span class="m">(squad kholne ke liye tap karo)</span><div class="m">${t.players.length} players · C: ${t.captain?e(PN(t.id,t.captain)):'-'} · VC: ${t.vc?e(PN(t.id,t.vc)):'-'}</div></div>
@@ -702,7 +702,7 @@ A.pa=()=>{const n=$('#np').value.trim();if(!n)return;const t=T(ctx.t),er=plCheck
 A.pc=v=>{const t=T(ctx.t);t.captain=v;if(t.vc===v)t.vc=null;toast('✅ Captain set ho gaya');R()};
 A.pv=v=>{const t=T(ctx.t);if(t.captain===v)return msgBox('Captain hi vice captain nahi ho sakta.');t.vc=v;toast('✅ Vice captain set ho gaya');R()};
 A.pd=v=>{const t=T(ctx.t),p=t.players.find(x=>x.id===v);if(!p)return;cf(p.name+' ko squad se hata dein?',()=>{db.gone[v]=p.name;t.players=t.players.filter(x=>x.id!==v);if(t.captain===v)t.captain=null;if(t.vc===v)t.vc=null;toast('✅ Player hata diya');R()})};
-A.tpk=()=>{const t=T(ctx.t),av=db.reg.filter(r=>!t.players.some(p=>rk(p.name)===rk(r.name)));M(`<h2>📋 Players list se chuno</h2><input placeholder="🔎 search" oninput="plf(this.value)"><div id="plpk" style="max-height:50vh;overflow:auto;margin-top:6px">${av.map(r=>`<label class="pkr" data-n="${e(rk(r.name))}" style="display:flex;gap:8px;align-items:center;font-size:.9rem;color:var(--t);margin:0;padding:6px 0"><input type="checkbox" style="width:auto;margin:0" value="${e(r.name)}">${e(r.name)} <span class="m">${e(r.type||'')}</span></label>`).join('')||'<div class="m">Saved list mein koi naya player nahi - pehle List of Players mein add karo.</div>'}</div><button class="b g wide" data-a="tpks">➕ Selected add karo</button><button class="b s wide" data-a="x">Cancel</button>`)};
+A.tpk=()=>{const t=T(ctx.t),av=db.reg.filter(r=>!t.players.some(p=>rk(p.name)===rk(r.name)));M(`<h2>📋 Choose from players list</h2><input placeholder="🔎 search" oninput="plf(this.value)"><div id="plpk" style="max-height:50vh;overflow:auto;margin-top:6px">${av.map(r=>`<label class="pkr" data-n="${e(rk(r.name))}" style="display:flex;gap:8px;align-items:center;font-size:.9rem;color:var(--t);margin:0;padding:6px 0"><input type="checkbox" style="width:auto;margin:0" value="${e(r.name)}">${e(r.name)} <span class="m">${e(r.type||'')}</span></label>`).join('')||'<div class="m">Saved list mein koi naya player nahi - pehle List of Players mein add karo.</div>'}</div><button class="b g wide" data-a="tpks">➕ Selected add karo</button><button class="b s wide" data-a="x">Cancel</button>`)};
 A.tpks=()=>{const t=T(ctx.t),ns=[...document.querySelectorAll('#plpk input:checked')].map(x=>x.value);let ok=0;const bad=[];ns.forEach(n=>{const er=plCheck(t,n);if(er)bad.push(er);else{t.players.push({id:uid(),name:n});ok++}});X();if(bad.length)msgBox(bad.join('\n\n'));else toast('✅ '+ok+' players add hue');R()};
 A.pr=v=>{const p=T(ctx.t).players.find(x=>x.id===v);pr('Player ka naya naam:',p.name,n=>{n=(n||'').trim();if(!n)return;p.name=n;regAdd(n);toast('✅ Naam badal gaya');R()})};
 A.tdel=v=>{if(db.matches.some(m=>m.a===v||m.b===v))return msgBox('Is team ke matches history mein hain - delete nahi ho sakti.');cf('Team delete karein?',()=>{db.teams=db.teams.filter(t=>t.id!==v);R()})};
@@ -739,7 +739,7 @@ V.plist=()=>{const st=nst(),L=db.reg.slice().sort((a,b)=>a.name.localeCompare(b.
  <div id="plrows">${L.map(r=>{const z=st[rk(r.name)]||{},ts=teamsOf(r.name);return `<div class="card plr" data-n="${e(rk(r.name))}"><div class="row"><b style="flex:3">${e(r.name)}</b></div><div>${[r.type,r.hand,r.bowl,r.pos,r.age?r.age+' yrs':''].filter(Boolean).map(x=>`<span class="chip">${e(x)}</span>`).join('')||'<span class="m">profile abhi adhura hai</span>'}</div><div class="m">Teams: ${ts.map(e).join(', ')||'-'} · M ${z.n||0} · Runs ${z.r||0} · Wkts ${z.w||0}</div>
  <button class="b g sm" data-a="plcr" data-v="${r.id}">📈 Career</button><button class="b sm" data-a="pgo" data-v="prof|${r.id}">🖼 Poster</button><button class="b s sm" data-a="pled" data-v="${r.id}">✏️ Edit</button><button class="b d sm" data-a="pldel" data-v="${r.id}">✕</button></div>`}).join('')||'<div class="card m">Abhi koi player nahi. + Player dabao.</div>'}</div>
  <h2 style="margin-top:16px">📋 Participant Lists</h2><div class="m">Tournament ya series ke liye alag list - tournament chun kar uske sab players khud import ho jate hain, aur khud se bhi add kar sakte ho.</div><button class="b g" data-a="plnew">+ Nayi participant list</button>
- ${db.pl.map(l=>{const z=l.comp&&findc(l.comp);return `<div class="card"><b>${e(l.name)}</b> <span class="m">(${l.names.length} players)</span>${z?`<div><span class="chip">${z.k==='t'?'Tournament':'Series'}: ${e(z.c.name)}</span></div>`:''}<div class="m">${l.names.map(e).join(', ')||'khali'}</div><button class="b s sm" data-a="plsel" data-v="${l.id}">✏️ Players chuno</button><button class="b s sm" data-a="plsrc" data-v="${l.id}">📥 Tournament/Series se import</button><button class="b g sm" data-a="plpp" data-v="${l.id}">🖨 PDF</button><button class="b sm" data-a="pgo" data-v="pllist|${l.id}">🖼 Poster</button><button class="b s sm" data-a="plren" data-v="${l.id}">Naam</button><button class="b d sm" data-a="pldl" data-v="${l.id}">🗑</button></div>`}).join('')}`};
+ ${db.pl.map(l=>{const z=l.comp&&findc(l.comp);return `<div class="card"><b>${e(l.name)}</b> <span class="m">(${l.names.length} players)</span>${z?`<div><span class="chip">${z.k==='t'?'Tournament':'Series'}: ${e(z.c.name)}</span></div>`:''}<div class="m">${l.names.map(e).join(', ')||'khali'}</div><button class="b s sm" data-a="plsel" data-v="${l.id}">✏️ Select players</button><button class="b s sm" data-a="plsrc" data-v="${l.id}">📥 Tournament/Series se import</button><button class="b g sm" data-a="plpp" data-v="${l.id}">🖨 PDF</button><button class="b sm" data-a="pgo" data-v="pllist|${l.id}">🖼 Poster</button><button class="b s sm" data-a="plren" data-v="${l.id}">Naam</button><button class="b d sm" data-a="pldl" data-v="${l.id}">🗑</button></div>`}).join('')}`};
 V.pcareer=()=>{const r=db.reg.find(x=>x.id===ctx.pc);if(!r)return '<div class="card">Player nahi mila.</div>';const cat=ctx.cc||'',all=career(r.name,cat||null),o=crRows(all),cps=Object.values(all.cp).filter(x=>!cat||x.cat===cat);
  return `<button class="b s" data-a="plback">← Players list</button><div class="card" style="margin-top:10px"><h2 style="margin-bottom:6px">🧢 ${e(r.name)} - Player Profile</h2><div class="sc"><table>${profRows(r).map(([k,v])=>`<tr><td style="color:var(--m);width:42%">${k}</td><td style="text-align:left;font-weight:600">${e(v)}</td></tr>`).join('')}</table></div><button class="b g sm" data-a="pled" data-v="${r.id}">✏️ Profile edit</button><button class="b sm" data-a="pcpdf" data-v="${r.id}">🖨 Profile + Career PDF</button><button class="b sm" data-a="pgo" data-v="prof|${r.id}">🖼 Poster</button></div>
  <div class="tabs" style="flex-wrap:wrap">${[['','Overall'],['t','Tournament'],['s','Series'],['i','Individual']].map(([k,n])=>`<button class="b ${cat===k?'g':'s'}" data-a="pcc" data-v="${k}">${n}</button>`).join('')}</div>
@@ -753,7 +753,7 @@ A.pcpdf=v=>{const r=db.reg.find(x=>x.id===v),cats=[['','Overall'],['t','Tourname
   '# Fielding',{tbl:['Category','Catches','Stumpings','Run outs'],w:[50,40,40,40],rows:rs.map(([n,o])=>[n,...o.fld])}];
  const cps=Object.values(career(r.name,null).cp);if(cps.length)L.push('# Competition-wise',{tbl:['Competition','Type','M','Runs','Wkts'],w:[80,34,22,26,28],rows:cps.map(x=>[x.name,{t:'Tournament',s:'Series',i:'Individual'}[x.cat],x.M.size,x.r,x.w])});
  pdf(r.name+' - Career',L,'RSL_Career_'+r.name,{type:'jsl_players',reg:[r],pl:[]})};
-function plForm(r){const x=r||{name:'',type:'',hand:'',bowl:'',pos:'',age:'',note:''},sel=(id,arr,v)=>`<select id="${id}"><option value="">— chuno —</option>${arr.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('')}</select>`;
+function plForm(r){const x=r||{name:'',type:'',hand:'',bowl:'',pos:'',age:'',note:''},sel=(id,arr,v)=>`<select id="${id}"><option value="">— Select —</option>${arr.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('')}</select>`;
  M(`<h2>${r?'Player edit':'Naya player'}</h2><label>Naam</label><input id="pn" value="${e(x.name)}"><div class="row"><div><label>Age</label><input id="pa2" type="number" min="5" max="90" value="${x.age||''}"></div><div><label>Player type</label>${sel('pt',PT,x.type)}</div></div>
  <label>Batting hand</label>${sel('ph',HD,x.hand)}<label>Bowling style</label>${sel('pb2',BS,x.bowl)}<label>Batting position</label>${sel('pp',PS,x.pos)}<label>Note (optional)</label><input id="pnote" value="${e(x.note||'')}"><button class="b g wide" data-a="plsv" data-v="${r?r.id:''}">💾 Save</button><button class="b s wide" data-a="x">Cancel</button>`)}
 A.pladd=()=>plForm();A.pled=v=>plForm(db.reg.find(r=>r.id===v));
@@ -800,7 +800,7 @@ function mkForm(k){const n=ctx.n,type=n.type||(k==='t'?'league':'bi'),g=+n.g||2;
  if(db.teams.length<2)return `<div class="card">Pehle kam az kam 2 teams banao (Teams Manager).</div>`;
  const gl=(n.gn||'').split(',').map(x=>x.trim()).filter(Boolean),names=gl.length?gl:Array.from({length:g},(_,i)=>String.fromCharCode(65+i)),opts=type==='league'?names.map(x=>`<option value="${e(x)}">${e(gname(x))}</option>`).join(''):'<option value="Y">Playing</option>';
  let teams;
- if(k==='s'){const slots=type==='bi'?2:3;n.tm=n.tm||[];teams=`<h3>${slots===2?'2 teams chuno':'3 teams chuno'}</h3>`+Array.from({length:slots},(_,i)=>{const t=n.tm[i]&&db.teams.find(x=>x.id===n.tm[i]);return `<label>Team ${i+1}</label><button class="b s wide" style="margin:0 0 8px;text-align:left;border-left:6px solid ${t?t.color:'var(--b)'}" data-a="tpick" data-v="${i}">${t?'<b>'+e(t.name)+'</b>':'🔎 Team chuno / search karo'}</button>`}).join('')}
+ if(k==='s'){const slots=type==='bi'?2:3;n.tm=n.tm||[];teams=`<h3>${slots===2?'2 teams chuno':'3 teams chuno'}</h3>`+Array.from({length:slots},(_,i)=>{const t=n.tm[i]&&db.teams.find(x=>x.id===n.tm[i]);return `<label>Team ${i+1}</label><button class="b s wide" style="margin:0 0 8px;text-align:left;border-left:6px solid ${t?t.color:'var(--b)'}" data-a="tpick" data-v="${i}">${t?'<b>'+e(t.name)+'</b>':'🔎 Select team / search'}</button>`}).join('')}
  else teams=`<h3>Teams select karo</h3>${db.teams.map(t=>`<div class="row" style="margin:3px 0"><span style="flex:2">${e(t.name)}</span><select data-s="${t.id}" style="flex:2"><option value="">— nahi —</option>${opts.replace(`value="${(n.sel||{})[t.id]}"`,`value="${(n.sel||{})[t.id]}" selected`)}</select></div>`).join('')}`;
  return `<div class="card"><h2>New ${k==='t'?'Tournament':'Series'}</h2><label>Name</label><input id="cn" data-f="n.name" value="${e(n.name||'')}" placeholder="e.g. RSL Season 1">
  <label>Format</label><select data-f="n.type.r">${k==='t'?`<option value="league" ${type==='league'?'selected':''}>League (Groups)</option><option value="ko" ${type==='ko'?'selected':''}>Knockout</option>`:`<option value="bi" ${type==='bi'?'selected':''}>Bi-Lateral (2 teams)</option><option value="tri" ${type==='tri'?'selected':''}>Tri Series (3 teams + Final)</option><option value="trik" ${type==='trik'?'selected':''}>Tri Series (Knockout style)</option>`}</select>
@@ -848,7 +848,7 @@ function ceDraw(id){const c=findc(id).c,fixed=['bi','tri','trik'].includes(c.typ
  M(`<h2>✏️ ${e(c.name)} - Edit</h2><label>Naam</label><input id="cen" value="${e(c.name)}"><button class="b sm" data-a="cen" data-v="${id}">💾 Naam save</button>
  <h3>Teams (${c.teams.length})</h3>${c.teams.map(t=>{const pd=c.fx.some(f=>f.mid&&(f.a===t||f.b===t));return `<div class="row" style="margin:3px 0"><span style="flex:3">${e(T(t).name)}</span>${lg?`<input value="${e(c.grp[t]||'')}" style="flex:2" placeholder="Group" onchange="ceGrp('${id}','${t}',this.value)">`:''}${fixed?'':`<button class="b d sm" data-a="cer" data-v="${id}|${t}" style="flex:0" ${pd?'disabled':''}>✕</button>`}</div>`}).join('')}
  ${lg?'<div class="m">Group ka naam badalne se sirf team ka group badalta hai - fixtures neeche wale buttons se dobara banao.</div>':''}
- ${fixed?'<div class="m">Bi/Tri series mein teams fixed hoti hain.</div>':`<h3>Nayi team add karo</h3><div class="row"><select id="cea"><option value="">— team chuno —</option>${rest.map(t=>`<option value="${t.id}">${e(t.name)}</option>`).join('')}</select>${lg?`<input id="ceg" value="${e(gs[gs.length-1]||'A')}" placeholder="Group" style="flex:1">`:''}</div><button class="b g wide" data-a="cea" data-v="${id}">+ Team add</button>`}
+ ${fixed?'<div class="m">Bi/Tri series mein teams fixed hoti hain.</div>':`<h3>Nayi team add karo</h3><div class="row"><select id="cea"><option value="">— Select team —</option>${rest.map(t=>`<option value="${t.id}">${e(t.name)}</option>`).join('')}</select>${lg?`<input id="ceg" value="${e(gs[gs.length-1]||'A')}" placeholder="Group" style="flex:1">`:''}</div><button class="b g wide" data-a="cea" data-v="${id}">+ Team add</button>`}
  <h3>Re-schedule</h3>${lg?`<button class="b wide" data-a="cef" data-v="${id}">➕ Missing fixtures add karo (nayi team ke matches)</button><button class="b s wide" data-a="ceu" data-v="${id}">🔄 Unplayed fixtures dobara banao (khele hue rahenge)</button>`:''}${c.type==='ko'?`<button class="b wide" data-a="cef" data-v="${id}">🔄 Round 1 dobara banao (jab tak koi match na hua ho)</button>`:''}${fixed?'<div class="m">Fixtures ke liye tournament page par "+ Fixture" ya ✏️ Change istemal karo.</div>':''}
  <button class="b s wide" data-a="x">Close</button>`)}
 function ceGrp(id,t,v){const c=findc(id).c;if(v.trim()){c.grp[t]=v.trim();save()}}
@@ -948,10 +948,10 @@ function setup(){const s=ctx.s=ctx.s||{};let h='<h2 style="margin-top:12px">🏏
  if(!s.cat){const n=k=>(k==='t'?db.tours:db.series).reduce((a,c)=>a+c.fx.filter(f=>!f.mid&&f.b).length,0);return h+'<div class="m" style="margin:6px 0 8px">Kis category ka match khelna hai? Chuno:</div>'+catTile('cat','t','c1','🏆','▶ Play Tournament Match',n('t')+' matches schedule mein')+catTile('cat','s','c2','📅','▶ Play Series Match',n('s')+' matches schedule mein')+catTile('cat','i','c3','⚡','▶ Play Individual Match','Do teams chun kar seedha match')}
  h+=`<button class="b s" data-a="pback">← Play Match</button>${pausedHtml(s)}<div class="card"><h3 style="margin-top:0">${{t:'🏆 Tournament',s:'📅 Series',i:'⚡ Individual'}[s.cat]} Match</h3>`;
  let a,b,fl=[];
- if(s.cat==='i'){const o=x=>'<option value="">— team chuno —</option>'+db.teams.map(t=>`<option value="${t.id}" ${t.id===x?'selected':''}>${e(t.name)}</option>`).join('');
+ if(s.cat==='i'){const o=x=>'<option value="">— Select team —</option>'+db.teams.map(t=>`<option value="${t.id}" ${t.id===x?'selected':''}>${e(t.name)}</option>`).join('');
   h+=`<label>Team A</label><select data-f="s.a.r">${o(s.a)}</select><label>Team B</label><select data-f="s.b.r">${o(s.b)}</select>`;a=s.a;b=s.b}
  else{const L=s.cat==='t'?db.tours:db.series,c=L.find(x=>x.id===s.comp);
-  h+=`<label>${s.cat==='t'?'Tournament':'Series'}</label><select data-f="s.comp.r"><option value="">— chuno —</option>${L.map(x=>`<option value="${x.id}" ${x.id===s.comp?'selected':''}>${e(x.name)}</option>`).join('')}</select>`;
+  h+=`<label>${s.cat==='t'?'Tournament':'Series'}</label><select data-f="s.comp.r"><option value="">— Select —</option>${L.map(x=>`<option value="${x.id}" ${x.id===s.comp?'selected':''}>${e(x.name)}</option>`).join('')}</select>`;
   if(c){fl=c.fx.filter(f=>!f.mid&&f.b);if(!fl.length)h+=`<div class="m" style="color:var(--r);margin-top:8px">⚠ Koi schedule shuda match nahi - pehle match schedule karo.</div>`;
    else{const f=fl.find(x=>x.id===s.fix)||fl[0];s.fix=f.id;a=f.a;b=f.b;h+=`<label>Match No / Fixture (${e(f.rd)})</label><select data-f="s.fix.r">${fl.map(x=>`<option value="${x.id}" ${x.id===f.id?'selected':''}>#${x.no} ${e(T(x.a).name)} vs ${e(T(x.b).name)} (${e(x.rd)})</option>`).join('')}</select>`}}}
  if(a&&b){const tw=[a,b].includes(s.toss)?s.toss:a;h+=`<div class="row"><div class="chip" style="border:1px solid ${T(a).color}">${e(T(a).name)}</div><div class="chip" style="border:1px solid ${T(b).color}">${e(T(b).name)}</div></div>
@@ -991,8 +991,8 @@ function live(m){const i=li(m),bt=T(i.bat),bw=T(i.bowl),k=m.inns.length,tg=k===2
  let h=`<div class="card"><div class="m">${e(m.venue)} · Match ${m.no} · ${m.overs} ov · ${k===1?'1st':'2nd'} innings</div><div style="color:${thCol(bt.color)};font-weight:800">${e(bt.name)} <span class="m">vs ${e(bw.name)}</span></div>
  <div class="row"><div class="big">${i.runs}/${i.wk} <small>(${ov(i.lb)}/${m.overs})</small></div></div>
  <div class="m">CRR ${i.lb?(i.runs/(i.lb/6)).toFixed(2):'0.00'}${tg?` · <span class="win">Target ${tg} · Need ${Math.max(0,tg-i.runs)} from ${left} balls${left>0&&tg>i.runs?' · RRR '+((tg-i.runs)/(left/6)).toFixed(2):''}</span>`:''}</div></div>`;
- if(!i.st||!i.ns){setTimeout(autoSel,40);return h+`<div class="card"><h2>${!i.st&&!i.ns?'Players chuno':'Naya batter chuno'}</h2><button class="b g wide" data-a="selopen" style="padding:16px">👥 List kholo</button>${undoBtn(i)}</div>`}
- if(!i.bw){setTimeout(autoSel,40);return h+`<div class="card"><h2>Naya bowler chuno</h2><button class="b g wide" data-a="selopen" style="padding:16px">👥 List kholo</button>${undoBtn(i)}</div>`}
+ if(!i.st||!i.ns){setTimeout(autoSel,40);return h+`<div class="card"><h2>${!i.st&&!i.ns?'Select players':'Select new batter'}</h2><button class="b g wide" data-a="selopen" style="padding:16px">👥 List kholo</button>${undoBtn(i)}</div>`}
+ if(!i.bw){setTimeout(autoSel,40);return h+`<div class="card"><h2>Select new bowler</h2><button class="b g wide" data-a="selopen" style="padding:16px">👥 List kholo</button>${undoBtn(i)}</div>`}
  const row=(p,s)=>{const f=bf(i,p);return `<tr class="${s?'stk':'nst'}"><td style="${s?'font-weight:800':''}">${e(PN(i.bat,p))}${s?' *':''}</td><td>${f.r}</td><td>${f.b}</td><td>${f.f4}</td><td>${f.f6}</td></tr>`};
  const bo=wf(i,i.bw),ovr=i.balls.filter(x=>x.ov===Math.floor(i.lb/6));
  h+=`<div class="card"><div class="sc"><table class="lt"><tr><th>Batting</th><th>R</th><th>B</th><th>4s</th><th>6s</th></tr>${row(i.st,1)}${row(i.ns,0)}</table></div>
@@ -1134,7 +1134,7 @@ function standHtml(c){const done=db.matches.filter(m=>m.comp===c.id&&m.status===
  return (ch?`<div class="win">🏆 Champion: ${e(T(ch).name)}</div>`:'<div class="m">Tournament jaari hai.</div>')+adv}
 V.hist=()=>{const c=ctx.h;
  if(!c){const n=k=>db.matches.filter(m=>m.cat===k&&m.status!=='live').length;
-  return `<h2 style="margin-top:12px">📋 History of Matches</h2><div class="m" style="margin-bottom:8px">Category chuno:</div>`+[['t','c1','🏆','Tournament History',n('t')+' matches · '+db.tours.length+' tournaments'],['s','c2','📅','Series History',n('s')+' matches · '+db.series.length+' series'],['i','c3','⚡','Individual Match History',n('i')+' matches']].map(([k,cl,ic,t,sub])=>`<button class="tile ${cl}" data-a="ht" data-v="${k}" style="width:100%;margin-bottom:10px;min-height:92px"><span class="ti">${ic}</span><b>${t}</b><small>${sub}</small></button>`).join('')}
+  return `<h2 style="margin-top:12px">📋 History of Matches</h2><div class="m" style="margin-bottom:8px">Select category:</div>`+[['t','c1','🏆','Tournament History',n('t')+' matches · '+db.tours.length+' tournaments'],['s','c2','📅','Series History',n('s')+' matches · '+db.series.length+' series'],['i','c3','⚡','Individual Match History',n('i')+' matches']].map(([k,cl,ic,t,sub])=>`<button class="tile ${cl}" data-a="ht" data-v="${k}" style="width:100%;margin-bottom:10px;min-height:92px"><span class="ti">${ic}</span><b>${t}</b><small>${sub}</small></button>`).join('')}
  const L=c==='t'?db.tours:c==='s'?db.series:[],nmC={t:'Tournament',s:'Series',i:'Individual'}[c];
  let h=`<button class="b s" data-a="hback">← History</button><h2 style="margin-top:10px">${{t:'🏆',s:'📅',i:'⚡'}[c]} ${nmC} History</h2>`;
  const foot=`<div class="card"><h3>📦 ${nmC} - PDF Export / Import</h3><button class="b g" data-a="dx" data-v="${c}|pdf">🖨 Is category ka poora PDF</button><button class="b s" data-a="bi">⬆ Match / PDF import</button><div class="m">PDF ke andar app ka data chhupa hota hai - wahi PDF wapas import ho sakti hai. Har match ka alag PDF uske card par hai.</div></div>`;
@@ -1160,7 +1160,7 @@ function entryLines(cat,id){const c=compOf(cat,id);if(!c)return[];const es=db.en
   '# Kharche (Expenses)',{tbl:['#','Date','Saman / kis cheez par','Note','Amount'],w:[10,26,70,50,34],rows:ex.map((x,i)=>[i+1,x.date||'-',x.item,x.note||'-',rs_(x.amount)])},
   '# Summary',{tbl:['Detail','Amount'],w:[120,70],rows:[['Total entry collection ('+pd+'/'+es.length+' players paid)',rs_(col)],['Total kharcha',rs_(kh)],['Net baqi (collection - kharcha)',rs_(col-kh)]]}]}
 V.entry=()=>{const s=ctx.e=ctx.e||{},NM={t:'Tournament',s:'Series',i:'Individual Match'};
- if(!s.cat)return `<h2 style="margin-top:12px">💰 Entry Management</h2><div class="m" style="margin-bottom:8px">Category chuno:</div>`+catTile('ect','t','c1','🏆','Tournament Entry',db.tours.length+' tournaments')+catTile('ect','s','c2','📅','Series Entry',db.series.length+' series')+catTile('ect','i','c3','⚡','Individual Match Entry',db.matches.filter(m=>m.cat==='i'&&m.status!=='live').length+' matches');
+ if(!s.cat)return `<h2 style="margin-top:12px">💰 Entry Management</h2><div class="m" style="margin-bottom:8px">Select category:</div>`+catTile('ect','t','c1','🏆','Tournament Entry',db.tours.length+' tournaments')+catTile('ect','s','c2','📅','Series Entry',db.series.length+' series')+catTile('ect','i','c3','⚡','Individual Match Entry',db.matches.filter(m=>m.cat==='i'&&m.status!=='live').length+' matches');
  const L=s.cat==='t'?db.tours:s.cat==='s'?db.series:db.matches.filter(m=>m.cat==='i'&&m.status!=='live'),nm=x=>s.cat==='i'?`Match ${x.no}: ${T(x.a).name} vs ${T(x.b).name}`:x.name,
  sm=id=>{const es=db.entries.filter(x=>x.cat===s.cat&&x.comp===id),ex=db.expenses.filter(x=>x.cat===s.cat&&x.comp===id);return{c:es.reduce((a,x)=>a+(+x.amount||0),0),k:ex.reduce((a,x)=>a+(+x.amount||0),0),p:es.filter(x=>x.amount>0).length,n:es.length}};
  if(!s.comp||!compOf(s.cat,s.comp))return `<button class="b s" data-a="ebackc">← Entry Management</button><h2 style="margin-top:10px">${{t:'🏆',s:'📅',i:'⚡'}[s.cat]} ${NM[s.cat]} Entry</h2><div class="m" style="margin-bottom:6px">Jis ki entry / collection dekhni hai usko chuno:</div>`+(L.map(x=>{const z=sm(x.id);return `<div class="card" data-a="ecomp" data-v="${x.id}" style="cursor:pointer"><b>${e(nm(x))}</b><div class="m">Collection ${rs_(z.c)} (${z.p}/${z.n} paid) · Kharcha ${rs_(z.k)}</div></div>`}).join('')||`<div class="card m">Abhi koi ${NM[s.cat].toLowerCase()} nahi.</div>`)+ioBar('en'+s.cat,NM[s.cat]+' entries - sab ka PDF / import');
@@ -1873,15 +1873,15 @@ function pickModal(title,tk,excl,cb){PCB={tk,cb};const ps=T(tk).players.filter(p
 function plf2(q){q=q.toLowerCase();document.querySelectorAll('.pkx').forEach(x=>x.style.display=x.dataset.n.includes(q)?'':'none')}
 A.pkp=v=>{const c=PCB.cb;X();c(v)};
 A.pknew=()=>{const tk=PCB.tk,c=PCB.cb;pr('Naye player ka naam:','',n=>{n=(n||'').trim();if(!n)return;const t=T(tk);let p=t.players.find(x=>rk(x.name)===rk(n));if(!p){const er=plCheck(t,n);if(er)return msgBox(er);regAdd(n);p={id:uid(),name:n};t.players.push(p)}X();c(p.id)})};
-function osShow(){const i=li(cur()),row=(k,l,tk)=>`<label>${l}</label><button class="choice-btn" data-a="osp" data-v="${k}" style="margin:2px 0 10px">${OS[k]?e(PN(tk,OS[k])):'— chuno —'}</button>`;
- M(`<h2>🏏 Innings shuru</h2>${row('a','Striker (facing)',i.bat)}${row('b','Non-striker',i.bat)}${OS.needW?row('w','Bowler',i.bowl):''}<div style="height:34px"></div><div class="row"><button class="b s" data-a="x">Cancel</button><button class="b g" data-a="osn">NEXT ▶</button></div>`)}
-A.osp=k=>{const i=li(cur()),bat=k!=='w',ex=bat?[k==='a'?OS.b:OS.a].filter(Boolean):[];pickModal(bat?'Batter chuno':'Bowler chuno',bat?i.bat:i.bowl,ex,id=>{OS[k]=id;osShow()})};
+function osShow(){const i=li(cur()),row=(k,l,tk)=>`<label>${l}</label><button class="choice-btn" data-a="osp" data-v="${k}" style="margin:2px 0 10px">${OS[k]?e(PN(tk,OS[k])):'— Select —'}</button>`;
+ M(`<h2>🏏 Start innings</h2>${row('a','Striker (facing)',i.bat)}${row('b','Non-striker',i.bat)}${OS.needW?row('w','Bowler',i.bowl):''}<div style="height:34px"></div><div class="row"><button class="b s" data-a="x">Cancel</button><button class="b g" data-a="osn">NEXT ▶</button></div>`)}
+A.osp=k=>{const i=li(cur()),bat=k!=='w',ex=bat?[k==='a'?OS.b:OS.a].filter(Boolean):[];pickModal(bat?'Select batter':'Select bowler',bat?i.bat:i.bowl,ex,id=>{OS[k]=id;osShow()})};
 function pfShow(ps,go,lab){M(pfHtml(ps,go,lab));const md=$('#ov .md');if(md)md.style.maxWidth='560px';pfDraw(ps.map(x=>x[0]))}
 A.osn=()=>{if(!OS.a||!OS.b||(OS.needW&&!OS.w))return msgBox('Sab players chuno.');const i=li(cur());PKP={a:OS.a,b:OS.b,open:true,w:OS.needW?OS.w:null};const ps=[[PN(i.bat,OS.a),'STRIKER'],[PN(i.bat,OS.b),'NON-STRIKER']];if(OS.needW)ps.push([PN(i.bowl,OS.w),'BOWLER']);pfShow(ps,'pkgo','Close & Start')};
 function autoSel(f){if(view!=='play'||!cur())return;if(!f&&$('#ov'))return;X();const i=li(cur());
  if(!i.st&&!i.ns){OS={a:null,b:null,w:i.bw||null,needW:!i.bw};return osShow()}
- if(!i.st||!i.ns)return pickModal('Naya batter chuno',i.bat,[...i.out,i.st,i.ns].filter(Boolean),id=>{PKP={a:id,b:null,open:false};pfShow([[PN(i.bat,id),!i.st?'NEW BATTER (Striker)':'NEW BATTER (Non-striker)']],'pkgo','Close & Start Batting')});
- if(!i.bw)return pickModal('Naya bowler chuno',i.bowl,i.last?[i.last]:[],id=>{PKP={b:id};pfShow([[PN(i.bowl,id),'BOWLER']],'pbgo','Close & Start Bowling')})}
+ if(!i.st||!i.ns)return pickModal('Select new batter',i.bat,[...i.out,i.st,i.ns].filter(Boolean),id=>{PKP={a:id,b:null,open:false};pfShow([[PN(i.bat,id),!i.st?'NEW BATTER (Striker)':'NEW BATTER (Non-striker)']],'pkgo','Close & Start Batting')});
+ if(!i.bw)return pickModal('Select new bowler',i.bowl,i.last?[i.last]:[],id=>{PKP={b:id};pfShow([[PN(i.bowl,id),'BOWLER']],'pbgo','Close & Start Bowling')})}
 A.selopen=()=>autoSel(true);
 A.pkgo=()=>{const i=li(cur());X();if(PKP.open){i.st=PKP.a;i.ns=PKP.b}else if(!i.st)i.st=PKP.a;else i.ns=PKP.a;if(PKP.w)i.bw=PKP.w;R()};
 function pfHtml(ps,go,lab){return `<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center">${ps.map(([n,t])=>`<div style="flex:0 0 calc(50% - 4px);min-width:0"><div class="chip" style="background:var(--g);color:#231a02;border:0;font-weight:800;font-size:.66rem">${t}</div><canvas class="pfc" width="1080" height="1350" style="width:100%;border-radius:10px;margin-top:4px"></canvas></div>`).join('')}</div><div style="height:26px"></div><div style="position:sticky;bottom:-16px;z-index:3;background:var(--p);padding:10px 0;display:flex;gap:10px"><button class="b s" data-a="x" style="flex:1;margin:0">← Wapas</button><button class="b g" data-a="${go}" style="flex:2;margin:0">✅ ${lab}</button></div>`}
@@ -4413,7 +4413,7 @@ A.pgo=v=>{const[k,a,b]=v.split('|');
  _pgoOld(v)};
 /* ===== Squad: Player replace (ECS jaisa) ===== */
 function replaceModal(t,p,after){const idx=t.players.findIndex(x=>x.id===p.id);if(idx<0)return;
- const ov_=el('<div class="modal-overlay"><div class="modal" style="max-width:460px;max-height:88vh;overflow:auto"><h3 style="margin:0 0 6px">⇄ Player replace</h3><p class="muted" style="font-size:.8rem;margin:0 0 8px">#'+(idx+1)+' <b>'+e(p.name)+'</b> ki jagah (usi number par) kaun aayega?</p><input type="text" id="rpn" placeholder="🔎 naam likho ya neeche se chuno" autocomplete="off"><div id="rpm" style="font-size:.76rem;margin:6px 0;min-height:16px;line-height:1.4"></div><div id="rpl" style="max-height:34vh;overflow:auto"></div><div class="row" style="margin-top:10px"><button class="btn gold" id="rpok">✅ Replace karo</button><button class="btn secondary" id="rpx">Cancel</button></div></div></div>');
+ const ov_=el('<div class="modal-overlay"><div class="modal" style="max-width:460px;max-height:88vh;overflow:auto"><h3 style="margin:0 0 6px">⇄ Player replace</h3><p class="muted" style="font-size:.8rem;margin:0 0 8px">#'+(idx+1)+' <b>'+e(p.name)+'</b> ki jagah (usi number par) kaun aayega?</p><input type="text" id="rpn" placeholder="🔎 Type a name or choose below" autocomplete="off"><div id="rpm" style="font-size:.76rem;margin:6px 0;min-height:16px;line-height:1.4"></div><div id="rpl" style="max-height:34vh;overflow:auto"></div><div class="row" style="margin-top:10px"><button class="btn gold" id="rpok">✅ Replace karo</button><button class="btn secondary" id="rpx">Cancel</button></div></div></div>');
  const inp=ov_.querySelector('#rpn'),L=ov_.querySelector('#rpl'),msg=ov_.querySelector('#rpm'),have=new Set(t.players.map(x=>rk(x.name)));
  const names=db.reg.map(r=>r.name).filter(n=>!have.has(rk(n))).sort((a,b)=>a.localeCompare(b));
  const draw=()=>{const q=rk(inp.value);L.innerHTML='';names.filter(n=>!q||rk(n).includes(q)).slice(0,60).forEach(n=>{const b=el('<button class="choice-btn" style="padding:9px 12px"></button>');b.textContent=n;b.onclick=()=>{inp.value=n;draw()};L.appendChild(b)});
@@ -4656,7 +4656,7 @@ const accCard=()=>{const a=accGet();return '<div class="card" style="border:1px 
 {const o=V.entry;V.entry=function(){
   if(!NOFIN()){const h=o.apply(this,arguments);return h+(CL&&!isAdm()?'':'<div class="card"><button class="b s sm" data-a="eacc">🏦 Payment accounts badlo</button></div>')}
   const s=ctx.e=ctx.e||{},NM={t:'Tournament',s:'Series',i:'Individual Match'};
-  if(!s.cat)return '<h2 style="margin-top:12px">💰 Entry Management</h2>'+accCard()+'<div class="m" style="margin-bottom:8px">Category chuno:</div>'+catTile('eroc','t','c1','🏆','Tournament Entry',db.tours.length+' tournaments')+catTile('eroc','s','c2','📅','Series Entry',db.series.length+' series')+catTile('eroc','i','c3','⚡','Individual Match Entry',db.matches.filter(m=>m.cat==='i'&&m.status!=='live').length+' matches');
+  if(!s.cat)return '<h2 style="margin-top:12px">💰 Entry Management</h2>'+accCard()+'<div class="m" style="margin-bottom:8px">Select category:</div>'+catTile('eroc','t','c1','🏆','Tournament Entry',db.tours.length+' tournaments')+catTile('eroc','s','c2','📅','Series Entry',db.series.length+' series')+catTile('eroc','i','c3','⚡','Individual Match Entry',db.matches.filter(m=>m.cat==='i'&&m.status!=='live').length+' matches');
   const L=s.cat==='t'?db.tours:s.cat==='s'?db.series:db.matches.filter(m=>m.cat==='i'&&m.status!=='live');
   const nm=x=>s.cat==='i'?'Match '+x.no+': '+T(x.a).name+' vs '+T(x.b).name:x.name;
   if(!s.comp||!compOf(s.cat,s.comp))return '<button class="b s" data-a="eroback0">← Entry Management</button><h2 style="margin-top:10px">'+NM[s.cat]+' Entry</h2>'+accCard()+(L.slice().reverse().map(x=>{const es=db.entries.filter(y=>y.cat===s.cat&&y.comp===x.id),p=es.filter(y=>y.amount>0).length;return '<div class="card" data-a="eroo" data-v="'+x.id+'" style="cursor:pointer"><b>'+e(nm(x))+'</b><div class="m">'+p+'/'+es.length+' paid</div></div>'}).join('')||'<div class="card m">Abhi koi nahi.</div>');
@@ -4808,7 +4808,7 @@ setTimeout(()=>{try{if(canV())scan();else refresh()}catch(x){}},4500);
         const lb=i.lb||0, ovMax=m.overs||0, total=ovMax*6, left=Math.max(0,total-lb), crr=lb?((i.runs||0)/(lb/6)).toFixed(2):'0.00';
         let tgt=0,need=0,rrr='',f1=''; if(ai>=1){ const f=m.inns[0]; tgt=(f.runs||0)+1; need=Math.max(0,tgt-(i.runs||0)); rrr=left?(need/(left/6)).toFixed(2):'-'; f1=T_(f.bat)+' 1st innings: '+(f.runs||0)+'/'+(f.wk||0)+' ('+Math.floor((f.lb||0)/6)+'.'+((f.lb||0)%6)+' ov)'; }
         const bowlFig=id=>{ let lg=0,rn=0,w=0; balls.forEach(x=>{ if(x.w!==id) return; if(x.ex!=='wd'&&x.ex!=='nb') lg++; if(x.ex==='wd'||x.ex==='nb') rn+=(x.r||0)+(x.ex==='nb'?1:0); else if(x.ex!=='b'&&x.ex!=='lb') rn+=x.r||0; if(x.wk&&x.wk!=='runout') w++; }); return Math.floor(lg/6)+'.'+(lg%6)+'-0-'+rn+'-'+w; };
-        const career=id=>{ let r=0,b=0,n=0; db.matches.forEach(mm=>(mm.inns||[]).forEach(ii=>{ let fc=false; (ii.balls||[]).forEach(x=>{ if(x.b!==id||x.ex==='wd') return; fc=true; if(x.ex!=='b'&&x.ex!=='lb') r+=x.r||0; if(x.ex!=='nb') b++; }); if(fc) n++; })); return n?('Ab tak: '+r+' runs ('+b+' balls) · '+n+' innings'):'Pehli batting'; };
+        const career=id=>{ let r=0,b=0,n=0; db.matches.forEach(mm=>(mm.inns||[]).forEach(ii=>{ let fc=false; (ii.balls||[]).forEach(x=>{ if(x.b!==id||x.ex==='wd') return; fc=true; if(x.ex!=='b'&&x.ex!=='lb') r+=x.r||0; if(x.ex!=='nb') b++; }); if(fc) n++; })); return n?('Ab tak: '+r+' runs ('+b+' balls) · '+n+' innings'):'First batting'; };
         const careerB=id=>{ let w=0,rn=0,lg=0; db.matches.forEach(mm=>(mm.inns||[]).forEach(ii=>(ii.balls||[]).forEach(x=>{ if(x.w!==id) return; if(x.ex!=='wd'&&x.ex!=='nb') lg++; if(x.ex==='wd'||x.ex==='nb') rn+=(x.r||0)+(x.ex==='nb'?1:0); else if(x.ex!=='b'&&x.ex!=='lb') rn+=x.r||0; if(x.wk&&x.wk!=='runout') w++; }))); return lg?('Ab tak: '+w+' wickets · economy '+(rn/(lg/6)).toFixed(1)):'Pehli bowling'; };
         const used=[]; balls.forEach(x=>{ if(x.b&&!used.includes(x.b)) used.push(x.b); }); [i.st,i.ns].forEach(x=>{ if(x&&!used.includes(x)) used.push(x); });
         const nbid=used.length>2?used[used.length-1]:null; const ex=balls.reduce((a,x)=>a+((x.ex==='wd'||x.ex==='nb')?Math.max(1,x.r||1):((x.ex==='b'||x.ex==='lb')?(x.r||0):0)),0);
@@ -4818,7 +4818,7 @@ setTimeout(()=>{try{if(canV())scan();else refresh()}catch(x){}},4500);
         const lastW=[...balls].reverse().find(x=>x.wk); const hw=id=>{ const b=[...balls].reverse().find(x=>x.wk&&x.out===id); if(!b) return 'out'; return String(b.wk)+(b.f?' ('+PN(i.bowl,b.f)+')':'')+(b.w?' b '+PN(i.bowl,b.w):''); };
         const ro=i.out||[], rr=i.ret||[]; const lo=ro.length?ro[ro.length-1]:null, lr=rr.length?rr[rr.length-1]:null;
         return {id:m.id,v:2,status:'live',title:T_(m.a)+' vs '+T_(m.b),series:m.cat==='i'?'':info,cat,rd:(m.rd&&!['Match','League'].includes(m.rd))?m.rd:'',of:'',date:m.date||'',ground:m.venue||'',caps:(capR(m.a)&&capR(m.b))?(capR(m.a)+' · '+capR(m.b)):'',ib:balls.length,
-          out:lo?{i:ai*100+ro.length,n:PN(i.bat,lo),how:hw(lo)}:null,rt:lr?{i:ai*100+rr.length,n:PN(i.bat,lr),why:'Batter retire hua (out nahi) — baad mein wapas aa sakta hai',sb:0}:null,no:m.no||'',toss:m.toss?(T_(m.toss)+' ne toss jeeta · '+(m.dec==='bat'?'batting':'bowling')+' chuni'):'',
+          out:lo?{i:ai*100+ro.length,n:PN(i.bat,lo),how:hw(lo)}:null,rt:lr?{i:ai*100+rr.length,n:PN(i.bat,lr),why:'Retired (not out) — can return later',sb:0}:null,no:m.no||'',toss:m.toss?(T_(m.toss)+' won the toss · chose '+(m.dec==='bat'?'batting':'bowling')+''):'',
           innL:ai===0?'1st INNINGS':'2nd INNINGS',bat:T_(i.bat),batCol:(T(i.bat)||{}).color||'#3d7bf5',r:i.runs||0,w:i.wk||0,ovs:Math.floor(lb/6)+'.'+(lb%6),max:ovMax,crr,tgt,need,left,rrr,f1,ext:ex,
           st:mk(i.st),ns:mk(i.ns),bw:bid?{id:bid,n:PN(i.bowl,bid),fig:bowlFig(bid),p:careerB(bid)}:{id:'',n:'',fig:''},
           nb:nbid?{i:ai*100+used.length,n:PN(i.bat,nbid),p:career(nbid)}:null,ev,last:balls.filter(x=>x.ov===Math.floor(lb/6)&&(!bid||x.w===bid)).map(lab)}; }catch(e){ return null; } },
@@ -5184,18 +5184,18 @@ setTimeout(()=>{ try{ if(sessionStorage.getItem(W.p+'_pv_done')) return; session
 ${j.toss?`<div class="L4toss">🪙 ${E(j.toss)}</div>`:''}
 <div class="L4tm"><div><div class="L4lb">${E(j.innL||'')}</div><div class="L4nm">${E(j.bat)}</div></div><div class="L4big">${E(j.r)}/${E(j.w)}<small>(${E(j.ovs)}/${E(j.max)})</small></div></div>
 <div class="L4rt"><span>CRR <b>${E(j.crr)}</b></span>${j.tgt?`<span>RRR <b>${E(j.rrr)}</b></span><span>Target <b>${E(j.tgt)}</b></span>`:''}${j.ext?`<span>Extras <b>${E(j.ext)}</b></span>`:''}</div>
-${j.tgt?`<div class="L4ch">${j.need>0?`Jeetne ke liye <b>${E(j.need)}</b> runs · <b>${E(j.left)}</b> balls baaqi`:'Target paar! 🎉'}</div>`:''}
+${j.tgt?`<div class="L4ch">${j.need>0?`Need <b>${E(j.need)}</b> runs from <b>${E(j.left)}</b> balls`:'Target paar! 🎉'}</div>`:''}
 ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
 <table>${ths}${batRow(j.st,true)}${batRow(j.ns,false)}</table>
 <table><tr><th>Bowler</th><th style="text-align:right">O-M-R-W</th></tr><tr><td>⚾ ${E(j.bw&&j.bw.n||'-')}</td><td>${E(j.bw&&j.bw.fig||'')}</td></tr></table>
-<div class="L4ov"><div class="L4ol">IS OVER / PICHLI BALLS</div><div class="L4bl">${(j.last||[]).map(x=>`<b style="background:${E(x[1]||'#5b6b82')}">${E(x[0])}</b>`).join('')}</div></div>`;
+<div class="L4ov"><div class="L4ol">THIS OVER</div><div class="L4bl">${(j.last||[]).map(x=>`<b style="background:${E(x[1]||'#5b6b82')}">${E(x[0])}</b>`).join('')}</div></div>`;
     cd.innerHTML=body; fx.forEach(f=>cd.appendChild(f));
     cd.querySelector('#lvx').onclick=()=>{ dismissed[j.id]=1; closeBox(); drawChip(j); };
     const bb=cd.querySelector('#lvb'); if(bb) bb.onclick=toggleBell;
   }
   async function toggleBell(){
-    if(ls.g(NOTK)==='1'){ ls.s(NOTK,'0'); W.toast('🔕 Notification band'); }
-    else { try{ const p=(Notification.permission==='granted')?'granted':await Notification.requestPermission(); if(p==='granted'){ ls.s(NOTK,'1'); W.toast('🔔 Notification chalu — app background mein ho to bhi khabar aayegi'); notify('🔔 Live notification chalu','Ab match ki khabar yahan aayegi','lv-test',false); } else W.toast('Phone ne notification ki ijazat nahi di (settings se allow karein)',false); }catch(e){ W.toast('Is browser mein notification nahi chal sakti',false); } }
+    if(ls.g(NOTK)==='1'){ ls.s(NOTK,'0'); W.toast('🔕 Notifications OFF'); }
+    else { try{ const p=(Notification.permission==='granted')?'granted':await Notification.requestPermission(); if(p==='granted'){ ls.s(NOTK,'1'); W.toast('🔔 Notifications ON — you will be alerted even when the app is in the background'); notify('🔔 Live notifications ON','Match updates will appear here','lv-test',false); } else W.toast('Notification permission denied (allow it in phone settings)',false); }catch(e){ W.toast('Notifications are not supported in this browser',false); } }
     const b=document.getElementById('lvb'); if(b) b.textContent=notifOn()?'🔔':'🔕';
   }
   function closeBox(){ if(box){ box.remove(); box=null; fxQ=[]; fxBusy=false; } }
@@ -5210,7 +5210,12 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
     hideChip(); render(j);
   }
   /* ---- animation: ball bubble + nayi batter / bowler ka profile ---- */
-  function pushFx(f){ fxQ.push(f); if(fxQ.length>9) fxQ=fxQ.slice(-7); runFx(); }
+  const recentP={};
+  function pushFx(f){ if(f.type==='prof'){ const k=f.kind+'|'+f.n, t=Date.now(); if(recentP[k]&&t-recentP[k]<90000) return; recentP[k]=t; } fxQ.push(f); if(fxQ.length>9) fxQ=fxQ.slice(-7); runFx(); }
+  function fitCards(el){
+    const go=()=>{ try{ const pb=el.querySelector('.L4pb'), sc=el.querySelector('.L4sc'); if(!pb||!sc||!el.parentNode) return; pb.style.transform=''; pb.style.marginBottom=''; const avail=el.clientHeight-20, pbH=pb.scrollHeight, other=sc.scrollHeight-pbH; let k=Math.min(1,(avail-other-8)/pbH); if(k<0.3) k=0.3; if(k<1){ pb.style.transformOrigin='top center'; pb.style.transform='scale('+k.toFixed(3)+')'; pb.style.marginBottom=(-(pbH*(1-k))).toFixed(0)+'px'; } }catch(e){} };
+    go(); [200,600,1500].forEach(t=>setTimeout(go,t));
+  }
   function runFx(){
     if(fxBusy||!box) return; const f=fxQ.shift(); if(!f) return; fxBusy=true; const cd=box.querySelector('.L4cd'); let el;
     if(f.type==='ball'){
@@ -5220,46 +5225,51 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
       cd.appendChild(el); setTimeout(()=>{ el.remove(); fxBusy=false; runFx(); },2300);
     } else if(f.type==='trio'){
       el=document.createElement('div'); el.className='L4pf'; const done=()=>{ if(!el.parentNode) return; el.style.transition='opacity .35s'; el.style.opacity='0'; setTimeout(()=>{ el.remove(); fxBusy=false; runFx(); },360); };
-      el.innerHTML=`<div class="L4sc"><div class="L4hd">🏏 INNINGS SHURU — OPENERS</div><div class="L4pb" style="text-align:center;opacity:.7;min-height:120px">Profiles aa rahi hain…</div><button class="L4cl" data-cl="1">Band karo</button></div>`;
+      el.innerHTML=`<div class="L4sc"><div class="L4hd">🏏 INNINGS START — OPENERS</div><div class="L4pb" style="text-align:center;opacity:.7;min-height:120px">Loading profiles…</div><button class="L4cl" data-cl="1">Close</button></div>`;
       el.onclick=e=>{ if(e.target.closest('.L4cl')||e.target===el) done(); }; box.appendChild(el);
-      Promise.all(f.items.map(x=>Promise.resolve().then(()=>LV.profile?LV.profile(x.kind,x.n,f.j,x.tag):'').catch(()=>''))).then(hs=>{ const pb=el.querySelector('.L4pb'); if(pb){ pb.style.opacity='1'; pb.style.minHeight=''; pb.innerHTML=f.items.map((x,k)=>`<div style="text-align:left"><span class="L4pill">${E(x.tag)}</span></div>`+(hs[k]||('<div style="font-size:1.2rem;font-weight:900;padding:10px">'+E(x.n)+'</div>'))).join(''); } });
+      Promise.all(f.items.map(x=>Promise.resolve().then(()=>LV.profile?LV.profile(x.kind,x.n,f.j,x.tag):'').catch(()=>''))).then(hs=>{ const pb=el.querySelector('.L4pb'); if(pb){ pb.style.opacity='1'; pb.style.minHeight=''; pb.innerHTML=f.items.map((x,k)=>`<div style="text-align:left"><span class="L4pill" style="margin:4px 0 2px">${E(x.tag)}</span></div>`+(hs[k]||('<div style="font-size:1.2rem;font-weight:900;padding:10px">'+E(x.n)+'</div>'))).join(''); fitCards(el); } });
       setTimeout(done,14000);
     } else if(f.type==='prof'||f.type==='info'){
       el=document.createElement('div'); el.className='L4pc'; const done=()=>{ if(!el.parentNode) return; el.style.transition='opacity .35s'; el.style.opacity='0'; setTimeout(()=>{ el.remove(); fxBusy=false; runFx(); },360); };
       el.onclick=done;
       if(f.type==='info'){
-        el.innerHTML=`<div class="L4ic"><div class="L4e">${f.k==='ret'?'🚶':'☝️'}</div><div class="L4hd" style="font-weight:900;letter-spacing:.1em;color:#ffd48a;font-size:.8rem">${f.k==='ret'?'BATTER RETIRE HUA':'WICKET! BATTER OUT'}</div><div class="L4n">${E(f.n)}</div><div class="L4rs">${E(f.t||'')}</div><div class="L4tap" style="font-size:.62rem;opacity:.55;margin-top:8px">tap karke band karein</div></div>`;
+        el.innerHTML=`<div class="L4ic"><div class="L4e">${f.k==='ret'?'🚶':'☝️'}</div><div class="L4hd" style="font-weight:900;letter-spacing:.1em;color:#ffd48a;font-size:.8rem">${f.k==='ret'?'BATTER RETIRED':'WICKET! BATTER OUT'}</div><div class="L4n">${E(f.n)}</div><div class="L4rs">${E(f.t||'')}</div><div class="L4tap" style="font-size:.62rem;opacity:.55;margin-top:8px">tap to close</div></div>`;
         cd.appendChild(el); setTimeout(done,3400);
       } else {
         el.remove(); el=document.createElement('div'); el.className='L4pf'; el.onclick=e=>{ if(e.target.closest('.L4cl')||e.target===el) done(); };
-        el.innerHTML=`<div class="L4sc"><div class="L4hd">${E(f.tag)}</div><div class="L4pb" style="min-height:120px;text-align:center;opacity:.7">Profile aa rahi hai…</div><button class="L4cl" data-cl="1">Band karo</button></div>`;
+        el.innerHTML=`<div class="L4sc"><div class="L4hd">${E(f.tag)}</div><div class="L4pb" style="min-height:120px;text-align:center;opacity:.7">Loading profile…</div><button class="L4cl" data-cl="1">Close</button></div>`;
         box.appendChild(el);
-        Promise.resolve().then(()=>LV.profile?LV.profile(f.kind,f.n,f.j,f.tag):'').then(h=>{ const pb=el.querySelector('.L4pb'); if(pb){ pb.style.opacity='1'; pb.style.minHeight=''; pb.innerHTML=h||('<div style="font-size:1.3rem;font-weight:900">'+E(f.n)+'</div>'); } }).catch(()=>{});
+        Promise.resolve().then(()=>LV.profile?LV.profile(f.kind,f.n,f.j,f.tag):'').then(h=>{ const pb=el.querySelector('.L4pb'); if(pb){ pb.style.opacity='1'; pb.style.minHeight=''; pb.innerHTML=h||('<div style="font-size:1.3rem;font-weight:900">'+E(f.n)+'</div>'); fitCards(el); } }).catch(()=>{});
         setTimeout(done,f.ms||5000);
       }
     } else {
       el=document.createElement('div'); el.className='L4pc';
       const ini=String(f.n||'?').trim().split(/\s+/).map(x=>x[0]).slice(0,2).join('').toUpperCase();
-      el.innerHTML=`<div class="L4in"><div class="L4av" style="background:${E(f.col||'#3d7bf5')}">${E(ini)}</div><div class="L4k">${f.type==='bat'?'🏏 NAYA BATTER KREEZ PAR':'⚾ NAYA BOWLER ATTACK MEIN'}</div><div class="L4n">${E(f.n)}</div><div class="L4p">${E(f.p||'')}</div></div>`;
+      el.innerHTML=`<div class="L4in"><div class="L4av" style="background:${E(f.col||'#3d7bf5')}">${E(ini)}</div><div class="L4k">${f.type==='bat'?'🏏 NEW BATTER AT THE CREASE':'⚾ NEW BOWLER IN THE ATTACK'}</div><div class="L4n">${E(f.n)}</div><div class="L4p">${E(f.p||'')}</div></div>`;
       cd.appendChild(el); setTimeout(()=>{ el.style.transition='opacity .4s'; el.style.opacity='0'; setTimeout(()=>{ el.remove(); fxBusy=false; runFx(); },420); },3600);
     }
   }
   const FXS={};
   function detectFx(j,show){
     const id=j.id, S=FXS[id]||(FXS[id]={}), q=[]; const names=[j.st&&j.st.n,j.ns&&j.ns.n].filter(Boolean), key=id+'|'+(j.innL||'');
+    /* purana (stale) payload: sirf thori der pehle ka -> fx na banao (varna purane players ke profile dobara aate hain) */
+    if(j.t){ if(S.t&&j.t<S.t&&(S.t-j.t)<20000) return; if(!S.t||j.t>S.t) S.t=j.t; }
     const ev=j.ev; if(ev){ const p=lastEv[id]; if(p!=null && ev.n>p && ev.n-p<=3) q.push(Object.assign({type:'ball'},ev)); lastEv[id]=ev.n; }
     if(S.out==null) S.out=j.out?j.out.i:0; if(S.rt==null) S.rt=j.rt?j.rt.i:0; if(!S.open) S.open={};
+    const sb=(S.sb||(S.sb={}))[key]||(S.sb[key]={}), sw=(S.sw||(S.sw={}))[key]||(S.sw[key]={});
     const prof=(kind,n,tag)=>({type:'prof',kind,n,tag,j});
     if(j.st&&j.ns&&j.bw&&j.bw.id&&!S.open[key]){
-      S.open[key]=1; if((j.ib||0)<=1){ q.push({type:'trio',j,items:[{kind:'bat',n:j.st.n,tag:'STRIKER'},{kind:'bat',n:j.ns.n,tag:'NON-STRIKER'},{kind:'bowl',n:j.bw.n,tag:'BOWLER'}]}); }
+      S.open[key]=1; names.forEach(n=>{ sb[n]=1; }); sw[j.bw.id]=1;
+      if((j.ib||0)<=1){ q.push({type:'trio',j,items:[{kind:'bat',n:j.st.n,tag:'STRIKER'},{kind:'bat',n:j.ns.n,tag:'NON-STRIKER'},{kind:'bowl',n:j.bw.n,tag:'BOWLER'}]}); }
       S.out=j.out?j.out.i:S.out; S.rt=j.rt?j.rt.i:S.rt;
     } else if(S.open[key]){
       if(j.out&&j.out.i>S.out) q.push({type:'info',k:'out',n:j.out.n,t:j.out.how});
-      if(j.rt&&j.rt.i>S.rt) q.push({type:'info',k:'ret',n:j.rt.n,t:(j.rt.why||'')+(j.rt.sb?' · '+j.rt.sb+' balls kheli':'')});
-      if(S.names) names.filter(n=>!S.names.includes(n)).forEach(n=>q.push(prof('bat',n,'🏏 NEXT BATTER PREVIEW')));
-      if(S.bw&&j.bw&&j.bw.id&&S.bw!==j.bw.id) q.push(prof('bowl',j.bw.n,'⚾ NEW BOWLER'));
+      if(j.rt&&j.rt.i>S.rt) q.push({type:'info',k:'ret',n:j.rt.n,t:(j.rt.why||'')+(j.rt.sb?' · '+j.rt.sb+' balls played':'')});
+      /* profile SIRF tab jab koi bilkul naya batter / bowler aaye (jo is innings mein pehle kabhi nahi dikha) */
+      names.forEach(n=>{ if(!sb[n]){ sb[n]=1; q.push(prof('bat',n,'🏏 NEXT BATTER')); } });
+      if(j.bw&&j.bw.id&&!sw[j.bw.id]){ sw[j.bw.id]=1; q.push(prof('bowl',j.bw.n,'⚾ NEW BOWLER')); }
       S.out=j.out?Math.max(S.out,j.out.i):S.out; S.rt=j.rt?Math.max(S.rt,j.rt.i):S.rt;
-    }
+    } else { names.forEach(n=>{ sb[n]=1; }); }
     if(names.length||S.open[key]) S.names=names.slice(); if(j.bw&&j.bw.id) S.bw=j.bw.id;
     if(show) q.forEach(pushFx);
   }
@@ -5274,7 +5284,7 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
     const prev=lastJ&&lastJ.id===j.id?lastJ:null; lastJ=j;
     if(j.status==='done'){ if(j.t) doneT[j.id]=j.t; hideChip(); closeBox(); setTimeout(async()=>{ try{ if(typeof clPull==='function'&&!W.isAdm()) await clPull(false); }catch(e){} checkDone(true); },1200); return; }
     if(j.status!=='live'||stale(j)){ hideChip(); closeBox(); return; }
-    if(!prev&&!firstSeen[j.id]){ firstSeen[j.id]=1; if(document.hidden) notify('🔴 Match shuru: '+j.title,(j.series||'')+(j.toss?'\n'+j.toss:''),'lv-start',true); }
+    if(!prev&&!firstSeen[j.id]){ firstSeen[j.id]=1; if(document.hidden) notify('🔴 Match started: '+j.title,(j.series||'')+(j.toss?'\n'+j.toss:''),'lv-start',true); }
     refresh(); detectFx(j,!!box); backgroundAlerts(j,prev);
   }
   function refresh(){
@@ -5317,7 +5327,7 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
   function showDone(x){
     const o=document.createElement('div'); o.className='dn104';
     const row=(t,w)=>t?`<div class="L4row ${w&&w===t.name?'L4w':''}"><span>${E(t.name)}</span><b>${E(t.score)} <small style="font-weight:600;opacity:.75">${E(t.ovs||'')}</small></b></div>`:'';
-    o.innerHTML=`<div class="L4c"><div style="font-size:2.2rem">🏁</div><div class="L4tt">MATCH COMPLETE</div><div class="L4sr">${E(x.series||'')}${x.no?' · Match '+E(x.no):''}</div>${row(x.a,x.win)}${row(x.b,x.win)}<div class="L4rs">${E(x.res||'')}</div><div class="L4dt">📅 ${E(x.date||'')}${x.time?' · '+E(x.time):''}</div><button data-cl="1" data-s style="background:linear-gradient(135deg,#e8590c,#f08c00)">📋 Poora Match Card dekhein</button><button data-cl="1" data-c style="background:#34498f">Band karo</button></div>`;
+    o.innerHTML=`<div class="L4c"><div style="font-size:2.2rem">🏁</div><div class="L4tt">MATCH COMPLETE</div><div class="L4sr">${E(x.series||'')}${x.no?' · Match '+E(x.no):''}</div>${row(x.a,x.win)}${row(x.b,x.win)}<div class="L4rs">${E(x.res||'')}</div><div class="L4dt">📅 ${E(x.date||'')}${x.time?' · '+E(x.time):''}</div><button data-cl="1" data-s style="background:linear-gradient(135deg,#e8590c,#f08c00)">📋 View full scorecard</button><button data-cl="1" data-c style="background:#34498f">Close</button></div>`;
     o.querySelector('[data-c]').onclick=()=>o.remove();
     o.querySelector('[data-s]').onclick=()=>{ o.remove(); try{ LV.open(x.id); }catch(e){} };
     document.body.appendChild(o);
