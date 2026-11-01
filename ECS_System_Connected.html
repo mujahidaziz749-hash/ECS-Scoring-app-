@@ -11453,6 +11453,7 @@ function ecsFixtureRowEl(s, r, label, onAfter){
     else if(r.action==='resume'){ const idx = s.matches.indexOf(r.m); root.activeSeriesId = s.id; state = s; if(r.m.status==='paused') resumeMatch(idx); else { activeTab='match'; saveState(); render(); } }
     else if(r.action==='view'){ root.activeSeriesId = s.id; state = s; activeTab='history'; saveState(); render(); }
   };
+  if(r.action!=='view') try{ ecsShareBtns(s,r.i,d); }catch(e){}
   return d;
 }
 
@@ -12012,6 +12013,7 @@ function ecsTourFixRow(t, s){
   if(q('[data-c]')) q('[data-c]').onclick = ()=>{ root.activeSeriesId = s.id; state = s; activeTab = 'history'; saveState(); render(); };
   if(q('[data-rp]')) q('[data-rp]').onclick = ()=>{ s.totalMatches++; saveState(); render(); };
   q('[data-o]').onclick = ()=> switchSeries(s.id);
+  if(!done) try{ ecsShareBtns(s,1,d); }catch(e){}
   if(q('[data-x]')) q('[data-x]').onclick = ()=>{ if(confirm('Ye fixture hata dein?')){ root.seriesList = root.seriesList.filter(z=>z!==s); ecsTourFix(t).forEach((z,i)=>z.fixNo=i+1); saveState(); render(); } };
   return d;
 }
@@ -12166,6 +12168,7 @@ function renderIndivMgr(){
     c.querySelector('[data-o]').onclick = ()=> switchSeries(s.id);
     c.querySelector('[data-f]').onclick = ()=> exportSeriesFullPdf(s);
     c.querySelector('[data-d]').onclick = ()=> ecsDeleteGroup(g);
+    if(!done) try{ ecsShareBtns(s,1,c,c.querySelector('.row')); }catch(e){}
     wrap.appendChild(c);
   });
   return wrap;
@@ -14815,7 +14818,7 @@ async function ecsPosterOpen(spec){
     <details id="pmi" open style="margin:8px 0;"><summary style="cursor:pointer;font-weight:800;">✏️ Match info / texts</summary><div id="pfields" style="margin-top:6px;"></div></details>
     <details style="margin:6px 0;"><summary style="cursor:pointer;font-weight:800;">📷 Photo settings</summary><div id="pph" style="margin-top:6px;"></div></details>
     <div class="row" style="margin:8px 0;flex-wrap:wrap;"><label class="btn secondary" style="cursor:pointer;">🌄 Apna background<input type="file" id="pbgf" accept="image/*" style="display:none;"></label><button class="btn secondary" id="pbgx" style="display:none;">✕ Background hatao</button><button class="btn secondary" id="pai">🤖 AI prompt</button></div>
-    <div class="row" style="margin-top:12px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:12px;"><button class="btn gold" id="pdlI" disabled>⬇ Image (PNG)</button><button class="btn gold" id="pdlP" disabled>📄 PDF</button><button class="btn secondary" id="prnd" disabled>🎲 Random</button><button class="btn secondary" id="pcl">Close</button></div></div></div>`);
+    <div class="row" style="margin-top:12px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:12px;"><button class="btn gold" id="pshr" data-cl="1" style="display:none" disabled>📤 Share + link</button><button class="btn gold" id="pdlI" disabled>⬇ Image (PNG)</button><button class="btn gold" id="pdlP" disabled>📄 PDF</button><button class="btn secondary" id="prnd" disabled>🎲 Random</button><button class="btn secondary" id="pcl">Close</button></div></div></div>`);
   let alive = true, timer = null; const kill = ()=>{ alive = false; clearInterval(timer); if(ov.parentNode) document.body.removeChild(ov); };
   ov.querySelector('#pcl').onclick = kill; document.body.appendChild(ov);
   try{
@@ -14850,7 +14853,7 @@ async function ecsPosterOpen(spec){
     ov.querySelector('#pai').onclick = ()=>{ const t = ecsAiText(spec, d, K, ECS_THEMES[cur], LY[lv]); const o2 = el(`<div class="modal-overlay"><div class="modal" style="max-width:520px;"><h3 style="margin:0 0 6px;">🤖 AI Prompt (is poster ke liye)</h3><p class="muted" style="font-size:.78rem;">Ye poora text ChatGPT / Gemini jaise image AI mein paste karo aur players ki photos attach karo.</p><textarea id="aip" rows="12" style="width:100%;"></textarea><div class="row" style="margin-top:8px;"><button class="btn gold" id="aicp">📋 Copy karo</button><button class="btn secondary" id="aicl">Close</button></div></div></div>`); o2.querySelector('#aip').value = t; o2.querySelector('#aicl').onclick = ()=> document.body.removeChild(o2); o2.querySelector('#aicp').onclick = ()=>{ try{ navigator.clipboard.writeText(t); showToast('✅ Prompt copy ho gaya', true); }catch(e){ o2.querySelector('#aip').select(); } }; document.body.appendChild(o2); };
     const draw = async (i)=>{
       const my = ++seq; cur = i; root.posterTheme = i; try{ saveState(); }catch(e){}
-      bI.disabled = bP.disabled = bR.disabled = true;
+      bI.disabled = bP.disabled = bR.disabled = true; { const _b=ov.querySelector("#pshr"); if(_b) _b.disabled=true; }
       const sl = ov.querySelector('#pslots'); let SN = []; try{ SN = K.slots ? K.slots(d) : []; }catch(e){} sl.innerHTML = ''; ecsSlotUI(sl, SN, async()=>{ d = await dataP() || d; draw(cur); });
       await ecsPreloadBg(); await new Promise(r=>setTimeout(r,15));
       const out = ecsSized(K, d, ECS_THEMES[i], lv); if(my!==seq || !alive) return;
@@ -14858,8 +14861,9 @@ async function ecsPosterOpen(spec){
       ov.querySelector('#pv').innerHTML = `<img src="${jpg}" style="width:100%;max-height:70vh;object-fit:contain;border-radius:12px;display:block;" alt="poster">`;
       const blob = await new Promise(res=> out.toBlob(res, 'image/png')); if(my!==seq || !alive) return;
       if(pngUrl && pngUrl.indexOf('blob:')===0) URL.revokeObjectURL(pngUrl); pngUrl = blob ? URL.createObjectURL(blob) : jpg;
-      bI.disabled = bP.disabled = bR.disabled = false; const s1 = ctl.querySelector('#sSty'); if(s1) s1.value = cur;
+      bI.disabled = bP.disabled = bR.disabled = false; { const _b=ov.querySelector("#pshr"); if(_b) _b.disabled=false; } const s1 = ctl.querySelector('#sSty'); if(s1) s1.value = cur;
     };
+    { const bS=ov.querySelector('#pshr'); if(bS && spec.share){ bS.style.display=''; bS.onclick=()=>{ try{ window.__share104.shareImage((pngUrl&&pngUrl.indexOf('blob:')===0)?pngUrl:jpg, spec.share.cap(), fn); }catch(e){ alert(e.message||e); } }; } }
     bI.onclick = ()=>{ try{ const a = document.createElement('a'); a.href = pngUrl; a.download = `${fn}_${ECS_THEMES[cur].id}.png`; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); showToast('⬇ Image download shuru — na aaye to poster par long-press karke "Save image" karein.', true); }catch(e){ window.open(jpg, '_blank'); } };
     bP.onclick = ()=>{ const J = getJsPDF(); if(!J){ alert('PDF library load nahi hui — internet check karein.'); return; } const wmm = 210, hmm = Math.round(210*cvH/cvW*10)/10; const doc = new J({orientation:hmm<wmm?'l':'p', unit:'mm', format:[wmm,hmm]}); doc.addImage(jpg, 'JPEG', 0, 0, wmm, hmm); doc.save(`${fn}_${ECS_THEMES[cur].id}.pdf`); };
     bR.onclick = ()=>{ let k; do{ k = Math.floor(Math.random()*NT); }while(k===cur && NT>1); draw(k); };
@@ -16198,7 +16202,7 @@ function clCard(){
 }
 
 /* ---- Viewer lock: sirf dekhna / PDF / poster / export. Baaqi sab block. (Asli suraksha Firebase Rules hain.) ---- */
-const VSAFE = /pdf|poster|export|download|⬇|🖨|📄|🖼|📑|📚|📊|📈|📋|career|leaderboard|🏅|profile|scorecard|card|back|←|peeche|home|close|cancel|band karein|open|dekhein|👁|history|stats|image|csv|png|fit|zoom|background|photo chuno|colour swap|ai prompt|🏆|📜|⋮|records?|^\s*(ok|✕|×|done|[◀▶⇄]️?)\s*$/i;
+const VSAFE = /pdf|poster|export|download|⬇|🖨|📄|🖼|📣|📑|📚|📊|📈|📋|career|leaderboard|🏅|profile|scorecard|card|back|←|peeche|home|close|cancel|band karein|open|dekhein|👁|history|stats|image|csv|png|fit|zoom|background|photo chuno|colour swap|ai prompt|🏆|📜|⋮|records?|^\s*(ok|✕|×|done|[◀▶⇄]️?)\s*$/i;
 const VDENY = /delete|hatay|hatao|remove|reset|wipe|saaf|clear|undo|redo|import|restore|edit|badlein|amend|\+|➕|\badd\b|create|naya|nayi|\bnew\b|shuru|start|resume|pause|assign|apply|confirm|swap|shuffle|replace|credit|replay|declare|tied|retire|bonus|attendance|squad manager|quota system|password|save|✏|✎|🗑|🧹|🔁|🔄|🎲|⚖|✍|📝|📥|📤|⬆|🔑|manual|fix\b|special|gap bharein|batting order|innings shuru|\bplay\b/i;
 document.addEventListener('click', ev=>{
   if(!VW() && !(typeof ADRO==='function' && ADRO())) return;
@@ -17547,6 +17551,203 @@ function chip(){ if(!document.getElementById('pv104chip')){ const c=document.cre
 setTimeout(chip,1200); setInterval(chip,1500); window.addEventListener('resize',placeChip);
 setTimeout(()=>{ try{ if(sessionStorage.getItem(W.p+'_pv_done')) return; sessionStorage.setItem(W.p+'_pv_done','1'); if(!PV.canAuto||PV.canAuto()){ const lc=PV.lastCat&&PV.lastCat(); if(lc&&lc.id) pvAct[lc.k]=lc.id; pvOpen(lc?lc.k:PV.def); } }catch(e){} },1800);
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ===== SHARE104 START — match announcement post + countdown link + scorecard share ===== */
+(function(){
+  if(window.__share104) return;
+  const E=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const LS={g:k=>{try{return localStorage.getItem(k)}catch(e){return null}},s:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
+  const b64e=o=>btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  const b64d=s=>{ s=s.replace(/-/g,'+').replace(/_/g,'/'); while(s.length%4) s+='='; return JSON.parse(decodeURIComponent(escape(atob(s)))); };
+  const DEF={ECS:'https://mujahidaziz749-hash.github.io/ECS-Scoring-app-/ECS_System_Connected.html'};
+  const pubHost=()=>/^https?:$/.test(location.protocol)&&!/^(localhost|127\.|0\.0\.0\.0)/.test(location.hostname);
+  const base=()=>{ if(pubHost()) return location.href.split('#')[0].split('?')[0]; return LS.g('sh104_base_'+APP)||DEF[APP]||''; };
+  function askBase(force){ const cur=base(); if(cur&&!force) return cur; const v=prompt('Paste your '+APP+' app link (the GitHub Pages address people open), e.g.\nhttps://yourname.github.io/'+APP+'-app/'+APP+'_Connected.html',cur||'https://mujahidaziz749-hash.github.io/'); if(v&&/^https?:\/\//i.test(v.trim())){ LS.s('sh104_base_'+APP,v.trim().split('#')[0]); return v.trim().split('#')[0]; } return cur; }
+  const fmtDate=t=>{ try{ return new Date(t).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short',year:'numeric'}); }catch(e){ return ''; } };
+  const fmtTime=t=>{ try{ return new Date(t).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}); }catch(e){ return ''; } };
+  const APP=(()=>{ const p=(location.pathname||'').toUpperCase(); return p.includes('RSL')?'RSL':p.includes('JSL')?'JSL':p.includes('ECS')?'ECS':(document.title.match(/ECS|RSL|JSL/)||['ECS'])[0]; })();
+  const css=`
+.sh104{position:fixed;inset:0;z-index:2147483200;background:rgba(3,8,22,.88);display:flex;align-items:center;justify-content:center;padding:12px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.sh104 .bx{width:100%;max-width:430px;max-height:96vh;overflow:auto;background:#101c33;color:#eef3ff;border-radius:18px;padding:14px;box-shadow:0 20px 60px #000}
+.sh104 h3{margin:0 0 8px;font-size:1.05rem}.sh104 img{width:100%;border-radius:12px;display:block;margin:6px 0}
+.sh104 .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.sh104 button{flex:1;min-width:120px;border:0;border-radius:12px;padding:12px 10px;font-weight:800;font-size:.9rem;color:#fff;background:#2f4a8f}
+.sh104 button.g{background:#1f9d57}.sh104 button.o{background:#e8590c}.sh104 button.r{background:#8a2a2a}
+.sh104 label{display:block;font-size:.78rem;opacity:.8;margin:10px 0 4px}.sh104 input{width:100%;box-sizing:border-box;padding:11px;border-radius:10px;border:1px solid #3a5190;background:#0b1428;color:#fff;font-size:1rem}
+.sh104 textarea{width:100%;box-sizing:border-box;min-height:120px;padding:10px;border-radius:10px;border:1px solid #3a5190;background:#0b1428;color:#fff;font-size:.82rem}
+.cd104{position:fixed;inset:0;z-index:2147483100;background:linear-gradient(160deg,#07132b,#0e3b2e);display:flex;align-items:center;justify-content:center;padding:14px;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;text-align:center}
+.cd104 .c{width:100%;max-width:420px}.cd104 .k{display:inline-block;background:#ffd45f;color:#10243a;font-weight:900;border-radius:99px;padding:5px 14px;font-size:.78rem;letter-spacing:.08em}
+.cd104 .t{font-size:1.5rem;font-weight:900;margin:14px 0 4px;line-height:1.25}.cd104 .s{opacity:.8;font-size:.86rem;margin:2px 0}
+.cd104 .tm{display:flex;gap:8px;justify-content:center;margin:18px 0 8px}.cd104 .tm div{background:#ffffff18;border:1px solid #ffffff33;border-radius:14px;padding:10px 6px;min-width:66px}
+.cd104 .tm b{display:block;font-size:1.9rem;font-variant-numeric:tabular-nums}.cd104 .tm span{font-size:.62rem;letter-spacing:.1em;opacity:.7}
+.cd104 .w{font-size:.95rem;margin:8px 0}.cd104 button{border:0;border-radius:12px;padding:12px 16px;font-weight:800;color:#fff;background:#34498f;margin:6px 4px;font-size:.92rem}.cd104 button.g{background:#1f9d57}
+`;
+  const st=document.createElement('style'); st.textContent=css; document.head.appendChild(st);
+  const kindCol={Series:['#0b7a4b','#042b1e','#ffd45f'],Tournament:['#1d4ed8','#071a4a','#ffd45f'],'Individual Match':['#c26a08','#3a1d02','#ffe08a']};
+  function wrapText(ctx,t,w){ const out=[]; let ln=''; String(t).split(/\s+/).forEach(x=>{ const z=(ln+' '+x).trim(); if(ctx.measureText(z).width<=w||!ln) ln=z; else { out.push(ln); ln=x; } }); if(ln) out.push(ln); return out; }
+  function rr(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+  const ini=n=>{ const w=String(n||'?').trim().split(/\s+/).filter(x=>/^[A-Za-z0-9\u0600-\u06FF]/.test(x)); return (w.length?w:['?']).map(x=>x[0]).slice(0,2).join('').toUpperCase(); };
+  function canvasBase(c){ const cv=document.createElement('canvas'); cv.width=1080; cv.height=1350; const x=cv.getContext('2d'); const g=x.createLinearGradient(0,0,1080,1350); g.addColorStop(0,c[0]); g.addColorStop(1,c[1]); x.fillStyle=g; x.fillRect(0,0,1080,1350);
+    x.globalAlpha=.08; x.fillStyle='#fff'; x.beginPath(); x.arc(980,160,300,0,7); x.fill(); x.beginPath(); x.arc(60,1240,260,0,7); x.fill(); x.globalAlpha=1; return [cv,x]; }
+  function pill(x,t,cx,y,bg,fg,fs){ x.font='800 '+fs+'px system-ui,sans-serif'; const w=x.measureText(t).width+44; x.fillStyle=bg; rr(x,cx-w/2,y,w,fs+26,(fs+26)/2); x.fill(); x.fillStyle=fg; x.textAlign='center'; x.fillText(t,cx,y+fs+4); }
+  function loadImg(u){ return new Promise(r=>{ if(!u) return r(null); const i=new Image(); i.onload=()=>r(i); i.onerror=()=>r(null); i.src=u; }); }
+  function teamBlock(x,t,cx,y,maxw,im){ const R=125, cy=y+R+6; x.save(); x.beginPath(); x.arc(cx,cy,R,0,7); x.closePath(); x.fillStyle=t.c||'#3d7bf5'; x.fill();
+    if(im){ x.clip(); const sc=Math.max(2*R/im.width,2*R/im.height), w=im.width*sc, h=im.height*sc; x.drawImage(im,cx-w/2,cy-R-(h-2*R)*0.25,w,h); }
+    x.restore(); if(!im){ x.fillStyle='#fff'; x.font='900 90px system-ui,sans-serif'; x.textAlign='center'; x.fillText(ini(t.n),cx,cy+30); }
+    x.lineWidth=12; x.strokeStyle='#ffffff'; x.beginPath(); x.arc(cx,cy,R+4,0,7); x.stroke(); x.lineWidth=8; x.strokeStyle=t.c||'#3d7bf5'; x.beginPath(); x.arc(cx,cy,R+14,0,7); x.stroke();
+    x.fillStyle='#fff'; x.textAlign='center'; x.font='900 46px system-ui,sans-serif'; const ls=wrapText(x,t.n||'',maxw); ls.slice(0,2).forEach((l,i)=>x.fillText(l,cx,y+2*R+78+i*52));
+    if(t.cap){ const yy=y+2*R+78+Math.min(2,ls.length)*52+6; x.font='700 24px system-ui,sans-serif'; x.fillStyle='#ffd45f'; x.fillText('CAPTAIN',cx,yy); x.font='700 34px system-ui,sans-serif'; x.fillStyle='#fff'; const cl=wrapText(x,t.cap,420)[0]; x.fillText(cl,cx,yy+40); } }
+  /* ---------- announcement poster ---------- */
+  async function drawAnnounce(i){
+    const ima=await loadImg(i.a.ph), imb=await loadImg(i.b.ph);
+    const c=kindCol[i.k]||kindCol.Series, [cv,x]=canvasBase(c); x.textAlign='center';
+    pill(x,i.app+'  •  MATCH DAY',540,64,'#ffd45f','#10243a',34);
+    x.fillStyle='#fff'; x.font='900 54px system-ui,sans-serif'; let y=190;
+    const head=(i.k==='Individual Match'?'INDIVIDUAL MATCH':i.k.toUpperCase()); x.fillStyle=c[2]; x.font='800 34px system-ui,sans-serif'; x.fillText(head+(i.no?'  ·  MATCH '+i.no+(i.of?' OF '+i.of:''):'')+(i.rd&&!/^match$/i.test(i.rd)?'  ·  '+String(i.rd).toUpperCase():''),540,y);
+    if(i.sr){ x.fillStyle='#fff'; x.font='900 60px system-ui,sans-serif'; const ls=wrapText(x,i.sr,940); ls.slice(0,2).forEach((l,k)=>x.fillText(l,540,y+70+k*66)); y+=70+Math.min(2,ls.length)*66; } else y+=30;
+    const ty=y+10; teamBlock(x,i.a,270,ty,440,ima); teamBlock(x,i.b,810,ty,440,imb);
+    x.fillStyle='#ffd45f'; x.font='900 64px system-ui,sans-serif'; x.fillText('VS',540,ty+150);
+    const by=ty+530; x.fillStyle='rgba(0,0,0,.35)'; rr(x,60,by,960,250,28); x.fill();
+    if(i.at){ x.fillStyle='#fff'; x.font='700 36px system-ui,sans-serif'; x.fillText('📅 '+fmtDate(i.at),540,by+62); x.fillStyle='#ffd45f'; x.font='900 110px system-ui,sans-serif'; x.fillText(fmtTime(i.at),540,by+178); }
+    else { x.fillStyle='#fff'; x.font='800 48px system-ui,sans-serif'; x.fillText('Time: to be announced',540,by+140); }
+    const meta=[i.gr?'📍 '+i.gr:'',i.ov?'🏏 '+i.ov+' overs':''].filter(Boolean).join('     '); if(meta){ x.fillStyle='#fff'; x.font='700 36px system-ui,sans-serif'; x.fillText(meta,540,by+232); }
+    x.fillStyle='#fff'; x.font='900 44px system-ui,sans-serif'; x.fillText('🔴 WATCH LIVE ON '+i.app,540,1235);
+    x.font='600 28px system-ui,sans-serif'; x.fillStyle='#cfe0ff'; x.fillText('Open the link — countdown & live ball-by-ball score',540,1285);
+    return cv; }
+  function caption(i){
+    const L=['🏏 *'+i.app+' — '+(i.k==='Individual Match'?'Individual Match':i.k)+(i.no?' · Match '+i.no+(i.of?'/'+i.of:''):'')+'*'];
+    if(i.sr) L.push('🏆 '+i.sr+(i.rd&&!/^match$/i.test(i.rd)?' · '+i.rd:''));
+    L.push('⚔ *'+i.a.n+'* vs *'+i.b.n+'*');
+    if(i.a.cap||i.b.cap) L.push('🧢 Captains: '+(i.a.cap||'-')+' vs '+(i.b.cap||'-'));
+    if(i.gr) L.push('📍 '+i.gr); if(i.ov) L.push('🎯 '+i.ov+' overs a side');
+    if(i.at) L.push('🕗 '+fmtDate(i.at)+' · '+fmtTime(i.at)); L.push('');
+    L.push('🔴 Live score + countdown:'); L.push(link(i)); return L.join('\n'); }
+  function link(i){ if(i.key) return base()+'#m='+encodeURIComponent(i.key); const o={a:i.a.n,b:i.b.n,ca:i.a.c,cb:i.b.c,k:i.k,sr:i.sr,n:i.no,of:i.of,rd:i.rd,t:i.at,g:i.gr,o:i.ov,p:i.app}; return base()+'#ev='+b64e(o); }
+  /* ---------- result poster ---------- */
+  function drawDone(x0){
+    const [cv,x]=canvasBase(['#7a2e0a','#1d0d03']); x.textAlign='center';
+    pill(x,APP+'  •  MATCH COMPLETE',540,64,'#ffd45f','#10243a',34);
+    x.fillStyle='#ffe9a8'; x.font='800 34px system-ui,sans-serif'; x.fillText(((x0.series||'')+(x0.no?'  ·  Match '+x0.no:'')).toUpperCase(),540,200);
+    const row=(t,y)=>{ if(!t) return; const win=x0.win&&x0.win===t.name; x.fillStyle=win?'rgba(255,212,95,.22)':'rgba(0,0,0,.35)'; rr(x,60,y,960,200,28); x.fill(); if(win){ x.lineWidth=5; x.strokeStyle='#ffd45f'; x.stroke(); }
+      x.textAlign='left'; x.fillStyle='#fff'; x.font='900 54px system-ui,sans-serif'; const nm=wrapText(x,t.name||'',560)[0]||''; x.fillText((win?'🏆 ':'')+nm,100,y+92); x.font='600 34px system-ui,sans-serif'; x.fillStyle='#ffe9a8'; x.fillText(t.ovs?('('+t.ovs+')'):'',100,y+150);
+      x.textAlign='right'; x.fillStyle='#ffd45f'; x.font='900 100px system-ui,sans-serif'; x.fillText(String(t.score||''),990,y+130); x.textAlign='center'; };
+    row(x0.a,300); row(x0.b,540);
+    x.fillStyle='#fff'; x.font='900 54px system-ui,sans-serif'; const rs=wrapText(x,x0.res||'',920); rs.slice(0,3).forEach((l,k)=>x.fillText(l,540,860+k*68));
+    x.font='600 34px system-ui,sans-serif'; x.fillStyle='#ffe9a8'; x.fillText([x0.date,x0.time].filter(Boolean).join(' · '),540,1110);
+    x.fillStyle='#fff'; x.font='900 42px system-ui,sans-serif'; x.fillText('📋 Full scorecard on '+APP,540,1235); x.font='600 28px system-ui,sans-serif'; x.fillStyle='#ffd9b0'; x.fillText('Open the link to see the complete scorecard',540,1285);
+    return cv; }
+  function captionDone(x0){ const L=['🏁 *'+APP+' — MATCH COMPLETE*']; if(x0.series) L.push('🏆 '+x0.series+(x0.no?' · Match '+x0.no:'')); [x0.a,x0.b].forEach(t=>{ if(t) L.push((x0.win&&x0.win===t.name?'🏆 ':'▫ ')+'*'+t.name+'* '+t.score+(t.ovs?' ('+t.ovs+')':'')); }); if(x0.res) L.push('✅ '+x0.res); if(x0.date) L.push('📅 '+x0.date); L.push(''); L.push('📋 Full scorecard:'); L.push(base()+'#sc='+encodeURIComponent(x0.id)); return L.join('\n'); }
+  /* ---------- preview / share modal ---------- */
+  function toBlob(cv){ return new Promise(r=>cv.toBlob(r,'image/png')); }
+  async function preview(cv,cap,name,title,rebuild,squad){
+    const blob=await toBlob(cv), url=URL.createObjectURL(blob); const file=new File([blob],name+'.png',{type:'image/png'});
+    const o=document.createElement('div'); o.className='sh104'; o.innerHTML=`<div class="bx"><h3>${E(title)}</h3><img src="${url}" alt="poster"><label>Message (you can edit it)</label><textarea>${E(cap)}</textarea><div class="row"><button data-cl="1" class="g" data-s>📤 Share (WhatsApp)</button><button data-cl="1" data-c>📋 Copy message</button><button data-cl="1" data-d>⬇ Save image</button><button data-cl="1" data-l>🔗 Set app link</button>${squad?'<button data-cl="1" class="o" data-q style="flex-basis:100%">👥 Squad poster — full squads, designs &amp; styles</button>':''}<button data-cl="1" class="r" data-x>Close</button></div><div style="font-size:.7rem;opacity:.65;margin-top:8px">Tap Share, choose your WhatsApp group, and send. WhatsApp does not allow apps to post in a group automatically.</div></div>`;
+    const ta=o.querySelector('textarea'); const close=()=>{ o.remove(); setTimeout(()=>URL.revokeObjectURL(url),2000); };
+    o.onclick=e=>{ if(e.target===o) close(); }; o.querySelector('[data-x]').onclick=close;
+    o.querySelector('[data-c]').onclick=async()=>{ try{ await navigator.clipboard.writeText(ta.value); }catch(e){ ta.select(); try{ document.execCommand('copy'); }catch(x){} } o.querySelector('[data-c]').textContent='✅ Copied'; };
+    const qb=o.querySelector('[data-q]'); if(qb) qb.onclick=()=>{ close(); try{ squad(); }catch(e){ alert('Could not open squad poster: '+e.message); } };
+    o.querySelector('[data-l]').onclick=()=>{ if(askBase(true)&&rebuild) ta.value=rebuild(); };
+    o.querySelector('[data-d]').onclick=()=>{ const a=document.createElement('a'); a.href=url; a.download=name+'.png'; document.body.appendChild(a); a.click(); a.remove(); };
+    o.querySelector('[data-s]').onclick=async()=>{
+      try{ if(navigator.canShare&&navigator.canShare({files:[file]})){ await navigator.share({files:[file],text:ta.value}); return; } }catch(e){ if(e&&e.name==='AbortError') return; }
+      try{ if(navigator.share){ await navigator.share({text:ta.value}); return; } }catch(e){ if(e&&e.name==='AbortError') return; }
+      window.open('https://wa.me/?text='+encodeURIComponent(ta.value),'_blank'); };
+    document.body.appendChild(o); }
+  /* ---------- time picker ---------- */
+  function setTime(cur,cb){
+    const d=new Date(cur&&cur.t?cur.t:Date.now()+3600e3); const pad=n=>String(n).padStart(2,'0');
+    const dv=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()), tv=pad(d.getHours())+':'+pad(d.getMinutes());
+    const o=document.createElement('div'); o.className='sh104';
+    o.innerHTML=`<div class="bx"><h3>🕒 Match date & time</h3><label>Date</label><input type="date" value="${dv}" data-d><label>Start time</label><input type="time" value="${tv}" data-t><label>Ground (optional)</label><input type="text" placeholder="e.g. SPG Ground" value="${E((cur&&cur.g)||LS.g('sh104_ground')||'')}" data-g><div class="row"><button data-cl="1" class="g" data-ok>✅ Save</button>${cur&&cur.t?'<button data-cl="1" class="o" data-clr>Clear time</button>':''}<button data-cl="1" class="r" data-x>Cancel</button></div></div>`;
+    o.onclick=e=>{ if(e.target===o) o.remove(); }; o.querySelector('[data-x]').onclick=()=>o.remove();
+    o.querySelector('[data-ok]').onclick=()=>{ const dd=o.querySelector('[data-d]').value, tt=o.querySelector('[data-t]').value, g=o.querySelector('[data-g]').value.trim(); if(!dd||!tt){ alert('Please choose date and time.'); return; } const ts=new Date(dd+'T'+tt).getTime(); if(g) LS.s('sh104_ground',g); o.remove(); cb({t:ts,g}); };
+    const cl=o.querySelector('[data-clr]'); if(cl) cl.onclick=()=>{ o.remove(); cb(null); };
+    document.body.appendChild(o); }
+  /* ---------- public ---------- */
+  async function announce(i){ try{ if(!askBase()) return; const cv=await drawAnnounce(i); await preview(cv,caption(i),'Match_'+(i.no||'')+'_'+String(i.a.n+'_vs_'+i.b.n).replace(/\W+/g,'_'),'📣 Match announcement',()=>caption(i),i.squad); }catch(e){ alert('Could not make the post: '+e.message); } }
+  async function done(x0){ try{ if(!askBase()) return; const cv=drawDone(x0); await preview(cv,captionDone(x0),'Result_'+String((x0.a&&x0.a.name||'')+'_vs_'+(x0.b&&x0.b.name||'')).replace(/\W+/g,'_'),'📤 Share match result',()=>captionDone(x0)); }catch(e){ alert('Could not make the post: '+e.message); } }
+  /* ---------- countdown card (when someone opens the shared link) ---------- */
+  function countdown(o){
+    const old=document.querySelector('.cd104'); if(old) old.remove();
+    const c=document.createElement('div'); c.className='cd104';
+    c.innerHTML=`<div class="c"><span class="k">🏏 ${E(o.p||APP)} • MATCH DAY</span><div class="t">${E(o.a)} <span style="color:#ffd45f">vs</span> ${E(o.b)}</div><div class="s">${E(o.k==='Individual Match'?'Individual Match':(o.k||''))}${o.sr?' · '+E(o.sr):''}${o.n?' · Match '+E(o.n)+(o.of?'/'+E(o.of):''):''}${o.rd&&!/^match$/i.test(o.rd)?' · '+E(o.rd):''}</div>${o.t?`<div class="s">📅 ${E(fmtDate(o.t))} · 🕗 ${E(fmtTime(o.t))}</div>`:''}${o.g?`<div class="s">📍 ${E(o.g)}</div>`:''}${o.t?`<div class="tm"><div><b data-d>--</b><span>DAYS</span></div><div><b data-h>--</b><span>HOURS</span></div><div><b data-m>--</b><span>MIN</span></div><div><b data-s>--</b><span>SEC</span></div></div>`:''}<div class="w" data-w>${o.t?'Match starts in':'Time will be announced'}</div><div><button data-cl="1" class="g" data-b>🔔 Notify me when live</button><button data-cl="1" data-x>Close</button></div><div class="s" style="font-size:.72rem;margin-top:10px">When the scorer starts the match, the live score opens here automatically.</div></div>`;
+    document.body.appendChild(c); const q=s=>c.querySelector(s); let iv=0;
+    const close=()=>{ clearInterval(iv); c.remove(); try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} };
+    q('[data-x]').onclick=close; q('[data-b]').onclick=()=>{ try{ if(window.__lv104&&window.__lv104.bell) window.__lv104.bell(); else alert('Open the live popup and tap the bell to turn on notifications.'); }catch(e){} };
+    const tick=()=>{ if(document.getElementById('lv104')){ close(); return; } if(!o.t) return; let ms=o.t-Date.now(); if(ms<=0){ q('[data-w]').textContent='It is match time! Waiting for the scorer to start — live score will open here.'; ['d','h','m','s'].forEach(k=>q('[data-'+k+']').textContent='00'); return; } const s=Math.floor(ms/1000), p=n=>String(n).padStart(2,'0'); q('[data-d]').textContent=p(Math.floor(s/86400)); q('[data-h]').textContent=p(Math.floor(s%86400/3600)); q('[data-m]').textContent=p(Math.floor(s%3600/60)); q('[data-s]').textContent=p(s%60); };
+    tick(); iv=setInterval(tick,1000); }
+  function waitMatch(key){
+    const old=document.querySelector('.cd104'); if(old) old.remove();
+    const c=document.createElement('div'); c.className='cd104'; c.innerHTML='<div class="c"><span class="k">🏏 '+E(APP)+' • MATCH DAY</span><div class="t">Loading match…</div><div class="s" data-w>Getting the latest details</div><div><button data-cl="1" data-x>Close</button></div></div>'; document.body.appendChild(c);
+    let n=0; const iv=setInterval(()=>{ n++; if(!document.body.contains(c)){ clearInterval(iv); return; } if(document.getElementById('lv104')){ clearInterval(iv); c.remove(); return; }
+      let r=null; try{ r=window.__share104.resolve&&window.__share104.resolve(key); }catch(e){}
+      if(r){ clearInterval(iv); c.remove(); countdown({a:r.a.n,b:r.b.n,k:r.k,sr:r.sr,n:r.no,of:r.of,rd:r.rd,t:r.at,g:r.gr,p:r.app}); return; }
+      if(n>90){ clearInterval(iv); c.querySelector('.t').textContent='Match details not found'; c.querySelector('[data-w]').textContent='Please open the app and wait a moment, or ask the admin to share the post again.'; } },1000);
+    c.querySelector('[data-x]').onclick=()=>{ clearInterval(iv); c.remove(); try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} }; }
+  function fromHash(){
+    try{ const h=location.hash||''; let m;
+      if((m=h.match(/[#&]ev=([^&]+)/))){ setTimeout(()=>{ try{ countdown(b64d(m[1])); }catch(e){} },700); }
+      else if((m=h.match(/[#&]m=([^&]+)/))){ waitMatch(decodeURIComponent(m[1])); }
+      else if((m=h.match(/[#&]sc=([^&]+)/))){ const id=decodeURIComponent(m[1]); let n=0; const iv=setInterval(()=>{ n++; try{ const LV=window.__W104&&window.__W104.live; if(LV&&LV.doneOf&&LV.doneOf(id)){ clearInterval(iv); LV.open(id); try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} } }catch(e){} if(n>40) clearInterval(iv); },1000); }
+    }catch(e){} }
+  async function shareImage(src,text,name){
+    let blob=src; if(typeof src==='string'){ blob=await (await fetch(src)).blob(); }
+    const file=new File([blob],(name||'Poster')+'.png',{type:blob.type||'image/png'});
+    try{ if(navigator.canShare&&navigator.canShare({files:[file]})){ await navigator.share({files:[file],text}); return; } }catch(e){ if(e&&e.name==='AbortError') return; }
+    try{ await navigator.clipboard.writeText(text); }catch(e){}
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=(name||'Poster')+'.png'; document.body.appendChild(a); a.click(); a.remove();
+    alert('Your phone could not open the share sheet with the image.\nThe image was saved and the message was copied — open WhatsApp, attach the image and paste the message.');
+    window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank'); }
+  window.__share104={shareImage,caption,resolve:null,setTime,announce,done,link,fromHash,countdown,fmtDate,fmtTime};
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',fromHash); else fromHash();
+})();
+/* ===== SHARE104 END ===== */
+
+/* ===== SHARE-ADAPTER START ===== */
+function ecsShInfo(s,no){
+  const k=(typeof ecsKind==='function'?ecsKind(s):s.kind)||'bi', tourO=(root.tours||[]).find(x=>x.id===s.tourId);
+  const cap=tk=>{ const T=s.teams[tk]||{}; const c=(T.players||[]).find(x=>x.id===T.captainId); return c?c.name:''; };
+  const ph=n=>{ try{ return n?(ecsRegOf(n).photo||''):''; }catch(x){ return ''; } };
+  const fx=(s.fxAt||{})[no]||{}, m=(s.matches||[]).find(x=>x.number===no);
+  return {app:'ECS',k:k==='tour'?'Tournament':k==='ind'?'Individual Match':'Series',
+    sr:k==='ind'?'':(k==='tour'?((tourO&&tourO.name)||s.groupName||''):sName(s)),
+    no:k==='tour'?(s.fixNo||''):(k==='ind'?'':no), of:(k==='bi'||k==='tri')?(s.totalMatches||''):'',
+    rd:k==='tour'?(s.fixRd||s.groupName||''):'',
+    key:s.id+'.'+no, a:{n:ecsMNm(s,'A'),c:ecsMCol(s,'A'),cap:cap('A'),ph:ph(cap('A'))}, b:{n:ecsMNm(s,'B'),c:ecsMCol(s,'B'),cap:cap('B'),ph:ph(cap('B'))},
+    at:fx.t||0, gr:fx.g||(m&&m.ground)||'', ov:s.standardOvers||''};
+}
+function ecsShInfoFull(s,no){ const i=ecsShInfo(s,no); const SH=window.__share104;
+  i.squad=()=>ecsPosterOpen({kind:'teams',series:[s],kicker:'MATCH DAY',title:(i.sr?i.sr+' · ':'')+(i.no?'Match '+i.no:i.k),
+    sub:[i.at?SH.fmtTime(i.at)+' · '+SH.fmtDate(i.at):'Time TBA',i.gr||'',i.ov?i.ov+' overs':''].filter(Boolean).join('  •  '),
+    share:{cap:()=>SH.caption(i)}});
+  return i; }
+window.__share104.resolve=key=>{ const i=key.lastIndexOf('.'); if(i<0) return null; const sid=key.slice(0,i), no=parseInt(key.slice(i+1)); const s=(root.seriesList||[]).find(x=>x.id===sid); return s?ecsShInfo(s,no):null; };
+window.__ecsShInfo=ecsShInfoFull;
+window.ecsShareBtns=function(s,no,d,host){
+  const mk=(txt,title,fn)=>{ const b=document.createElement('button'); b.className='btn secondary small'; b.style.cssText='flex:0 0 auto;margin-left:4px;'; b.textContent=txt; b.title=title; b.onclick=e=>{ e.stopPropagation(); fn(); }; (host||d).appendChild(b); };
+  mk('🕒','Set match time',()=>{ s.fxAt=s.fxAt||{}; window.__share104.setTime(s.fxAt[no],v=>{ if(v) s.fxAt[no]=v; else delete s.fxAt[no]; saveState(); render(); }); });
+  mk('📣','Share match post',()=>window.__share104.announce(ecsShInfoFull(s,no)));
+};
+/* ===== SHARE-ADAPTER END ===== */
+
 /* =====================  LIVE MATCH POPUP v2 (real-time) + MATCH COMPLETE CARD + NOTIFICATION  ===================== */
 (function(){
   const LV=W.live; if(!LV) return;
@@ -17771,7 +17972,8 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
   function showDone(x){
     const o=document.createElement('div'); o.className='dn104';
     const row=(t,w)=>t?`<div class="L4row ${w&&w===t.name?'L4w':''}"><span>${E(t.name)}</span><b>${E(t.score)} <small style="font-weight:600;opacity:.75">${E(t.ovs||'')}</small></b></div>`:'';
-    o.innerHTML=`<div class="L4c"><div style="font-size:2.2rem">🏁</div><div class="L4tt">MATCH COMPLETE</div><div class="L4sr">${E(x.series||'')}${x.no?' · Match '+E(x.no):''}</div>${row(x.a,x.win)}${row(x.b,x.win)}<div class="L4rs">${E(x.res||'')}</div><div class="L4dt">📅 ${E(x.date||'')}${x.time?' · '+E(x.time):''}</div><button data-cl="1" data-s style="background:linear-gradient(135deg,#e8590c,#f08c00)">📋 View full scorecard</button><button data-cl="1" data-c style="background:#34498f">Close</button></div>`;
+    o.innerHTML=`<div class="L4c"><div style="font-size:2.2rem">🏁</div><div class="L4tt">MATCH COMPLETE</div><div class="L4sr">${E(x.series||'')}${x.no?' · Match '+E(x.no):''}</div>${row(x.a,x.win)}${row(x.b,x.win)}<div class="L4rs">${E(x.res||'')}</div><div class="L4dt">📅 ${E(x.date||'')}${x.time?' · '+E(x.time):''}</div><button data-cl="1" data-s style="background:linear-gradient(135deg,#e8590c,#f08c00)">📋 View full scorecard</button><button data-cl="1" data-sh style="background:#1f9d57">📤 Share result (WhatsApp)</button><button data-cl="1" data-c style="background:#34498f">Close</button></div>`;
+    o.querySelector('[data-sh]').onclick=()=>{ try{ if(window.__share104) window.__share104.done(x); }catch(e){} };
     o.querySelector('[data-c]').onclick=()=>o.remove();
     o.querySelector('[data-s]').onclick=()=>{ o.remove(); try{ LV.open(x.id); }catch(e){} };
     document.body.appendChild(o);
@@ -17788,7 +17990,7 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
     const x=fresh[fresh.length-1]; if(doneT[x.id]){ try{ x.time=new Date(doneT[x.id]).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }catch(e){} } showDone(x);
   }
   setInterval(checkDone,4000); setTimeout(checkDone,3000);
-  window.__lv104={onLive:j=>{lastKey=null;onLive(j)},checkDone,drop:()=>{closeBox();hideChip()}};
+  window.__lv104={bell:()=>{try{toggleBell()}catch(e){}},onLive:j=>{lastKey=null;onLive(j)},checkDone,drop:()=>{closeBox();hideChip()}};
 })();
 
 })();
