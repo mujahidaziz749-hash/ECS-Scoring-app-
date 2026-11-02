@@ -4755,7 +4755,7 @@ window.gGuard={vault:gVault,me:myRights};
     extra+='<button class="b s" data-a="gme">ℹ️ Mere haq / Kis se kia hoga</button><button class="b s" data-a="gdev">📱 Device ka naam</button>';
     if(isOwner())extra+='<button class="b g" data-a="gadm">👥 Admin Management</button><button class="b g" data-a="gsess">📱 Logged-in Devices</button><button class="b s" data-a="glog">📜 Admin Record</button><button class="b s" data-a="gbk">💾 Cloud Backups</button><button class="b s" data-a="grules">🔐 Firebase Rules</button>'}
   if(isOwner())extra+='<button class="b s" data-a="gsafe">📖 Safety features kya hain?</button>';
-  if(canV())extra+='<button class="b g" data-a="gvault">🛟 Matches Recovery (sab admins)</button>';
+  if(canV())extra+='<button class="b g" data-a="gvault">🛟 Matches Recovery (sab admins)</button>';if(canV()&&CL)extra+='<button class="b g" data-a="lvv">📊 Viewers (live watchers)</button>';
   if(extra)h=h.replace(/<\/div>$/,extra+'</div>')}catch(x){}return h}}
 /* ---- MATCH-WISE AUTO MERGE (do phones ke alag matches DONO bachte hain) ---- */
 const midScore=()=>view==='play';
@@ -5192,7 +5192,7 @@ setTimeout(()=>{ try{ if(sessionStorage.getItem(W.p+'_pv_done')) return; session
     if(i.gr) L.push('📍 '+i.gr); if(i.ov) L.push('🎯 '+i.ov+' overs a side');
     if(i.at) L.push('🕗 '+fmtDate(i.at)+' · '+fmtTime(i.at)); L.push('');
     L.push('🔴 Live score + countdown:'); L.push(link(i)); return L.join('\n'); }
-  function link(i){ if(i.key) return base()+'#m='+encodeURIComponent(i.key); const o={a:i.a.n,b:i.b.n,ca:i.a.c,cb:i.b.c,k:i.k,sr:i.sr,n:i.no,of:i.of,rd:i.rd,t:i.at,g:i.gr,o:i.ov,p:i.app}; return base()+'#ev='+b64e(o); }
+  function link(i){ if(i.key) return base()+'#m='+encodeURIComponent(i.key)+(LS.g('sh104_tag')?'&s='+encodeURIComponent(LS.g('sh104_tag')):''); const o={a:i.a.n,b:i.b.n,ca:i.a.c,cb:i.b.c,k:i.k,sr:i.sr,n:i.no,of:i.of,rd:i.rd,t:i.at,g:i.gr,o:i.ov,p:i.app}; return base()+'#ev='+b64e(o); }
   /* ---------- result poster ---------- */
   function drawDone(x0){
     const [cv,x]=canvasBase(['#7a2e0a','#1d0d03']); x.textAlign='center';
@@ -5206,15 +5206,16 @@ setTimeout(()=>{ try{ if(sessionStorage.getItem(W.p+'_pv_done')) return; session
     x.font='600 34px system-ui,sans-serif'; x.fillStyle='#ffe9a8'; x.fillText([x0.date,x0.time].filter(Boolean).join(' · '),540,1110);
     x.fillStyle='#fff'; x.font='900 42px system-ui,sans-serif'; x.fillText('📋 Full scorecard on '+APP,540,1235); x.font='600 28px system-ui,sans-serif'; x.fillStyle='#ffd9b0'; x.fillText('Open the link to see the complete scorecard',540,1285);
     return cv; }
-  function captionDone(x0){ const L=['🏁 *'+APP+' — MATCH COMPLETE*']; if(x0.series) L.push('🏆 '+x0.series+(x0.no?' · Match '+x0.no:'')); [x0.a,x0.b].forEach(t=>{ if(t) L.push((x0.win&&x0.win===t.name?'🏆 ':'▫ ')+'*'+t.name+'* '+t.score+(t.ovs?' ('+t.ovs+')':'')); }); if(x0.res) L.push('✅ '+x0.res); if(x0.date) L.push('📅 '+x0.date); L.push(''); L.push('📋 Full scorecard:'); L.push(base()+'#sc='+encodeURIComponent(x0.id)); return L.join('\n'); }
+  function captionDone(x0){ const L=['🏁 *'+APP+' — MATCH COMPLETE*']; if(x0.series) L.push('🏆 '+x0.series+(x0.no?' · Match '+x0.no:'')); [x0.a,x0.b].forEach(t=>{ if(t) L.push((x0.win&&x0.win===t.name?'🏆 ':'▫ ')+'*'+t.name+'* '+t.score+(t.ovs?' ('+t.ovs+')':'')); }); if(x0.res) L.push('✅ '+x0.res); if(x0.date) L.push('📅 '+x0.date); L.push(''); L.push('📋 Full scorecard:'); L.push(base()+'#sc='+encodeURIComponent(x0.id)+(LS.g('sh104_tag')?'&s='+encodeURIComponent(LS.g('sh104_tag')):'')); return L.join('\n'); }
   /* ---------- preview / share modal ---------- */
   function toBlob(cv){ return new Promise(r=>cv.toBlob(r,'image/png')); }
   async function preview(cv,cap,name,title,rebuild,squad){
     const blob=await toBlob(cv), url=URL.createObjectURL(blob); const file=new File([blob],name+'.png',{type:'image/png'});
-    const o=document.createElement('div'); o.className='sh104'; o.innerHTML=`<div class="bx"><h3>${E(title)}</h3><img src="${url}" alt="poster"><label>Message (you can edit it)</label><textarea>${E(cap)}</textarea><div class="row"><button data-cl="1" class="g" data-s>📤 Share (WhatsApp)</button><button data-cl="1" data-c>📋 Copy message</button><button data-cl="1" data-d>⬇ Save image</button><button data-cl="1" data-l>🔗 Set app link</button>${squad?'<button data-cl="1" class="o" data-q style="flex-basis:100%">👥 Squad poster — full squads, designs &amp; styles</button>':''}<button data-cl="1" class="r" data-x>Close</button></div><div style="font-size:.7rem;opacity:.65;margin-top:8px">Tap Share, choose your WhatsApp group, and send. WhatsApp does not allow apps to post in a group automatically.</div></div>`;
+    const o=document.createElement('div'); o.className='sh104'; o.innerHTML=`<div class="bx"><h3>${E(title)}</h3><img src="${url}" alt="poster"><label>Group tag for the link (optional, e.g. daily)</label><input data-cl="1" data-t placeholder="daily" maxlength="20" value="${E(LS.g('sh104_tag')||'')}"><label>Message (you can edit it)</label><textarea>${E(cap)}</textarea><div class="row"><button data-cl="1" class="g" data-s>📤 Share (WhatsApp)</button><button data-cl="1" data-c>📋 Copy message</button><button data-cl="1" data-d>⬇ Save image</button><button data-cl="1" data-l>🔗 Set app link</button>${squad?'<button data-cl="1" class="o" data-q style="flex-basis:100%">👥 Squad poster — full squads, designs &amp; styles</button>':''}<button data-cl="1" class="r" data-x>Close</button></div><div style="font-size:.7rem;opacity:.65;margin-top:8px">Tap Share, choose your WhatsApp group, and send. WhatsApp does not allow apps to post in a group automatically.</div></div>`;
     const ta=o.querySelector('textarea'); const close=()=>{ o.remove(); setTimeout(()=>URL.revokeObjectURL(url),2000); };
     o.onclick=e=>{ if(e.target===o) close(); }; o.querySelector('[data-x]').onclick=close;
     o.querySelector('[data-c]').onclick=async()=>{ try{ await navigator.clipboard.writeText(ta.value); }catch(e){ ta.select(); try{ document.execCommand('copy'); }catch(x){} } o.querySelector('[data-c]').textContent='✅ Copied'; };
+    o.querySelector('[data-t]').oninput=ev=>{ LS.s('sh104_tag',ev.target.value.trim().replace(/[^A-Za-z0-9_-]/g,'').slice(0,20)); if(rebuild) ta.value=rebuild(); };
     const qb=o.querySelector('[data-q]'); if(qb) qb.onclick=()=>{ close(); try{ squad(); }catch(e){ alert('Could not open squad poster: '+e.message); } };
     o.querySelector('[data-l]').onclick=()=>{ if(askBase(true)&&rebuild) ta.value=rebuild(); };
     o.querySelector('[data-d]').onclick=()=>{ const a=document.createElement('a'); a.href=url; a.download=name+'.png'; document.body.appendChild(a); a.click(); a.remove(); };
@@ -5240,10 +5241,10 @@ setTimeout(()=>{ try{ if(sessionStorage.getItem(W.p+'_pv_done')) return; session
   function countdown(o){
     const old=document.querySelector('.cd104'); if(old) old.remove();
     const c=document.createElement('div'); c.className='cd104';
-    c.innerHTML=`<div class="c"><span class="k">🏏 ${E(o.p||APP)} • MATCH DAY</span><div class="t">${E(o.a)} <span style="color:#ffd45f">vs</span> ${E(o.b)}</div><div class="s">${E(o.k==='Individual Match'?'Individual Match':(o.k||''))}${o.sr?' · '+E(o.sr):''}${o.n?' · Match '+E(o.n)+(o.of?'/'+E(o.of):''):''}${o.rd&&!/^match$/i.test(o.rd)?' · '+E(o.rd):''}</div>${o.t?`<div class="s">📅 ${E(fmtDate(o.t))} · 🕗 ${E(fmtTime(o.t))}</div>`:''}${o.g?`<div class="s">📍 ${E(o.g)}</div>`:''}${o.t?`<div class="tm"><div><b data-d>--</b><span>DAYS</span></div><div><b data-h>--</b><span>HOURS</span></div><div><b data-m>--</b><span>MIN</span></div><div><b data-s>--</b><span>SEC</span></div></div>`:''}<div class="w" data-w>${o.t?'Match starts in':'Time will be announced'}</div><div><button data-cl="1" class="g" data-b>🔔 Notify me when live</button><button data-cl="1" data-x>Close</button></div><div class="s" style="font-size:.72rem;margin-top:10px">When the scorer starts the match, the live score opens here automatically.</div></div>`;
+    c.innerHTML=`<div class="c"><span class="k">🏏 ${E(o.p||APP)} • MATCH DAY</span><div class="t">${E(o.a)} <span style="color:#ffd45f">vs</span> ${E(o.b)}</div><div class="s">${E(o.k==='Individual Match'?'Individual Match':(o.k||''))}${o.sr?' · '+E(o.sr):''}${o.n?' · Match '+E(o.n)+(o.of?'/'+E(o.of):''):''}${o.rd&&!/^match$/i.test(o.rd)?' · '+E(o.rd):''}</div>${o.t?`<div class="s">📅 ${E(fmtDate(o.t))} · 🕗 ${E(fmtTime(o.t))}</div>`:''}${o.g?`<div class="s">📍 ${E(o.g)}</div>`:''}${o.t?`<div class="tm"><div><b data-d>--</b><span>DAYS</span></div><div><b data-h>--</b><span>HOURS</span></div><div><b data-m>--</b><span>MIN</span></div><div><b data-s>--</b><span>SEC</span></div></div>`:''}<div class="w" data-w>${o.t?'Match starts in':'Time will be announced'}</div><div><button data-cl="1" class="g" data-b>🔔 Notify me when live</button><button data-cl="1" data-x>Close</button></div><div><button data-cl="1" data-j style="background:#2f4a8f">👤 Add my name / member code (optional)</button></div><div class="s" style="font-size:.72rem;margin-top:10px">When the scorer starts the match, the live score opens here automatically.</div></div>`;
     document.body.appendChild(c); const q=s=>c.querySelector(s); let iv=0;
     const close=()=>{ clearInterval(iv); c.remove(); try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} };
-    q('[data-x]').onclick=close; const bb=q('[data-b]'); const upd=on=>{ bb.textContent=on?'✅ Notifications ON (tap to turn off)':'🔔 Notify me when live'; bb.style.background=on?'#0b5d34':''; bb.style.outline=on?'2px solid #7dffb3':''; };
+    q('[data-x]').onclick=close; q('[data-j]').onclick=()=>{ try{ window.__lv104&&window.__lv104.join&&window.__lv104.join(); }catch(e){} }; const bb=q('[data-b]'); const upd=on=>{ bb.textContent=on?'✅ Notifications ON (tap to turn off)':'🔔 Notify me when live'; bb.style.background=on?'#0b5d34':''; bb.style.outline=on?'2px solid #7dffb3':''; };
     try{ upd(window.__lv104&&window.__lv104.notifOn&&window.__lv104.notifOn()); }catch(e){}
     bb.onclick=async()=>{ try{ if(window.__lv104&&window.__lv104.bell){ upd(await window.__lv104.bell()); } else alert('Open the live popup and tap the bell to turn on notifications.'); }catch(e){} };
     const tick=()=>{ if(document.getElementById('lv104')){ close(); return; } if(!o.t) return; let ms=o.t-Date.now(); if(ms<=0){ q('[data-w]').textContent='It is match time! Waiting for the scorer to start — live score will open here.'; ['d','h','m','s'].forEach(k=>q('[data-'+k+']').textContent='00'); return; } const s=Math.floor(ms/1000), p=n=>String(n).padStart(2,'0'); q('[data-d]').textContent=p(Math.floor(s/86400)); q('[data-h]').textContent=p(Math.floor(s%86400/3600)); q('[data-m]').textContent=p(Math.floor(s%3600/60)); q('[data-s]').textContent=p(s%60); };
@@ -5257,7 +5258,7 @@ setTimeout(()=>{ try{ if(sessionStorage.getItem(W.p+'_pv_done')) return; session
       if(n>90){ clearInterval(iv); c.querySelector('.t').textContent='Match details not found'; c.querySelector('[data-w]').textContent='Please open the app and wait a moment, or ask the admin to share the post again.'; } },1000);
     c.querySelector('[data-x]').onclick=()=>{ clearInterval(iv); c.remove(); try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} }; }
   function fromHash(){
-    try{ const h=location.hash||''; let m;
+    try{ const h=location.hash||''; let m; const sm=h.match(/[#&]s=([^&]+)/); if(sm) LS.s('lv_src',decodeURIComponent(sm[1]).replace(/[^A-Za-z0-9_-]/g,'').slice(0,20));
       if((m=h.match(/[#&]ev=([^&]+)/))){ setTimeout(()=>{ try{ countdown(b64d(m[1])); }catch(e){} },700); }
       else if((m=h.match(/[#&]m=([^&]+)/))){ waitMatch(decodeURIComponent(m[1])); }
       else if((m=h.match(/[#&]sc=([^&]+)/))){ const id=decodeURIComponent(m[1]); let n=0; const iv=setInterval(()=>{ n++; try{ const LV=window.__W104&&window.__W104.live; if(LV&&LV.doneOf&&LV.doneOf(id)){ clearInterval(iv); LV.open(id); try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} } }catch(e){} if(n>40) clearInterval(iv); },1000); }
@@ -5307,7 +5308,8 @@ setTimeout(()=>{ try{ if(sessionStorage.getItem(W.p+'_pv_done')) return; session
 #lv104 .L4cd{position:relative;width:100%;max-width:410px;max-height:96vh;overflow:hidden auto;border-radius:20px;border:1px solid #3c57b0;box-shadow:0 18px 50px #000c;padding:12px 13px 13px;
  background:radial-gradient(120% 60% at 15% 0%,#2142a3 0%,transparent 60%),radial-gradient(90% 50% at 100% 100%,#0f6b52 0%,transparent 60%),linear-gradient(170deg,#0e1b45,#070d24)}
 #lv104 .L4h{display:flex;align-items:center;gap:6px;font-weight:800;font-size:.78rem}
-#lv104 .L4h .L4lv{color:#ff5a5a;white-space:nowrap}.lvw{display:inline-flex;align-items:center;gap:4px;background:#ffffff26;border-radius:99px;padding:2px 9px;font-size:.74rem;font-weight:800;color:#fff;margin-left:6px;white-space:nowrap}.lvw svg{width:15px;height:15px}.lvw:empty{display:none}#lv104 .L4h #lvb{width:auto;height:auto;border-radius:99px;padding:6px 10px;font-size:.72rem;font-weight:800;white-space:nowrap;line-height:1}#lvchip .lvw{margin-left:8px}
+#lv104 .L4h .L4lv{color:#ff5a5a;white-space:nowrap}.lvw{display:inline-flex;align-items:center;gap:4px;background:#ffffff26;border-radius:99px;padding:2px 9px;font-size:.74rem;font-weight:800;color:#fff;margin-left:6px;white-space:nowrap}.lvw svg{width:15px;height:15px}.lvw:empty{display:none}#lv104 .L4h #lvj{width:auto;height:auto;border-radius:99px;padding:6px 9px;font-size:.8rem;white-space:nowrap;line-height:1}.lvw.lva{cursor:pointer}
+#lv104 .L4h #lvb{width:auto;height:auto;border-radius:99px;padding:6px 10px;font-size:.72rem;font-weight:800;white-space:nowrap;line-height:1}#lvchip .lvw{margin-left:8px}
 #lv104 .L4h .L4lv i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff3b3b;margin-right:4px;animation:lvp 1s infinite}
 @keyframes lvp{50%{opacity:.25}}
 #lv104 .L4h .L4t{flex:1;min-width:0;text-align:center;line-height:1.25}#lv104 .L4h .L4t small{display:block;font-weight:600;opacity:.75;font-size:.66rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -5372,7 +5374,7 @@ setTimeout(()=>{ try{ if(sessionStorage.getItem(W.p+'_pv_done')) return; session
     if(!box) return; const keep=box.querySelector('.L4fx, .L4pc'); 
     const cd=box.querySelector('.L4cd'); const fx=cd.querySelectorAll('.L4fx,.L4pc'); 
     const ths='<tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr>';
-    const body=`<div class="L4h"><span class="L4lv"><i></i>LIVE</span><span class="lvw">${vwHtml()}</span><span class="L4t">${E(j.title)}</span>${bell()}<button data-cl="1" id="lvx" title="Band">✕</button></div>
+    const body=`<div class="L4h"><span class="L4lv"><i></i>LIVE</span><span class="lvw">${vwHtml()}</span><span class="L4t">${E(j.title)}</span><button data-cl="1" id="lvj" title="Add my name / member code">${myNm().n?'👤✓':'👤'}</button>${bell()}<button data-cl="1" id="lvx" title="Band">✕</button></div>
 <div class="L4mt"><span class="L4cat">${j.cat==='Tournament'?'🏆 TOURNAMENT':j.cat==='Individual Match'?'⚡ INDIVIDUAL MATCH':'📅 SERIES'}</span>${E(j.series||'')}</div>
 <div class="L4mi">${[j.no?('Match '+E(j.no)+(j.of?'/'+E(j.of):'')):'',j.rd?('Round: '+E(j.rd)):'',j.date?('📅 '+E(j.date)):'',j.ground?('📍 '+E(j.ground)):''].filter(Boolean).join(' · ')}${j.caps?'<br>🧢 '+E(j.caps):''}</div>
 ${j.toss?`<div class="L4toss">🪙 ${E(j.toss)}</div>`:''}
@@ -5386,6 +5388,8 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
     cd.innerHTML=body; fx.forEach(f=>cd.appendChild(f));
     cd.querySelector('#lvx').onclick=()=>{ dismissed[j.id]=1; closeBox(); drawChip(j); };
     const bb=cd.querySelector('#lvb'); if(bb) bb.onclick=toggleBell;
+    const jb=cd.querySelector('#lvj'); if(jb) jb.onclick=lvJoin;
+    if(W.isAdm()) cd.querySelectorAll('.lvw').forEach(x=>{ x.classList.add('lva'); x.onclick=lvPanel; });
   }
   /* ---- live viewers count (eye + number) ---- */
   const VID=(()=>{ let v=ls.g('lv_vid'); if(!v){ v=Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4); ls.s('lv_vid',v); } return v; })();
@@ -5401,17 +5405,91 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
       const r=await fetch(vwUrl(VID),{method:'PUT',body:JSON.stringify({t:{'.sv':'timestamp'}})});
       if(r.status===401||r.status===403){ vwOk=false; vwBlockT=Date.now()+600000; vwOn=false; setVw(0); return; }
       if(!r.ok) return; const me=await r.json(), ref=me&&me.t; if(typeof ref!=='number') return;
+      vwLog();
       const g=await fetch(vwUrl()); const all=(await g.json())||{}; let n=0; const stale=[];
       for(const k in all){ const t=all[k]&&all[k].t; if(typeof t!=='number') continue; if(t>=ref-50000) n++; else if(t<ref-600000) stale.push(k); }
       setVw(Math.max(1,n)); stale.slice(0,5).forEach(k=>{ fetch(vwUrl(k),{method:'DELETE'}).catch(()=>{}); });
     }catch(e){}
   }
-  function vwLeave(){ if(!vwOn) return; vwOn=false; vwLast=0; try{ fetch(vwUrl(VID),{method:'DELETE',keepalive:true}).catch(()=>{}); }catch(e){} }
+  function vwLeave(){ if(!vwOn) return; vwOn=false; vwLast=0; vwPrev=0; try{ fetch(vwUrl(VID),{method:'DELETE',keepalive:true}).catch(()=>{}); }catch(e){} }
   document.addEventListener('visibilitychange',()=>{ if(document.hidden) vwLeave(); else vwBeat(); });
   window.addEventListener('pagehide',vwLeave);
   setInterval(()=>{ const live=lastJ&&lastJ.status==='live'; if(live) vwBeat(); else if(vwOn){ vwLeave(); setVw(0); } },2500);
   const bellTxt=()=>notifOn()?'🔔 ON':'🔕 OFF';
   function lvToast(msg,ok){ let t=document.getElementById('lvtoast'); if(!t){ t=document.createElement('div'); t.id='lvtoast'; t.style.cssText='position:fixed;left:50%;bottom:70px;transform:translateX(-50%);z-index:2147483647;max-width:88vw;padding:12px 16px;border-radius:14px;font:800 .9rem system-ui,sans-serif;color:#fff;text-align:center;box-shadow:0 8px 30px #000a'; document.body.appendChild(t); } t.style.background=ok===false?'#b3261e':'#1f9d57'; t.textContent=msg; t.style.display='block'; clearTimeout(t._h); t._h=setTimeout(()=>{ t.style.display='none'; },3800); }
+
+  /* ---- viewers v118: join (name / member code), anonymous log, owner panel ---- */
+  const vbase=()=>liveUrl().replace(/_live\.json$/,'');
+  const RET=!!ls.g('lv_seen'); let vwPrev=0;
+  const hashCode=c=>{ const s=String(c||'').trim().toUpperCase()+'|'+((CL&&CL.club)||''); let h1=0xdeadbeef,h2=0x41c6ce57; for(let i=0;i<s.length;i++){ const ch=s.charCodeAt(i); h1=Math.imul(h1^ch,2654435761); h2=Math.imul(h2^ch,1597334677); } h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909); h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909); return (4294967296*(2097151&h2)+(h1>>>0)).toString(36); };
+  const devStr=()=>{ const u=navigator.userAgent||''; const os=/Android/.test(u)?'Android':/iPhone|iPad|iPod/.test(u)?'iPhone':/Windows/.test(u)?'PC':/Mac/.test(u)?'Mac':/Linux/.test(u)?'Linux':'Other'; const br=/SamsungBrowser/.test(u)?'Samsung':/Edg\//.test(u)?'Edge':/Firefox/.test(u)?'Firefox':/Chrome|CriOS/.test(u)?'Chrome':/Safari/.test(u)?'Safari':'Browser'; return os+' · '+br; };
+  const myNm=()=>{ const v=ls.g('lv_vname'); if(v) return {n:v,vf:1}; const n=ls.g('lv_name'); return n?{n,vf:0}:{n:'',vf:0}; };
+  function vwLog(){
+    try{
+      const mid=String(lastJ.id).replace(/[^A-Za-z0-9_-]/g,'_'), key=mid+'~'+VID, nowT=Date.now(), FK='lv_f_'+mid, WK='lv_w_'+mid;
+      let f=+ls.g(FK)||0; if(!f){ f=nowT; ls.s(FK,String(f)); }
+      let w=+ls.g(WK)||0; if(vwPrev&&nowT-vwPrev<=45000) w+=Math.round((nowT-vwPrev)/1000); vwPrev=nowT; ls.s(WK,String(w));
+      const nm=myNm();
+      const body={f,l:nowT,w,d:devStr(),s:(ls.g('lv_src')||''),n:nm.n,vf:nm.vf,r:RET?1:0,o:String(lastJ.ovs||''),i:/^2/.test(lastJ.innL||'')?2:1,mt:String(lastJ.title||'').slice(0,60)};
+      fetch(vbase()+'_log_viewers/'+encodeURIComponent(key)+'.json',{method:'PUT',body:JSON.stringify(body)}).catch(()=>{});
+      if(!ls.g('lv_seen')) ls.s('lv_seen','1');
+    }catch(e){}
+  }
+  const ovl=(title)=>{ const o=document.createElement('div'); o.style.cssText='position:fixed;inset:0;z-index:2147483300;background:rgba(3,8,22,.9);overflow:auto;padding:10px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#eef3ff'; o.innerHTML='<div style="max-width:480px;margin:0 auto;background:#101c33;border-radius:18px;padding:14px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px"><h3 style="margin:0;font-size:1.05rem">'+E(title)+'</h3><button data-cl="1" data-xx style="border:0;border-radius:10px;padding:8px 12px;font-weight:800;background:#8a2a2a;color:#fff">✕ Close</button></div><div data-bd></div></div>'; o.querySelector('[data-xx]').onclick=()=>o.remove(); document.body.appendChild(o); return o; };
+  const inp='width:100%;box-sizing:border-box;padding:11px;border-radius:10px;border:1px solid #3a5190;background:#0b1428;color:#fff;font-size:1rem;margin:4px 0 8px';
+  const btn=(bg)=>'border:0;border-radius:12px;padding:12px 14px;font-weight:800;color:#fff;background:'+(bg||'#2f4a8f')+';margin:4px 4px 0 0;font-size:.9rem';
+  function lvJoin(){
+    if(document.getElementById('lvjoin')) return; const cur=myNm();
+    const o=document.createElement('div'); o.id='lvjoin'; o.style.cssText='position:fixed;inset:0;z-index:2147483300;background:rgba(3,8,22,.88);display:flex;align-items:center;justify-content:center;padding:12px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif';
+    o.innerHTML='<div style="width:100%;max-width:400px;background:#101c33;color:#eef3ff;border-radius:18px;padding:16px"><h3 style="margin:0 0 6px">👤 Join the viewers list</h3><div style="font-size:.78rem;opacity:.8;margin-bottom:8px">Optional. Only the organisers can see this. You can watch live without filling anything.</div><label style="font-size:.78rem;opacity:.85">Member code (if the organiser gave you one)</label><input id="lvj1" autocomplete="off" autocapitalize="characters" placeholder="e.g. K7M2" style="'+inp+'"><label style="font-size:.78rem;opacity:.85">…or just type your name</label><input id="lvj2" autocomplete="off" maxlength="30" placeholder="Your name" value="'+E(cur.vf?'':cur.n)+'" style="'+inp+'"><div id="lvjm" style="font-size:.82rem;min-height:1.2em;margin-bottom:4px"></div>'+(cur.n?'<div style="font-size:.8rem;opacity:.85;margin-bottom:6px">Now saved: <b>'+E(cur.n)+'</b> '+(cur.vf?'✅ member':'✍ self-typed')+'</div>':'')+'<div><button data-cl="1" id="lvjs" style="'+btn('#1f9d57')+'">Save</button><button data-cl="1" id="lvjc" style="'+btn('#34498f')+'">Cancel</button>'+(cur.n?'<button data-cl="1" id="lvjx" style="'+btn('#8a2a2a')+'">Remove my name</button>':'')+'</div></div>';
+    document.body.appendChild(o); const q=s=>o.querySelector(s), msg=(t,ok)=>{ const m=q('#lvjm'); m.textContent=t; m.style.color=ok?'#7dffb3':'#ff9a9a'; };
+    const done=()=>{ o.remove(); document.querySelectorAll('#lvj').forEach(b=>{ b.textContent=myNm().n?'👤✓':'👤'; }); vwLast=0; };
+    q('#lvjc').onclick=()=>o.remove(); const x=q('#lvjx'); if(x) x.onclick=()=>{ ls.s('lv_vname',''); ls.s('lv_name',''); done(); lvToast('Name removed'); };
+    q('#lvjs').onclick=async()=>{
+      const code=q('#lvj1').value.trim().toUpperCase(), nm=q('#lvj2').value.trim();
+      if(code){ msg('Checking code…',true); try{ const r=await fetch(vbase()+'_mh/'+hashCode(code)+'.json'); const j=r.ok?await r.json():null; if(j&&j.n){ ls.s('lv_vname',String(j.n)); ls.s('lv_name',''); done(); lvToast('✅ Welcome, '+j.n+'!'); } else msg('Code not found — check it and try again.',false); }catch(e){ msg('Could not check the code. Check your internet.',false); } return; }
+      if(!nm){ msg('Type a name or a member code (or press Cancel).',false); return; }
+      ls.s('lv_name',nm.slice(0,30)); ls.s('lv_vname',''); done(); lvToast('✅ Saved: '+nm.slice(0,30));
+    };
+  }
+  const memBase=()=>CL.url.replace(/\/+$/,'')+'/ecsmeta/'+encodeURIComponent(CL.club)+'/members';
+  async function lvPanel(){
+    if(!CL||!W.isAdm()){ lvToast('Only the Owner / Admin can open this',false); return; }
+    const o=ovl('📊 Viewers'), bd=o.querySelector('[data-bd]'); bd.textContent='Loading…';
+    let tok; try{ tok=await clToken(); }catch(e){ bd.textContent='Admin login needed.'; return; }
+    const A_=encodeURIComponent(tok);
+    const [lr,mr]=await Promise.all([fetch(vbase()+'_log_viewers.json?auth='+A_).catch(()=>null),fetch(memBase()+'.json?auth='+A_).catch(()=>null)]);
+    if(!lr||!lr.ok){ bd.innerHTML='<div style="color:#ff9a9a">Could not read viewer data. Update the Firebase rules (the new rules file) and try again.</div>'; return; }
+    const log=(await lr.json())||{}, mem=(mr&&mr.ok?(await mr.json()):null)||{};
+    const now=Date.now(), old=[]; const by={};
+    Object.keys(log).forEach(k=>{ const x=log[k]; if(!x||typeof x.l!=='number') return; if(x.l<now-45*864e5){ old.push(k); return; } const m=k.split('~')[0]; (by[m]=by[m]||{t:x.mt||m,a:[]}).a.push(x); });
+    old.slice(0,60).forEach(k=>fetch(vbase()+'_log_viewers/'+encodeURIComponent(k)+'.json?auth='+A_,{method:'DELETE'}).catch(()=>{}));
+    const cnt=(arr,fn)=>{ const c={}; arr.forEach(x=>{ const k=fn(x); c[k]=(c[k]||0)+1; }); return Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([k,v])=>E(k)+' <b>'+v+'</b>').join(' · ')||'-'; };
+    const card=s=>'<div style="background:#0b1428;border-radius:14px;padding:10px;margin:8px 0;font-size:.84rem;line-height:1.5">'+s+'</div>';
+    let h=''; const ms=Object.values(by).map(g=>{ g.mx=Math.max(...g.a.map(x=>x.l)); g.mn=Math.min(...g.a.map(x=>x.f||x.l)); return g; }).sort((a,b)=>b.mx-a.mx).slice(0,15);
+    if(!ms.length) h+=card('No viewer data yet. It is recorded while a match is live and people have the app open.');
+    ms.forEach(g=>{
+      const a=g.a, ev=[]; a.forEach(x=>{ ev.push([x.f||x.l,1],[x.l,-1]); }); ev.sort((p,q)=>p[0]-q[0]||q[1]-p[1]); let c=0,pk=0; ev.forEach(e=>{ c+=e[1]; if(c>pk) pk=c; });
+      const avg=Math.round(a.reduce((s,x)=>s+(x.w||0),0)/a.length/60*10)/10, nw=a.filter(x=>!x.r).length, rt=a.length-nw;
+      const left=a.filter(x=>x.l<g.mx-120000&&x.o); const named=a.filter(x=>x.n).sort((p,q)=>(q.w||0)-(p.w||0));
+      h+=card('<div style="font-weight:800;font-size:.95rem">'+E(g.t)+'</div><div style="opacity:.7;font-size:.74rem">'+E(new Date(g.mx).toLocaleString())+'</div>'
+        +'<div>👁 Peak at once: <b>'+pk+'</b> · Total devices: <b>'+a.length+'</b> · Avg watch: <b>'+avg+' min</b></div>'
+        +'<div>🆕 New: <b>'+nw+'</b> · 🔁 Returning: <b>'+rt+'</b></div>'
+        +'<div>📱 '+cnt(a,x=>String(x.d||'?').split(' · ')[0])+'</div>'
+        +'<div>🔗 Source: '+cnt(a,x=>x.s||'direct')+'</div>'
+        +(left.length?'<div>🚪 Left during: '+cnt(left,x=>'over '+Math.floor(parseFloat(x.o)||0))+'</div>':'')
+        +'<div style="margin-top:4px">👥 '+(named.length?named.map(x=>(x.vf?'✅ ':'✍ ')+E(x.n)+' <span style="opacity:.6">('+E(String(x.d||'').split(' · ')[0])+', '+Math.round((x.w||0)/60)+'m)</span>').join('<br>'):'<span style="opacity:.7">No names — everyone is a guest</span>')+(named.length&&a.length>named.length?'<br><span style="opacity:.7">+ '+(a.length-named.length)+' guests</span>':'')+'</div>');
+    });
+    h+='<h3 style="margin:14px 0 4px;font-size:1rem">🔑 Member codes</h3><div style="font-size:.76rem;opacity:.75">Give a code to a member. When they paste it (👤 button), their name shows here as ✅ member.</div>';
+    const mk=Object.keys(mem).map(k=>Object.assign({k},mem[k])).filter(x=>x&&x.n).sort((p,q)=>(q.t||0)-(p.t||0));
+    h+='<div data-ml>'+(mk.map(x=>'<div style="display:flex;gap:6px;align-items:center;background:#0b1428;border-radius:12px;padding:8px 10px;margin:6px 0"><div style="flex:1"><b>'+E(x.n)+'</b><br><span style="font-size:1.05rem;letter-spacing:.12em;color:#ffd45f;font-weight:900">'+E(x.c||'')+'</span></div><button data-cl="1" data-cp="'+E(x.c||'')+'" style="'+btn('#34498f')+';margin:0">Copy</button><button data-cl="1" data-dl="'+E(x.k)+'" style="'+btn('#8a2a2a')+';margin:0">✕</button></div>').join('')||'<div style="opacity:.7;margin:6px 0;font-size:.82rem">No member codes yet.</div>')+'</div>';
+    h+='<input data-mn placeholder="Member name" maxlength="30" style="'+inp+'"><button data-cl="1" data-mc style="'+btn('#1f9d57')+'">➕ Create code</button>';
+    bd.innerHTML=h;
+    bd.querySelectorAll('[data-cp]').forEach(b=>b.onclick=async()=>{ try{ await navigator.clipboard.writeText(b.dataset.cp); b.textContent='✅ Copied'; }catch(e){ prompt('Copy this code:',b.dataset.cp); } });
+    bd.querySelectorAll('[data-dl]').forEach(b=>b.onclick=async()=>{ if(!confirm('Remove this member code?')) return; try{ const t2=encodeURIComponent(await clToken()); await fetch(memBase()+'/'+encodeURIComponent(b.dataset.dl)+'.json?auth='+t2,{method:'DELETE'}); await fetch(vbase()+'_mh/'+encodeURIComponent(b.dataset.dl)+'.json?auth='+t2,{method:'DELETE'}); o.remove(); lvPanel(); }catch(e){ alert('Could not remove.'); } });
+    bd.querySelector('[data-mc]').onclick=async()=>{ const nm=bd.querySelector('[data-mn]').value.trim(); if(!nm){ alert('Type the member name first.'); return; } const AL='ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let code=''; for(let i=0;i<4;i++) code+=AL[Math.floor(Math.random()*AL.length)]; const hk=hashCode(code);
+      try{ const t2=encodeURIComponent(await clToken()); const r1=await fetch(memBase()+'/'+hk+'.json?auth='+t2,{method:'PUT',body:JSON.stringify({n:nm,c:code,t:Date.now()})}); const r2=await fetch(vbase()+'_mh/'+hk+'.json?auth='+t2,{method:'PUT',body:JSON.stringify({n:nm})}); if(!r1.ok||!r2.ok) throw new Error('rules'); o.remove(); lvPanel(); }catch(e){ alert('Could not save. Update the Firebase rules (new rules file) and try again.'); } };
+  }
   async function toggleBell(){
     let on=false;
     if(ls.g(NOTK)==='1'){ ls.s(NOTK,'0'); lvToast('🔕 Notifications turned OFF',false); }
@@ -5419,6 +5497,7 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
     document.querySelectorAll('#lvb').forEach(b=>{ b.textContent=on?'🔔 ON':'🔕 OFF'; });
     return on;
   }
+  try{ if(typeof A!=='undefined') A.lvv=()=>lvPanel(); }catch(e){}
   function closeBox(){ if(box){ box.remove(); box=null; fxQ=[]; fxBusy=false; } }
   function drawChip(j){
     if(!chipEl){ chipEl=document.createElement('div'); chipEl.id='lvchip'; document.body.appendChild(chipEl); chipEl.onclick=()=>{ if(lastJ){ delete dismissed[lastJ.id]; showBox(lastJ); } }; }
@@ -5566,7 +5645,7 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
     const x=fresh[fresh.length-1]; if(doneT[x.id]){ try{ x.time=new Date(doneT[x.id]).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }catch(e){} } showDone(x);
   }
   setInterval(checkDone,4000); setTimeout(checkDone,3000);
-  window.__lv104={notifOn,bell:()=>toggleBell(),onLive:j=>{lastKey=null;onLive(j)},checkDone,drop:()=>{closeBox();hideChip()}};
+  window.__lv104={join:lvJoin,viewers:lvPanel,notifOn,bell:()=>toggleBell(),onLive:j=>{lastKey=null;onLive(j)},checkDone,drop:()=>{closeBox();hideChip()}};
 })();
 
 })();
