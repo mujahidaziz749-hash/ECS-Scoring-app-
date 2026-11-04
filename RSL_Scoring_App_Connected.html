@@ -4795,7 +4795,7 @@ window.gGuard={vault:gVault,me:myRights};
     extra+='<button class="b s" data-a="gme">ℹ️ Mere haq / Kis se kia hoga</button><button class="b s" data-a="gdev">📱 Device ka naam</button>';
     if(isOwner())extra+='<button class="b g" data-a="gadm">👥 Admin Management</button><button class="b g" data-a="gsess">📱 Logged-in Devices</button><button class="b s" data-a="glog">📜 Admin Record</button><button class="b s" data-a="gbk">💾 Cloud Backups</button><button class="b s" data-a="grules">🔐 Firebase Rules</button>'}
   if(isOwner())extra+='<button class="b s" data-a="gsafe">📖 Safety features kya hain?</button>';
-  if(canV())extra+='<button class="b g" data-a="gvault">🛟 Matches Recovery (sab admins)</button>';if(canV()&&CL)extra+='<button class="b g" data-a="lvv">📊 Viewers (live watchers)</button>';
+  if(canV())extra+='<button class="b g" data-a="gvault">🛟 Matches Recovery (sab admins)</button>';if(canV()&&CL)extra+='<button class="b g" data-a="lvv">📊 Viewers (live watchers)</button><button class="b g" data-a="lvc">💬 Match Chats (PDF / delete)</button>';
   if(extra)h=h.replace(/<\/div>$/,extra+'</div>')}catch(x){}return h}}
 /* ---- MATCH-WISE AUTO MERGE (do phones ke alag matches DONO bachte hain) ---- */
 const midScore=()=>view==='play';
@@ -5169,7 +5169,7 @@ setTimeout(()=>{ try{ if(sessionStorage.getItem(W.p+'_pv_done')) return; session
  const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
  const pdTxt=d=>d.getDate()+' '+MON[d.getMonth()]+', '+((d.getHours()%12)||12)+':'+String(d.getMinutes()).padStart(2,'0')+' '+(d.getHours()>=12?'PM':'AM');
  const _cd=cdet; cdet=function(k){ let h=_cd(k); const c=(k==='t'?db.tours:db.series).find(x=>x.id===ctx.id); if(!c||c.type==='ko'&&false) return h; const i=h.lastIndexOf('data-a="pcomp"'); if(i<0) return h; const j=h.lastIndexOf('<button',i); return h.slice(0,j)+'<button class="b g sm" data-a="asm" data-v="'+c.id+'">🗓 Auto Schedule</button>'+h.slice(j); };
- A.asm=v=>{ const z=findc(v).c, d=new Date(Date.now()+864e5), ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+ A.asm=v=>{ const z=findc(v).c, pv=window.__prevMatchTs([].concat(z.fx.filter(x=>x.at).map(x=>x.at),db.matches.filter(m=>m.comp===v).map(m=>m.date))), d=pv?new Date(new Date(pv).getFullYear(),new Date(pv).getMonth(),new Date(pv).getDate()+1):new Date(Date.now()+864e5), ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   const up=z.fx.filter(f=>!f.mid&&f.b).length;
   M(`<h2>🗓 Auto Schedule</h2><div class="m">${e(z.name)} — ${z.teams.length} teams. ${z.type==='ko'?'Knockout mein sirf maujooda round ke matches ka waqt lagega.':'Sab teams ki aapas mein ek-ek round ki jodiyan banengi (jo pehle se hain wo nahi doharengi), phir har match ko date/time milegi.'} ${up} unplayed fixtures abhi hain.</div>
   <label>Pehle match ki date</label><input type="date" id="asd" value="${ds}"><label>Pehle match ka time</label><input type="time" id="ast" value="16:00">
@@ -5187,6 +5187,8 @@ setTimeout(()=>{ try{ if(sessionStorage.getItem(W.p+'_pv_done')) return; session
  try{ VOK.add&&0 }catch(e){}
 })();
 /* ===== AUTOSCH120 END ===== */
+/* ===== PREVDATE122 ===== */
+window.__prevMatchTs=function(list){ let mx=0; (list||[]).forEach(x=>{ if(!x) return; let t=0; if(typeof x==='number') t=x; else if(typeof x==='string'){ const m=x.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) t=new Date(+m[1],+m[2]-1,+m[3],12).getTime(); } if(t>mx) mx=t; }); return mx||0; };
 /* ===== SHARE104 START — match announcement post + countdown link + scorecard share ===== */
 (function(){
   if(window.__share104) return;
@@ -5289,9 +5291,11 @@ setTimeout(()=>{ try{ if(sessionStorage.getItem(W.p+'_pv_done')) return; session
       window.open('https://wa.me/?text='+encodeURIComponent(ta.value),'_blank'); };
     document.body.appendChild(o); }
   /* ---------- time picker ---------- */
-  function setTime(cur,cb){
-    const d=new Date(cur&&cur.t?cur.t:Date.now()+3600e3); const pad=n=>String(n).padStart(2,'0');
-    const dv=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()), tv=pad(d.getHours())+':'+pad(d.getMinutes());
+  function setTime(cur,cb,prev){
+    const pad=n=>String(n).padStart(2,'0'); const DT=(APP==='ECS')?'16:45':'16:00'; let d,tv;
+    if(cur&&cur.t){ d=new Date(cur.t); tv=pad(d.getHours())+':'+pad(d.getMinutes()); }
+    else{ tv=DT; const p=prev?new Date(prev):null; if(p){ d=new Date(p.getFullYear(),p.getMonth(),p.getDate()+1,12); } else { d=new Date(); if(d.getHours()*60+d.getMinutes()>=(+DT.slice(0,2))*60+(+DT.slice(3))) d.setDate(d.getDate()+1); } }
+    const dv=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
     const o=document.createElement('div'); o.className='sh104';
     o.innerHTML=`<div class="bx"><h3>🕒 Match date & time</h3><label>Date</label><input type="date" value="${dv}" data-d><label>Start time</label><input type="time" value="${tv}" data-t><label>Ground (optional)</label><input type="text" placeholder="e.g. SPG Ground" value="${E((cur&&cur.g)||LS.g('sh104_ground')||'')}" data-g><div class="row"><button data-cl="1" class="g" data-ok>✅ Save</button>${cur&&cur.t?'<button data-cl="1" class="o" data-clr>Clear time</button>':''}<button data-cl="1" class="r" data-x>Cancel</button></div></div>`;
     o.onclick=e=>{ if(e.target===o) o.remove(); }; o.querySelector('[data-x]').onclick=()=>o.remove();
@@ -5380,7 +5384,7 @@ setTimeout(()=>{ try{ if(sessionStorage.getItem(W.p+'_pv_done')) return; session
   frow=function(c,f){ let h=_fr(c,f); try{ const m=db.matches.find(x=>x.id===f.mid); if(f.b&&!(m&&m.status==='completed')){ const k=(db.tours.some(x=>x.id===c.id))?'t':'s'; const when=f.at?'<small style="opacity:.75"> 🕒 '+e(window.__share104.fmtDate(f.at))+' '+e(window.__share104.fmtTime(f.at))+'</small>':''; h=h.replace(/<\/div>$/,'<button class="b s sm" data-a="stm" data-v="'+c.id+'|'+f.id+'">🕒 Time</button><button class="b g sm" data-a="shp" data-v="'+c.id+'|'+f.id+'">📣 Share</button>'+when+'</div>'); } }catch(x){} return h; };
   try{ VOK.add('shp'); }catch(x){}
   A.shp=v=>{ const[c,f]=v.split('|'),z=findc(c),fx=z.c.fx.find(x=>x.id===f); window.__share104.announce(rjShFull(z.c,z.k,fx)); };
-  A.stm=v=>{ const[c,f]=v.split('|'),z=findc(c),fx=z.c.fx.find(x=>x.id===f); window.__share104.setTime(fx.at?{t:fx.at,g:fx.gr}:null,r=>{ if(r){ fx.at=r.t; fx.gr=r.g||''; } else { delete fx.at; delete fx.gr; } save(); R(); }); };
+  A.stm=v=>{ const[c,f]=v.split('|'),z=findc(c),fx=z.c.fx.find(x=>x.id===f); window.__share104.setTime(fx.at?{t:fx.at,g:fx.gr}:null,r=>{ if(r){ fx.at=r.t; fx.gr=r.g||''; } else { delete fx.at; delete fx.gr; } save(); R(); },window.__prevMatchTs([].concat(z.c.fx.filter(x=>x!==fx&&x.at).map(x=>x.at),db.matches.filter(m=>m.comp===c).map(m=>m.date)))); };
 })();
 /* ===== SHARE-ADAPTER END ===== */
 
@@ -5409,6 +5413,15 @@ setTimeout(()=>{ try{ if(sessionStorage.getItem(W.p+'_pv_done')) return; session
 #lv104 .L4cp{display:flex;justify-content:center;gap:12px;margin-top:3px;font-size:.68rem;opacity:.85;white-space:nowrap}#lv104 .L4cp span{overflow:hidden;text-overflow:ellipsis;max-width:48%}#lv104 .L4cp small{opacity:.7}
 #lv104 .L4hc .L4mt{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:6px;flex-wrap:wrap}#lv104 .L4hc .L4sn{font-size:.72rem;font-weight:800;opacity:.92}
 #lv104 .L4hc .L4mi{margin-top:4px;font-size:.68rem;opacity:.78;font-weight:600}
+#lv104 .L4ac{display:flex;gap:8px;margin-top:8px}#lv104 .L4ac button{flex:1;border:0;border-radius:12px;padding:9px 6px;font-weight:800;font-size:.78rem;color:#fff;background:#26376e;cursor:pointer;position:relative}#lv104 .L4ac #lvc.lvun{background:#1f7a4d}#lv104 .L4ac #lvc b{position:absolute;top:-6px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:#ff3b3b;color:#fff;font-size:.68rem;line-height:18px;text-align:center;padding:0 4px}#lv104 .L4ac #lvc b:empty{display:none}
+#lv104.chat{flex-direction:column;justify-content:flex-start;align-items:center;gap:8px;padding:8px}#lv104.chat .L4cd{flex:none;max-height:44vh}
+#lv104 .chp{display:flex;flex-direction:column;width:100%;max-width:410px;flex:1;min-height:0;background:#0d1733;border:1px solid #3c57b0;border-radius:18px;padding:8px;box-shadow:0 18px 50px #000c;color:#eef3ff}
+#lv104 .chh{display:flex;align-items:center;gap:8px;font-size:.86rem}#lv104 .chh .chn{flex:1;font-size:.68rem;opacity:.65}#lv104 .chh button{border:0;border-radius:10px;padding:6px 10px;font-weight:800;font-size:.72rem;background:#26376e;color:#fff}
+#lv104 .chl{flex:1;min-height:90px;overflow:auto;margin:6px 0;padding:2px 2px}#lv104 .che{text-align:center;opacity:.6;font-size:.8rem;padding:18px 8px}
+#lv104 .chm{display:flex;margin:4px 0}#lv104 .chm.me{justify-content:flex-end}#lv104 .chb{max-width:82%;background:#1b2a58;border-radius:14px 14px 14px 4px;padding:6px 10px;font-size:.84rem;line-height:1.35;word-break:break-word;position:relative}#lv104 .chm.me .chb{background:#1f6b46;border-radius:14px 14px 4px 14px}
+#lv104 .chnm{display:block;font-size:.66rem;font-weight:800;margin-bottom:1px}#lv104 .chb small{display:block;text-align:right;font-size:.58rem;opacity:.55;margin-top:2px}#lv104 .chst{font-size:2rem;display:block;line-height:1.1}#lv104 .chsl{font-weight:900;font-size:.8rem;color:#ffd48a}#lv104 .chb i{position:absolute;top:-6px;left:-6px;background:#8a2a2a;color:#fff;border-radius:50%;width:18px;height:18px;line-height:18px;text-align:center;font-size:.6rem;font-style:normal;cursor:pointer}
+#lv104 .cht{background:#142048;border-radius:12px;padding:6px;margin-bottom:6px;display:none;max-height:21vh;overflow:auto}#lv104 .cht>button{display:inline-flex;flex-direction:column;align-items:center;width:23%;margin:1%;border:0;border-radius:10px;background:#1f2e63;color:#fff;padding:5px 2px}#lv104 .cht>button span{font-size:1.5rem}#lv104 .cht>button small{font-size:.56rem;opacity:.85}#lv104 .che2{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}#lv104 .che2 button{border:0;background:#1f2e63;border-radius:8px;font-size:1.2rem;padding:3px 7px}
+#lv104 .chw{display:flex;gap:6px;align-items:center}#lv104 .chw input{flex:1;min-width:0;padding:10px;border-radius:12px;border:1px solid #3a5190;background:#0b1428;color:#fff;font-size:1rem}#lv104 .chw button{border:0;border-radius:12px;padding:9px 12px;font-size:1.1rem;background:#26376e;color:#fff}#lv104 .chw #chg{background:#1f7a4d}#lv104 .chy{font-size:.62rem;opacity:.55;margin-top:4px;text-align:center}
 #lv104 .L4toss{font-size:.68rem;opacity:.8;text-align:center;margin:5px 0 2px}
 #lv104 .L4tm{display:flex;align-items:flex-end;justify-content:space-between;margin-top:8px}
 #lv104 .L4tm .L4nm{font-size:.82rem;font-weight:800;opacity:.95}#lv104 .L4tm .L4lb{font-size:.62rem;font-weight:800;color:#ffd48a;letter-spacing:.05em}
@@ -5462,6 +5475,96 @@ setTimeout(()=>{ try{ if(sessionStorage.getItem(W.p+'_pv_done')) return; session
 
   function bell(){ return typeof Notification!=='undefined'?`<button data-cl="1" id="lvb" title="Notifications on/off">${bellTxt()}</button>`:''; }
   function batRow(p,on){ if(!p||!p.n) return ''; return `<tr><td class="${on?'L4on':''}">${on?'🏏 ':''}${E(p.n)}${on?'*':''}</td><td>${E(p.r)}</td><td>${E(p.b)}</td><td>${E(p.f)}</td><td>${E(p.s)}</td><td>${E(p.sr)}</td></tr>`; }
+/* ===== CHAT122 START: live chat + full scorecard button ===== */
+const CHS=[['six','🏏','SIX!'],['four','🔥','FOUR!'],['out','☝️','OUT!'],['clap','👏','Well played'],['lol','😂','Haha'],['wow','😮','Wow!'],['sad','😢','Unlucky'],['love','❤️','Love it'],['win','🏆','Champions'],['hund','💯','100%'],['miss','🥲','Miss you all'],['hi','👋','Salaam!'],['bowl','🎯','Great bowling'],['catch','🙌','What a catch!']];
+const CHE=['😀','😂','😍','👍','🙏','🔥','🏏','👏','😮','😢','❤️','💪'];
+const CH={mid:null,es:null,msgs:{},open:false,lastSend:0,j:null,tray:0,seen:'',meta:''};
+const chOK=k=>k&&k!=='_m';
+const chMid=j=>String(j.id).replace(/[^A-Za-z0-9_-]/g,'_');
+const chUrl=mid=>vbase()+'_chat/'+encodeURIComponent(mid||CH.mid);
+const chKeys=()=>Object.keys(CH.msgs).filter(chOK).sort();
+const chUn=()=>chKeys().filter(k=>k>CH.seen&&(CH.msgs[k]||{}).v!==VID).length;
+const chBtn=()=>{ const n=CH.open?0:chUn(); return '<button data-cl="1" id="lvc"'+(n>0?' class="lvun"':'')+'>💬 Chat<b>'+(n>0?(n>9?'9+':n):'')+'</b></button>'; };
+function chBadge(){ const b=box&&box.querySelector('#lvc'); if(!b) return; const n=CH.open?0:chUn(); b.classList.toggle('lvun',n>0); const s=b.querySelector('b'); if(s) s.textContent=n>0?(n>9?'9+':String(n)):''; }
+function chStop(){ try{ CH.es&&CH.es.close(); }catch(e){} CH.es=null; CH.mid=null; CH.msgs={}; CH.meta=''; if(CH.open) chClose(); }
+function chStart(j){ if(!CL||typeof EventSource==='undefined') return; const mid=chMid(j); CH.j=j; if(CH.mid===mid&&CH.es) return; chStop(); CH.mid=mid; CH.seen=ls.g('lv_cs_'+mid)||'';
+  try{ const es=new EventSource(chUrl()+'.json'); CH.es=es;
+    const h=patch=>ev=>{ try{ const d=JSON.parse(ev.data), p=d.path||'/', v=d.data;
+      if(p==='/'){ if(patch){ Object.keys(v||{}).forEach(k=>{ if(v[k]==null) delete CH.msgs[k]; else CH.msgs[k]=v[k]; }); } else CH.msgs=v||{}; }
+      else{ const a=p.split('/').filter(Boolean); if(a.length===1){ if(v==null) delete CH.msgs[a[0]]; else CH.msgs[a[0]]=v; } }
+      chChanged(); }catch(e){} };
+    es.addEventListener('put',h(0)); es.addEventListener('patch',h(1)); }catch(e){} }
+function chChanged(){ if(CH.open){ chDraw(); const ks=chKeys(); CH.seen=ks[ks.length-1]||CH.seen; ls.s('lv_cs_'+CH.mid,CH.seen); } else chBadge(); }
+const chHue=s=>{ let h=0; for(const c of String(s)) h=(h*31+c.charCodeAt(0))%360; return h; };
+const chTm=t=>{ try{ return new Date(t).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } };
+function chDraw(first){ const p=box&&box.querySelector('.chp'); if(!p) return; const L=p.querySelector('.chl'); const near=L.scrollHeight-L.scrollTop-L.clientHeight<90; const adm=W.isAdm(); const ks=chKeys().slice(-200);
+  p.querySelector('.chn').textContent=ks.length?(ks.length+' messages'):'';
+  L.innerHTML=ks.map(k=>{ const m=CH.msgs[k]||{}; const st=m.s&&CHS.find(x=>x[0]===m.s); const mine=m.v===VID;
+    const body=st?'<span class="chst">'+st[1]+'</span><span class="chsl">'+E(st[2])+'</span>':'<span>'+E(m.x||'')+'</span>';
+    return '<div class="chm'+(mine?' me':'')+'"><div class="chb">'+(m.n?'<span class="chnm" style="color:hsl('+chHue(m.n)+' 85% 72%)">'+E(m.n)+(m.f?' ✔':'')+'</span>':'')+body+'<small>'+chTm(m.t)+'</small>'+(adm?'<i data-del="'+E(k)+'" title="Delete">✕</i>':'')+'</div></div>'; }).join('')||'<div class="che">Abhi koi message nahi — pehla message aap bhejein! 👋</div>';
+  if(first||near||ks.length&&CH.msgs[ks[ks.length-1]].v===VID) L.scrollTop=L.scrollHeight;
+  L.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>chDel(b.dataset.del)); }
+async function chDel(k){ try{ const t=encodeURIComponent(await clToken()); const r=await fetch(chUrl()+'/'+encodeURIComponent(k)+'.json?auth='+t,{method:'DELETE'}); if(!r.ok) throw 0; delete CH.msgs[k]; chDraw(); }catch(e){ lvToast('Message delete nahi hua',false); } }
+function chOpen(){ if(!box||CH.open||!CH.mid) return; CH.open=true; box.classList.add('chat');
+  if(!box._ch){ box._ch=1; box.addEventListener('click',e=>{ if(CH.open&&e.target===box) e.stopImmediatePropagation(); },true); }
+  const p=document.createElement('div'); p.className='chp';
+  p.innerHTML='<div class="chh"><b>💬 Live Chat</b><span class="chn"></span><button data-cl="1" id="chm">▾ Minimize</button></div><div class="chl"></div><div class="cht" style="display:none">'+CHS.map(x=>'<button data-cl="1" data-st="'+x[0]+'"><span>'+x[1]+'</span><small>'+E(x[2])+'</small></button>').join('')+'<div class="che2">'+CHE.map(e=>'<button data-cl="1" data-em="'+e+'">'+e+'</button>').join('')+'</div></div><div class="chw"><button data-cl="1" id="chs" title="Stickers">😊</button><input id="chi" maxlength="300" placeholder="Message likho…" autocomplete="off" enterkeyhint="send"><button data-cl="1" id="chg">➤</button></div><div class="chy"></div>';
+  box.appendChild(p);
+  const nm=myNm().n; p.querySelector('.chy').textContent=nm?('Aap: '+nm):'Aap anonymous hain — naam ke liye upar 👤 dabayein';
+  p.querySelector('#chm').onclick=chClose; const inp=p.querySelector('#chi');
+  const send=async()=>{ const v=inp.value.trim(); if(!v) return; const ok=await chSend({x:v.slice(0,300)}); if(ok) inp.value=''; };
+  p.querySelector('#chg').onclick=send; inp.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); send(); } };
+  const tr=p.querySelector('.cht'); p.querySelector('#chs').onclick=()=>{ tr.style.display=tr.style.display==='none'?'block':'none'; };
+  tr.querySelectorAll('[data-st]').forEach(b=>b.onclick=async()=>{ if(await chSend({s:b.dataset.st})) tr.style.display='none'; });
+  tr.querySelectorAll('[data-em]').forEach(b=>b.onclick=()=>{ inp.value+=b.dataset.em; inp.focus(); });
+  chDraw(true); const ks=chKeys(); CH.seen=ks[ks.length-1]||CH.seen; ls.s('lv_cs_'+CH.mid,CH.seen); chBadge(); }
+function chClose(){ CH.open=false; if(box){ box.classList.remove('chat'); const p=box.querySelector('.chp'); if(p) p.remove(); } chBadge(); }
+async function chSend(o){ if(!CH.mid) return false; const now=Date.now(); if(now-CH.lastSend<2000){ lvToast('Thora ruk kar bhejein',false); return false; }
+  CH.lastSend=now; const me=myNm(); const k=String(now).padStart(14,'0')+VID.slice(0,3);
+  const body=Object.assign({t:{'.sv':'timestamp'},v:VID},me.n?{n:me.n.slice(0,30)}:{},me.vf?{f:1}:{},o);
+  try{ if(CH.meta!==CH.mid&&CH.j){ CH.meta=CH.mid; fetch(chUrl()+'/_m.json',{method:'PUT',body:JSON.stringify({ti:String(CH.j.title||'').slice(0,100),sr:String(CH.j.series||'').slice(0,60),d:String(CH.j.date||'').slice(0,20),no:String(CH.j.no||'').slice(0,6)})}).catch(()=>{}); }
+    const r=await fetch(chUrl()+'/'+k+'.json',{method:'PUT',body:JSON.stringify(body)}); if(!r.ok) throw new Error(String(r.status));
+    CH.msgs[k]=Object.assign({},body,{t:now}); chChanged(); return true;
+  }catch(e){ lvToast((e&&(e.message==='401'||e.message==='403'))?'Chat abhi on nahi hui — Owner ko Firebase rules update karni hain':'Message nahi gaya — internet check karein',false); return false; } }
+async function chScore(j){ try{ if(typeof clPull==='function'&&!W.isAdm()) await Promise.race([clPull(false),new Promise(r=>setTimeout(r,6000))]); }catch(e){}
+  let st='none'; try{ st=LV.stat?LV.stat(j.id):'none'; }catch(e){}
+  if(st==='none'){ lvToast('Scorecard abhi sync nahi hua — thori der baad dobara dabayein',false); return; }
+  try{ window.__raise104?window.__raise104(()=>LV.open(j.id)):LV.open(j.id); }catch(e){} }
+function chBind(cd,j){ const s=cd.querySelector('#lvs'); if(s) s.onclick=()=>chScore(j); const c=cd.querySelector('#lvc'); if(c) c.onclick=()=>CH.open?chClose():chOpen(); CH.j=j; chStart(j); chBadge(); }
+setInterval(()=>{ if(!box&&CH.es) chStop(); },4000);
+/* ---- Owner / Admin: har match ki chat, PDF, delete ---- */
+async function chatAdmin(){
+  if(!CL||!W.isAdm()){ lvToast('Only the Owner / Admin can open this',false); return; }
+  const o=ovl('💬 Match Chats'), bd=o.querySelector('[data-bd]'); bd.textContent='Loading…'; let all=null;
+  const load=async()=>{ try{ const r=await fetch(vbase()+'_chat.json'); all=r.ok?(await r.json()):null; }catch(e){ bd.textContent='Internet problem — dobara try karein.'; return false; } return true; };
+  const draw=()=>{ const ids=Object.keys(all||{}); if(!ids.length){ bd.innerHTML='<div style="padding:10px;opacity:.8">Abhi kisi match ki chat save nahi hai.</div>'; return; }
+    const info=ids.map(id=>{ const ks=Object.keys(all[id]||{}).filter(chOK).sort(); return {id,m:(all[id]||{})._m||{},n:ks.length,last:ks.length?(+ks[ks.length-1].slice(0,14)):0}; }).sort((a,b)=>b.last-a.last);
+    bd.innerHTML='<div style="font-size:.76rem;opacity:.75;margin-bottom:6px">Har match ki chat Firebase mein save hai. PDF banayein ya delete karke jagah khali karein.</div>'+info.map(x=>'<div style="background:#0b1428;border-radius:14px;padding:10px;margin:8px 0"><div style="font-weight:800">'+E(x.m.ti||x.id)+'</div><div style="font-size:.74rem;opacity:.7">'+E([x.m.sr,x.m.no?'Match '+x.m.no:'',x.m.d].filter(Boolean).join(' · '))+'</div><div style="font-size:.78rem;margin:3px 0 7px">'+x.n+' messages'+(x.last?' · aakhri: '+E(new Date(x.last).toLocaleString()):'')+'</div><button data-cl="1" data-pdf="'+E(x.id)+'" style="border:0;border-radius:10px;padding:8px 12px;font-weight:800;background:#1f7a4d;color:#fff;margin-right:6px">📄 PDF</button><button data-cl="1" data-rm="'+E(x.id)+'" style="border:0;border-radius:10px;padding:8px 12px;font-weight:800;background:#8a2a2a;color:#fff">🗑 Delete chat</button></div>').join('')+'<button data-cl="1" id="chold" style="border:0;border-radius:10px;padding:9px 12px;font-weight:800;background:#7a5a1f;color:#fff;margin-top:6px">🧹 30 din se purani chats delete</button>';
+    bd.querySelectorAll('[data-pdf]').forEach(b=>b.onclick=()=>chPdf(b.dataset.pdf,all[b.dataset.pdf]));
+    bd.querySelectorAll('[data-rm]').forEach(b=>b.onclick=async()=>{ if(!confirm('Is match ki poori chat delete karein? Wapas nahi aayegi.')) return; try{ const t=encodeURIComponent(await clToken()); const r=await fetch(vbase()+'_chat/'+encodeURIComponent(b.dataset.rm)+'.json?auth='+t,{method:'DELETE'}); if(!r.ok) throw 0; delete all[b.dataset.rm]; draw(); lvToast('Chat delete ho gayi'); }catch(e){ lvToast('Delete nahi hua — admin login check karein',false); } });
+    const old=bd.querySelector('#chold'); if(old) old.onclick=async()=>{ const lim=Date.now()-30*864e5, tg=info.filter(x=>x.last&&x.last<lim); if(!tg.length){ lvToast('30 din se purani koi chat nahi'); return; } if(!confirm(tg.length+' purani chat(s) delete karein?')) return; try{ const t=encodeURIComponent(await clToken()); for(const x of tg){ await fetch(vbase()+'_chat/'+encodeURIComponent(x.id)+'.json?auth='+t,{method:'DELETE'}); delete all[x.id]; } draw(); lvToast('Purani chats delete ho gayin'); }catch(e){ lvToast('Delete nahi hua',false); } };
+  };
+  if(await load()) draw();
+}
+async function chPdf(mid,obj){
+  const J=window.jspdf; if(!J){ lvToast('PDF library load nahi hui — internet check karein',false); return; }
+  const meta=(obj&&obj._m)||{}, ks=Object.keys(obj||{}).filter(chOK).sort(), msgs=ks.map(k=>obj[k]); const W0=1190,H0=1684,P=60; const pages=[]; let cv,x,y;
+  const fit=(t,px,py,mw,sz)=>{ let s=sz; do{ x.font='900 '+s+'px system-ui,sans-serif'; s-=2; }while(x.measureText(t).width>mw&&s>22); x.fillText(t,px,py); };
+  const wrap=(t,mw)=>{ const out=[]; String(t).split('\n').forEach(par=>{ let l=''; par.split(/(\s+)/).forEach(w=>{ if(x.measureText(l+w).width>mw&&l){ out.push(l.trimEnd()); l=w.trimStart(); } else l+=w; if(x.measureText(l).width>mw){ out.push(l); l=''; } }); out.push(l.trimEnd()); }); return out.filter((s,i)=>s||i===0); };
+  const newPage=first=>{ cv=document.createElement('canvas'); cv.width=W0; cv.height=H0; x=cv.getContext('2d'); x.fillStyle='#f5f7ff'; x.fillRect(0,0,W0,H0); const g=x.createLinearGradient(0,0,W0,0); g.addColorStop(0,'#1d2b6b'); g.addColorStop(1,'#0f7a55'); x.fillStyle=g;
+    if(first){ x.fillRect(0,0,W0,260); x.fillStyle='#ffd45f'; x.font='800 30px system-ui,sans-serif'; x.fillText('💬  LIVE CHAT',P,72); x.fillStyle='#fff'; fit(meta.ti||mid,P,140,W0-2*P,54); x.font='600 28px system-ui,sans-serif'; x.fillText([meta.sr,meta.no?'Match '+meta.no:'',meta.d].filter(Boolean).join('  ·  '),P,192); const t0=msgs.length&&msgs[0].t?new Date(msgs[0].t).toLocaleString():''; x.fillText(msgs.length+' messages'+(t0?'  ·  '+t0:''),P,235); y=310; }
+    else{ x.fillRect(0,0,W0,80); x.fillStyle='#fff'; x.font='800 28px system-ui,sans-serif'; x.fillText('💬 '+String(meta.ti||mid).slice(0,70),P,52); y=120; } pages.push(cv); };
+  newPage(true); const cols=['#e6eeff','#e3f7ec','#fff3d9','#fde7ef','#efe7ff'];
+  if(!msgs.length){ x.fillStyle='#555'; x.font='600 32px system-ui,sans-serif'; x.fillText('Is match mein koi message nahi.',P,y+20); }
+  msgs.forEach(m=>{ const st=m.s&&CHS.find(q=>q[0]===m.s); const txt=st?(st[1]+'  '+st[2]):String(m.x||''); x.font='500 30px system-ui,sans-serif'; const ls_=wrap(txt,W0-2*P-80); const h=ls_.length*40+(m.n?44:22)+34;
+    if(y+h>H0-90) newPage(false); const hue=m.n?chHue(m.n):210; x.fillStyle=cols[hue%cols.length]; x.beginPath(); x.roundRect?x.roundRect(P,y,W0-2*P,h,18):x.rect(P,y,W0-2*P,h); x.fill(); x.fillStyle='hsl('+hue+' 65% 45%)'; x.fillRect(P,y+8,8,h-16);
+    let yy=y+(m.n?40:34); if(m.n){ x.fillStyle='hsl('+hue+' 70% 32%)'; x.font='800 28px system-ui,sans-serif'; x.fillText(m.n+(m.f?' ✔':''),P+30,yy); yy+=44; }
+    x.fillStyle='#16213e'; x.font=(st?'700 ':'500 ')+'30px system-ui,sans-serif'; ls_.forEach(l=>{ x.fillText(l,P+30,yy); yy+=40; }); x.fillStyle='#7b84a3'; x.font='500 22px system-ui,sans-serif'; const tt=m.t?new Date(m.t).toLocaleString([], {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):''; x.fillText(tt,W0-P-20-x.measureText(tt).width,y+h-14); y+=h+16; });
+  pages.forEach((c,i)=>{ const g=c.getContext('2d'); g.fillStyle='#7b84a3'; g.font='500 22px system-ui,sans-serif'; g.fillText('Page '+(i+1)+' / '+pages.length,W0/2-40,H0-30); });
+  try{ const doc=new J.jsPDF({unit:'pt',format:'a4'}); pages.forEach((c,i)=>{ if(i) doc.addPage(); doc.addImage(c.toDataURL('image/jpeg',.88),'JPEG',0,0,595.28,841.89); }); doc.save('Chat_'+String(meta.ti||mid).replace(/[^A-Za-z0-9]+/g,'_').slice(0,50)+'.pdf'); lvToast('✅ PDF ban gayi'); }catch(e){ lvToast('PDF nahi bani: '+e.message,false); }
+}
+/* ===== CHAT122 END ===== */
+
   function render(j){
     if(!box) return; const keep=box.querySelector('.L4fx, .L4pc'); 
     const cd=box.querySelector('.L4cd'); const fx=cd.querySelectorAll('.L4fx,.L4pc'); 
@@ -5471,6 +5574,7 @@ setTimeout(()=>{ try{ if(sessionStorage.getItem(W.p+'_pv_done')) return; session
 ${j.caps?`<div class="L4cp">${j.caps.split(' · ').map(x=>'<span>🧢 '+E(x)+' <small>(C)</small></span>').join('')}</div>`:''}
 <div class="L4mt"><span class="L4cat">${j.cat==='Tournament'?'🏆 TOURNAMENT':j.cat==='Individual Match'?'⚡ INDIVIDUAL':'📅 SERIES'}</span>${j.series?'<span class="L4sn">'+E(j.series)+'</span>':''}</div>
 <div class="L4mi">${[j.no?('Match '+E(j.no)+(j.of?'/'+E(j.of):'')):'',j.rd?E(j.rd):'',j.date?('📅 '+E(j.date)):'',j.ground?('📍 '+E(j.ground)):''].filter(Boolean).join(' · ')}</div></div>
+<div class="L4ac"><button data-cl="1" id="lvs">📋 Full scorecard</button>${chBtn()}</div>
 ${j.toss?`<div class="L4toss">🪙 ${E(j.toss)}</div>`:''}
 <div class="L4tm"><div><div class="L4lb">${E(j.innL||'')}</div><div class="L4nm">${E(j.bat)}</div></div><div class="L4big">${E(j.r)}/${E(j.w)}<small>(${E(j.ovs)}/${E(j.max)})</small></div></div>
 <div class="L4rt"><span>CRR <b>${E(j.crr)}</b></span>${j.tgt?`<span>RRR <b>${E(j.rrr)}</b></span><span>Target <b>${E(j.tgt)}</b></span>`:''}${j.ext?`<span>Extras <b>${E(j.ext)}</b></span>`:''}</div>
@@ -5482,7 +5586,7 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
     cd.innerHTML=body; fx.forEach(f=>cd.appendChild(f));
     cd.querySelector('#lvx').onclick=()=>{ dismissed[j.id]=1; closeBox(); drawChip(j); };
     const bb=cd.querySelector('#lvb'); if(bb) bb.onclick=toggleBell;
-    const jb=cd.querySelector('#lvj'); if(jb) jb.onclick=lvJoin;
+    const jb=cd.querySelector('#lvj'); if(jb) jb.onclick=lvJoin; try{ chBind(cd,j); }catch(e){}
     if(W.isAdm()) cd.querySelectorAll('.lvw').forEach(x=>{ x.classList.add('lva'); x.onclick=lvPanel; });
   }
   /* ---- live viewers count (eye + number) ---- */
@@ -5591,7 +5695,7 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
     document.querySelectorAll('#lvb').forEach(b=>{ b.textContent=on?'🔔 ON':'🔕 OFF'; });
     return on;
   }
-  try{ if(typeof A!=='undefined') A.lvv=()=>lvPanel(); }catch(e){}
+  try{ if(typeof A!=='undefined'){ A.lvv=()=>lvPanel(); A.lvc=()=>chatAdmin(); } }catch(e){}
   function closeBox(){ if(box){ box.remove(); box=null; fxQ=[]; fxBusy=false; } }
   function drawChip(j){
     if(!chipEl){ chipEl=document.createElement('div'); chipEl.id='lvchip'; document.body.appendChild(chipEl); chipEl.onclick=()=>{ if(lastJ){ delete dismissed[lastJ.id]; showBox(lastJ); } }; }
@@ -5739,7 +5843,7 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
     const x=fresh[fresh.length-1]; if(doneT[x.id]){ try{ x.time=new Date(doneT[x.id]).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }catch(e){} } showDone(x);
   }
   setInterval(checkDone,4000); setTimeout(checkDone,3000);
-  window.__lv104={join:lvJoin,viewers:lvPanel,notifOn,bell:()=>toggleBell(),onLive:j=>{lastKey=null;onLive(j)},checkDone,drop:()=>{closeBox();hideChip()}};
+  window.__lv104={join:lvJoin,viewers:lvPanel,chats:chatAdmin,notifOn,bell:()=>toggleBell(),onLive:j=>{lastKey=null;onLive(j)},checkDone,drop:()=>{closeBox();hideChip()}};
 })();
 
 })();
