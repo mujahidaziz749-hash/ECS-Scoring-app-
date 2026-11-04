@@ -5,6 +5,46 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ECS-System v103</title>
 <link rel="manifest" href="manifest-ecs.json"><meta name="theme-color" content="#d24a36"><link rel="apple-touch-icon" href="icon-ecs-192.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
+<script>/* NET104: network diagnostics + fresh-cloud tracking */
+(function(){ var W=window; if(W.__net104) return; W.__net104=1;
+ var log=W.__fbLog=[], bar=null, hideT=0, okAt=0;
+ function el(){ if(bar&&bar.parentNode) return bar; if(!document.body) return null;
+  bar=document.createElement('div'); bar.id='net104'; bar.setAttribute('data-cl','1');
+  bar.style.cssText='position:fixed;left:8px;right:8px;top:8px;z-index:2147483600;padding:9px 12px;border-radius:12px;font:700 13px/1.35 system-ui,sans-serif;color:#fff;text-align:center;box-shadow:0 4px 16px #0006;display:none';
+  bar.onclick=function(){ bar.style.display='none'; }; document.body.appendChild(bar); return bar; }
+ function show(msg,bg,auto){ var b=el(); if(!b){ document.addEventListener('DOMContentLoaded',function(){ show(msg,bg,auto); }); return; }
+  b.textContent=msg+'  ✕'; b.style.background=bg; b.style.display='block'; clearTimeout(hideT); if(auto) hideT=setTimeout(hide,auto); }
+ function hide(){ if(bar) bar.style.display='none'; }
+ W.__net104show=show;
+ var RED='#b91c1c', AMB='#b45309', GRN='#15803d';
+ function offMsg(){ show('📴 Aapka internet band hai (offline). App saved data se chal rahi hai — internet aate hi latest data aa jayega.',RED); }
+ W.addEventListener('offline',offMsg);
+ W.addEventListener('online',function(){ show('✅ Internet wapas aa gaya',GRN,2500); });
+ W.addEventListener('load',function(){ W.__ready=1; if(bar&&/App load/.test(bar.textContent)) hide(); if(navigator.onLine===false) offMsg(); });
+ /* page load slow? head script pehle chalta hai, isliye 6 second baad bhi load na ho to batao */
+ setTimeout(function(){ if(!W.__ready){ if(navigator.onLine===false) offMsg(); else show('🐢 App load ho rahi hai — aapka internet bahut slow lag raha hai. Thora intezar karein.',AMB); } },6000);
+ var of=W.fetch; if(typeof of!=='function') return;
+ var host=/firebaseio\.com|firebasedatabase\.app|firebaseapp\.com|identitytoolkit\.googleapis\.com|securetoken\.googleapis\.com/;
+ W.fetch=function(u,o){ var url=''; try{ url=typeof u==='string'?u:(u&&u.url)||String(u); }catch(e){}
+  if(!host.test(url)) return of.apply(this,arguments);
+  var get=!(o&&o.method&&o.method!=='GET')&&!(o&&o.body), ac=null, o2=o, aborted=false;
+  if(get&&W.AbortController&&!(o&&o.signal)){ ac=new AbortController(); o2=Object.assign({},o||{},{signal:ac.signal}); }
+  var to=ac&&setTimeout(function(){ aborted=true; try{ ac.abort(); }catch(e){} },25000);
+  var sl=setTimeout(function(){ if(navigator.onLine===false) offMsg(); else show('🐢 Internet bahut slow hai — server se data aane mein der lag rahi hai…',AMB); },6000);
+  var path=''; try{ path=new URL(url,location.href).pathname; }catch(e){}
+  return of.call(this,u,ac?o2:o).then(function(r){ clearTimeout(to); clearTimeout(sl);
+    if(r&&r.ok){ if(get){ log.push({p:path,t:Date.now(),ok:1}); if(log.length>40) log.shift(); } if(bar&&bar.style.display==='block'&&/slow|Server|offline|jawab/.test(bar.textContent)) show('✅ Connection theek ho gaya',GRN,2000); }
+    else if(r&&r.status>=500){ show('☁ Server abhi theek kaam nahi kar raha (error '+r.status+'). Thori der baad try karein.',RED,8000); }
+    return r; },function(e){ clearTimeout(to); clearTimeout(sl);
+    if(navigator.onLine===false) offMsg();
+    else if(aborted) show('⏱ Server se 25 second tak jawab nahi aaya — internet atka hua ya bahut slow hai. WiFi/mobile data dobara on-off karke dekhein.',RED,12000);
+    else show('☁ Server tak nahi pahunch pa rahe — internet ya data connection check karein.',RED,10000);
+    throw e; }); };
+ /* naya khula scorecard/modal preview ke upar laao */
+ W.__raise104=function(fn){ var mo; try{ mo=new MutationObserver(function(ms){ ms.forEach(function(m){ Array.prototype.forEach.call(m.addedNodes,function(n){ if(n.nodeType===1&&/(^|\s)(modal-overlay|ov)(\s|$)/.test(n.className||'')) n.style.setProperty('z-index','2147483000','important'); }); }); }); mo.observe(document.body,{childList:true}); setTimeout(function(){ try{ mo.disconnect(); }catch(e){} },4000); }catch(e){}
+  try{ fn(); }catch(e){} };
+})();
+</script>
 <script>/*embedded jsPDF 2.5.1 - offline PDF*/
 /** @license
  *
@@ -17706,23 +17746,33 @@ setTimeout(()=>{ try{ if(sessionStorage.getItem(W.p+'_pv_done')) return; session
     document.body.appendChild(c);
     const close=()=>{ c.remove(); try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} };
     c.querySelector('[data-x]').onclick=close;
-    c.querySelector('[data-sc]').onclick=()=>{ close(); try{ if(LV&&LV.open) LV.open(r.mid); }catch(e){} };
+    c.querySelector('[data-sc]').onclick=()=>{ close(); try{ __raise104(()=>{ if(LV&&LV.open) LV.open(r.mid); }); }catch(e){} };
   }
   function waitMatch(key){
     const old=document.querySelector('.cd104'); if(old) old.remove();
     const c=document.createElement('div'); c.className='cd104'; c.innerHTML='<div class="c"><span class="k">🏏 '+E(APP)+' • MATCH DAY</span><div class="t">Loading match…</div><div class="s" data-w>Getting the latest details</div><div><button data-cl="1" data-x>Close</button></div></div>'; document.body.appendChild(c);
-    let n=0; const iv=setInterval(()=>{ n++; if(!document.body.contains(c)){ clearInterval(iv); return; } if(document.getElementById('lv104')){ clearInterval(iv); c.remove(); return; }
+    const dpath=()=>{ try{ return new URL(clUrl(),location.href).pathname; }catch(e){ return ''; } };
+    const fresh=()=>{ try{ if(!CL) return true; }catch(e){ return true; } const L=window.__fbLog||[], p=dpath(); return L.some(x=>x.ok&&x.p===p&&Date.now()-x.t>900); };
+    try{ if(typeof clPull==='function') clPull(false); }catch(e){}
+    let n=0, nf=0; const W2=c.querySelector('[data-w]');
+    const iv=setInterval(()=>{ n++; if(!document.body.contains(c)){ clearInterval(iv); return; } if(document.getElementById('lv104')){ clearInterval(iv); c.remove(); return; }
+      if(!fresh()){ nf++;
+        if(nf===4){ try{ if(typeof clPull==='function') clPull(false); }catch(e){} }
+        if(navigator.onLine===false){ c.querySelector('.t').textContent='📴 Internet band hai'; W2.textContent='Latest match details ke liye internet chahiye. Internet on karein — yeh khud update ho jayega.'; }
+        else if(nf>10){ c.querySelector('.t').textContent='🐢 Internet slow hai'; W2.textContent='Server se latest details aa rahi hain… ('+nf+'s)'; }
+        if(nf>45){ clearInterval(iv); c.querySelector('.t').textContent='Latest details nahi aa saki'; W2.textContent='Internet slow ya server tak connection nahi ban raha. Purani details dikhana galat hoga, isliye dobara try karein.'; const b=document.createElement('button'); b.setAttribute('data-cl','1'); b.textContent='🔄 Retry'; b.onclick=()=>{ c.remove(); waitMatch(key); }; c.querySelector('.c div:last-child').prepend(b); }
+        return; }
       let r=null; try{ r=window.__share104.resolve&&window.__share104.resolve(key); }catch(e){}
       if(r&&r.st==='done'&&r.mid){ clearInterval(iv); c.remove(); doneCard(r); return; }
-      if(r&&(r.st==='live'||r.st==='paused')){ n=0; c.querySelector('.t').textContent=r.st==='live'?'Match is LIVE':'Match in progress'; c.querySelector('[data-w]').textContent=r.st==='live'?'Opening the live score…':'The scorer paused the match — live score opens when it resumes'; return; }
+      if(r&&(r.st==='live'||r.st==='paused')){ n=0; c.querySelector('.t').textContent=r.st==='live'?'Match is LIVE':'Match in progress'; W2.textContent=r.st==='live'?'Opening the live score…':'The scorer paused the match — live score opens when it resumes'; return; }
       if(r){ clearInterval(iv); c.remove(); countdown({a:r.a.n,b:r.b.n,k:r.k,sr:r.sr,n:r.no,of:r.of,rd:r.rd,t:r.at,g:r.gr,p:r.app}); return; }
-      if(n>90){ clearInterval(iv); c.querySelector('.t').textContent='Match details not found'; c.querySelector('[data-w]').textContent='Please open the app and wait a moment, or ask the admin to share the post again.'; } },1000);
+      if(n>90){ clearInterval(iv); c.querySelector('.t').textContent='Match details not found'; W2.textContent='Please open the app and wait a moment, or ask the admin to share the post again.'; } },1000);
     c.querySelector('[data-x]').onclick=()=>{ clearInterval(iv); c.remove(); try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} }; }
   function fromHash(){
     try{ const h=location.hash||''; let m; const sm=h.match(/[#&]s=([^&]+)/); if(sm) LS.s('lv_src',decodeURIComponent(sm[1]).replace(/[^A-Za-z0-9_-]/g,'').slice(0,20));
       if((m=h.match(/[#&]ev=([^&]+)/))){ setTimeout(()=>{ try{ countdown(b64d(m[1])); }catch(e){} },700); }
       else if((m=h.match(/[#&]m=([^&]+)/))){ waitMatch(decodeURIComponent(m[1])); }
-      else if((m=h.match(/[#&]sc=([^&]+)/))){ const id=decodeURIComponent(m[1]); let n=0; const iv=setInterval(()=>{ n++; try{ const LV=window.__W104&&window.__W104.live; if(LV&&LV.doneOf&&LV.doneOf(id)){ clearInterval(iv); LV.open(id); try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} } }catch(e){} if(n>40) clearInterval(iv); },1000); }
+      else if((m=h.match(/[#&]sc=([^&]+)/))){ const id=decodeURIComponent(m[1]); let n=0; const iv=setInterval(()=>{ n++; try{ const LV=window.__W104&&window.__W104.live; if(LV&&LV.doneOf&&LV.doneOf(id)){ clearInterval(iv); __raise104(()=>LV.open(id)); try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} } }catch(e){} if(n>40) clearInterval(iv); },1000); }
     }catch(e){} }
   async function shareImage(src,text,name){
     let blob=src; if(typeof src==='string'){ blob=await (await fetch(src)).blob(); }
@@ -18097,7 +18147,7 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
     o.innerHTML=`<div class="L4c"><div style="font-size:2.2rem">🏁</div><div class="L4tt">MATCH COMPLETE</div><div class="L4sr">${E(x.series||'')}${x.no?' · Match '+E(x.no):''}</div>${row(x.a,x.win)}${row(x.b,x.win)}<div class="L4rs">${E(x.res||'')}</div><div class="L4dt">📅 ${E(x.date||'')}${x.time?' · '+E(x.time):''}</div><button data-cl="1" data-s style="background:linear-gradient(135deg,#e8590c,#f08c00)">📋 View full scorecard</button><button data-cl="1" data-sh style="background:#1f9d57">📤 Share result (WhatsApp)</button><button data-cl="1" data-c style="background:#34498f">Close</button></div>`;
     o.querySelector('[data-sh]').onclick=()=>{ try{ if(window.__share104) window.__share104.done(x); }catch(e){} };
     o.querySelector('[data-c]').onclick=()=>o.remove();
-    o.querySelector('[data-s]').onclick=()=>{ o.remove(); try{ LV.open(x.id); }catch(e){} };
+    o.querySelector('[data-s]').onclick=()=>{ o.remove(); try{ __raise104(()=>LV.open(x.id)); }catch(e){} };
     document.body.appendChild(o);
     notify('🏁 Match complete: '+x.title, (x.res||''),'lv-done',true);
   }
