@@ -10941,6 +10941,21 @@ function ecsIoCard(title, onPdf, onImp, onPoster){
   c.querySelector('[data-e]').onclick = onPdf; c.querySelector('[data-i]').onclick = ()=> ecsPicker(onImp); return c;
 }
 
+
+/* ===== LIBFROMSERIES124: Teams library ko series ki squads se update ===== */
+function ecsLibFromSeries(){
+  const L=(root.seriesList||[]).filter(s=>s.teamIds&&s.teams);
+  if(!L.length){ alert('Koi series nahi mili.'); return; }
+  let s=L[0];
+  if(L.length>1){ const cur=L.find(x=>state&&x.id===state.id)||L[0]; const list=L.map((x,i)=>(i+1)+'. '+(x.name||('Series '+(x.seriesNumber||i+1)))+' ('+(x.matches||[]).filter(m=>m.status!=='setup').length+' matches)').join('\n'); const a=prompt('Kis series ki squads library mein lagani hain? Number likhein:\n\n'+list,String(L.indexOf(cur)+1)); if(a===null) return; const n=parseInt(a,10); if(!(n>=1&&n<=L.length)){ alert('Galat number.'); return; } s=L[n-1]; }
+  const plan=[]; ['A','B'].forEach(tk=>{ const lib=root.teamsLib.find(x=>x.id===s.teamIds[tk]); const T=s.teams[tk]; if(!lib||!T) return; const nw=new Set(T.players.map(p=>_rk(p.name))), old=new Set(lib.players.map(p=>_rk(p.name)));
+    plan.push({lib,T,out:lib.players.filter(p=>!nw.has(_rk(p.name))).map(p=>p.name),inn:T.players.filter(p=>!old.has(_rk(p.name))).map(p=>p.name)}); });
+  if(!plan.length){ alert('Is series ki teams library se juri nahi hain.'); return; }
+  const msg='"'+(s.name||'Series')+'" ki squads library mein lagayein?\n\n'+plan.map(x=>x.lib.name+' ('+x.T.players.length+' players)\n  + Aayenge: '+(x.inn.join(', ')||'-')+'\n  − Hatenge: '+(x.out.join(', ')||'-')).join('\n\n')+'\n\nHataye gaye players Players list mein mehfooz rahenge, sirf is team ki squad se nikal jayenge. Jo series chal rahi/ban chuki hain un par asar nahi hoga.';
+  if(!confirm(msg)) return;
+  plan.forEach(x=>{ x.lib.players=x.T.players.map(p=>({id:p.id,name:p.name})); x.lib.captainId=x.T.captainId||null; x.lib.vcId=x.T.vcId||null; });
+  try{ saveState(); }catch(e){} try{ render(); }catch(e){} try{ showToast('✅ Library squads update ho gayin'); }catch(e){}
+}
 /* ---------- Teams Manager (JSL style) ---------- */
 function renderTeamsMgr(){
   ecsInit();
@@ -10957,6 +10972,11 @@ function renderTeamsMgr(){
     };
     wrap.appendChild(c);
     wrap.appendChild(ecsIoCard('Sari teams / squads', ()=>{ if(!root.teamsLib.length){ alert('Export ke liye abhi kuch nahi.'); return; } ecsTeamPdf(root.teamsLib); }, ecsImportTeams, ()=>{ if(!root.teamsLib.length){ alert('Pehle teams banao.'); return; } ecsPosterOpen({kind:'teams', libIds:root.teamsLib.map(t=>t.id), title:'All Teams', sub:root.teamsLib.length+' teams'}); }));
+    if(typeof ecsLibFromSeries==='function' && (root.seriesList||[]).some(s=>s.teamIds)){
+      const sc=el(`<div class="card" style="border-color:var(--gold)"><div style="font-weight:800">🔄 Library ko kisi series ki squads se update karo</div><p class="muted" style="font-size:.75rem;margin:4px 0 8px;">Series ke andar jo squad changes huin (transfers, naye players, captain) wo yahan khud nahi aatin. Yahan se chuni hui series ki squads Teams library mein copy ho jati hain, taake nayi series wohi squads se shuru ho.</p><button class="btn gold" id="lfs">🔄 Series se Teams update karo</button></div>`);
+      sc.querySelector('#lfs').onclick=()=>ecsLibFromSeries();
+      wrap.appendChild(sc);
+    }
     if(!root.teamsLib.length) wrap.appendChild(el(`<div class="card muted">Abhi koi team nahi.</div>`));
     root.teamsLib.forEach(tm=>{
       const cap = tm.players.find(p=>p.id===tm.captainId), vc = tm.players.find(p=>p.id===tm.vcId);
