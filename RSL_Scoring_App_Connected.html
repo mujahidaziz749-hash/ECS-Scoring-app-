@@ -537,7 +537,7 @@ tr.unp td:nth-child(2){color:#ff8f8f;font-weight:700}
 .modal-overlay #pslots{max-height:150px;overflow:auto}
 .modal-overlay label.row input[type=checkbox]{flex:0 0 auto}
 .toast{z-index:300}
-</style><style id="ORG125">.iog{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 0}.iog>.b,.iog>.btn,.iog>label.btn{width:100%;margin:0!important;box-sizing:border-box;display:flex;align-items:center;justify-content:center;text-align:center;min-height:44px;line-height:1.25;white-space:normal}.iog>.wide2{grid-column:1/-1}.iog>.b.sm,.iog>.btn.small{min-height:40px}.iosec{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;opacity:.75;margin:12px 0 2px;font-weight:800}.iosec:first-child{margin-top:0}#clcard .row,.card .row:has(>#bx),.card .row:has(>button[data-e]){display:grid!important;grid-template-columns:1fr 1fr;gap:8px}#clcard .row>.btn,.card .row>#bx,.card .row>label.btn,.card .row>#bpw,.card .row>button[data-e],.card .row>button[data-po],.card .row>button[data-i]{width:100%;margin:0!important;box-sizing:border-box;display:flex;align-items:center;justify-content:center;text-align:center;min-height:44px;line-height:1.25;white-space:normal}#clcard .row>.btn:last-child:nth-child(odd){grid-column:1/-1}</style>
+</style><style id="ORG125">.iog{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 0}.iog>.b,.iog>.btn,.iog>label.btn{width:100%;margin:0!important;box-sizing:border-box;display:flex;align-items:center;justify-content:center;text-align:center;min-height:44px;line-height:1.25;white-space:normal}.iog>.wide2{grid-column:1/-1}.iog>.b.sm,.iog>.btn.small{min-height:40px}.iosec{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;opacity:.75;margin:12px 0 2px;font-weight:800}.iosec:first-child{margin-top:0}#clcard .row,.card .row:has(>#bx){display:grid!important;grid-template-columns:1fr 1fr;gap:8px}#clcard .row>.btn,.card .row>#bx,.card .row>label.btn,.card .row>#bpw{width:100%;margin:0!important;box-sizing:border-box;display:flex;align-items:center;justify-content:center;text-align:center;min-height:44px;line-height:1.25;white-space:normal}#clcard .row>.btn:last-child:nth-child(odd){grid-column:1/-1}</style>
 </head><body><div class="w" id="app"></div>
 <script>
 const K='rsl_v1';
@@ -4844,7 +4844,7 @@ setTimeout(()=>{try{if(canV())scan();else refresh()}catch(x){}},4500);
         const mk=id=>{ if(!id) return null; const g=fig(id); return Object.assign({n:PN(i.bat,id)},g); };
         const lab=x=>x.wk?['W','#e5484d']:x.ex==='wd'?['Wd','#e8a51a']:x.ex==='nb'?['Nb','#e8a51a']:(x.r||0)===0?['•','#5b6b82']:[String(x.r),x.r===4?'#2f7bf0':x.r===6?'#8a4be0':'#2fa866'];
         const lb=i.lb||0, ovMax=m.overs||0, total=ovMax*6, left=Math.max(0,total-lb), crr=lb?((i.runs||0)/(lb/6)).toFixed(2):'0.00';
-        let tgt=0,need=0,rrr='',f1=''; if(ai>=1){ const f=m.inns[0]; tgt=(f.runs||0)+1; need=Math.max(0,tgt-(i.runs||0)); rrr=left?(need/(left/6)).toFixed(2):'-'; f1=T_(f.bat)+' 1st innings: '+(f.runs||0)+'/'+(f.wk||0)+' ('+Math.floor((f.lb||0)/6)+'.'+((f.lb||0)%6)+' ov)'; }
+        let tgt=0,need=0,rrr='',f1='',f1d=null; if(ai>=1){ const f=m.inns[0]; tgt=(f.runs||0)+1; need=Math.max(0,tgt-(i.runs||0)); rrr=left?(need/(left/6)).toFixed(2):'-'; f1=T_(f.bat)+' 1st innings: '+(f.runs||0)+'/'+(f.wk||0)+' ('+Math.floor((f.lb||0)/6)+'.'+((f.lb||0)%6)+' ov)'; try{ const fb=f.balls||[], bm=new Map(), bw=new Map(); fb.forEach(x=>{ if(x.b&&x.ex!=='wd'){ const o=bm.get(x.b)||{r:0,b:0}; if(x.ex!=='nb') o.b++; if(x.ex!=='b'&&x.ex!=='lb') o.r+=x.r||0; bm.set(x.b,o); } if(x.w){ const o=bw.get(x.w)||{w:0,r:0}; if(x.ex==='wd'||x.ex==='nb') o.r+=(x.r||0)+(x.ex==='nb'?1:0); else if(x.ex!=='b'&&x.ex!=='lb') o.r+=x.r||0; if(x.wk&&x.wk!=='runout') o.w++; bw.set(x.w,o); } }); f1d={b:[...bm].map(([k,o])=>[PN(f.bat,k),o.r,o.b]).sort((p,q)=>q[1]-p[1]).slice(0,3),w:[...bw].map(([k,o])=>[PN(f.bowl,k),o.w,o.r]).sort((p,q)=>q[1]-p[1]||p[2]-q[2]).slice(0,3)}; }catch(e){} }
         const bowlFig=id=>{ let lg=0,rn=0,w=0; balls.forEach(x=>{ if(x.w!==id) return; if(x.ex!=='wd'&&x.ex!=='nb') lg++; if(x.ex==='wd'||x.ex==='nb') rn+=(x.r||0)+(x.ex==='nb'?1:0); else if(x.ex!=='b'&&x.ex!=='lb') rn+=x.r||0; if(x.wk&&x.wk!=='runout') w++; }); return Math.floor(lg/6)+'.'+(lg%6)+'-0-'+rn+'-'+w; };
         const career=id=>{ let r=0,b=0,n=0; db.matches.forEach(mm=>(mm.inns||[]).forEach(ii=>{ let fc=false; (ii.balls||[]).forEach(x=>{ if(x.b!==id||x.ex==='wd') return; fc=true; if(x.ex!=='b'&&x.ex!=='lb') r+=x.r||0; if(x.ex!=='nb') b++; }); if(fc) n++; })); return n?('Ab tak: '+r+' runs ('+b+' balls) · '+n+' innings'):'First batting'; };
         const careerB=id=>{ let w=0,rn=0,lg=0; db.matches.forEach(mm=>(mm.inns||[]).forEach(ii=>(ii.balls||[]).forEach(x=>{ if(x.w!==id) return; if(x.ex!=='wd'&&x.ex!=='nb') lg++; if(x.ex==='wd'||x.ex==='nb') rn+=(x.r||0)+(x.ex==='nb'?1:0); else if(x.ex!=='b'&&x.ex!=='lb') rn+=x.r||0; if(x.wk&&x.wk!=='runout') w++; }))); return lg?('Ab tak: '+w+' wickets · economy '+(rn/(lg/6)).toFixed(1)):'Pehli bowling'; };
@@ -4857,7 +4857,7 @@ setTimeout(()=>{try{if(canV())scan();else refresh()}catch(x){}},4500);
         const ro=i.out||[], rr=i.ret||[]; const lo=ro.length?ro[ro.length-1]:null, lr=rr.length?rr[rr.length-1]:null;
         return {id:m.id,v:2,status:'live',title:T_(m.a)+' vs '+T_(m.b),series:m.cat==='i'?'':info,cat,rd:(m.rd&&!['Match','League'].includes(m.rd))?m.rd:'',of:'',date:m.date||'',ground:m.venue||'',caps:(capR(m.a)&&capR(m.b))?(capR(m.a)+' · '+capR(m.b)):'',ib:balls.length,
           out:lo?{i:ai*100+ro.length,n:PN(i.bat,lo),how:hw(lo)}:null,rt:lr?{i:ai*100+rr.length,n:PN(i.bat,lr),why:'Retired (not out) — can return later',sb:0}:null,no:m.no||'',toss:m.toss?(T_(m.toss)+' won the toss · chose '+(m.dec==='bat'?'batting':'bowling')+''):'',
-          innL:ai===0?'1st INNINGS':'2nd INNINGS',bat:T_(i.bat),batCol:(T(i.bat)||{}).color||'#3d7bf5',r:i.runs||0,w:i.wk||0,ovs:Math.floor(lb/6)+'.'+(lb%6),max:ovMax,crr,tgt,need,left,rrr,f1,ext:ex,
+          innL:ai===0?'1st INNINGS':'2nd INNINGS',bat:T_(i.bat),batCol:(T(i.bat)||{}).color||'#3d7bf5',r:i.runs||0,w:i.wk||0,ovs:Math.floor(lb/6)+'.'+(lb%6),max:ovMax,crr,tgt,need,left,rrr,f1,f1d,ext:ex,
           st:mk(i.st),ns:mk(i.ns),bw:bid?{id:bid,n:PN(i.bowl,bid),fig:bowlFig(bid),p:careerB(bid)}:{id:'',n:'',fig:''},
           nb:nbid?{i:ai*100+used.length,n:PN(i.bat,nbid),p:career(nbid)}:null,ev,last:balls.filter(x=>x.ov===Math.floor(lb/6)&&(!bid||x.w===bid)).map(lab)}; }catch(e){ return null; } },
       completed(){ return db.matches.filter(m=>m.status==='completed').map(m=>rjDoneInfo(m)); },
@@ -5360,7 +5360,51 @@ window.__prevMatchTs=function(list){ let mx=0; (list||[]).forEach(x=>{ if(!x) re
     const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=(name||'Poster')+'.png'; document.body.appendChild(a); a.click(); a.remove();
     alert('Your phone could not open the share sheet with the image.\nThe image was saved and the message was copied — open WhatsApp, attach the image and paste the message.');
     window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank'); }
-  window.__share104={shareImage,caption,resolve:null,setTime,announce,done,link,fromHash,countdown,fmtDate,fmtTime};
+
+  /* ---------- v125: LIVE match share (har viewer kar sakta hai) ---------- */
+  function drawLive(j){
+    const [cv,x]=canvasBase(['#0b2a4a','#050d18']); x.textAlign='center';
+    pill(x,'🔴  LIVE NOW  •  '+APP,540,52,'#e5484d','#fff',36);
+    let y=196;
+    const info=[j.cat==='Tournament'?'Tournament':j.cat==='Individual Match'?'Individual Match':'Series',j.series,j.no?('Match '+j.no+(j.of?'/'+j.of:'')):'',j.rd].filter(Boolean).join('  ·  ');
+    x.fillStyle='#9fc4ff'; x.font='800 30px system-ui,sans-serif'; const il=wrapText(x,info.toUpperCase(),960).slice(0,2); il.forEach((l,k)=>x.fillText(l,540,y+k*38)); y+=il.length*38+26;
+    x.fillStyle='#fff'; x.font='900 60px system-ui,sans-serif'; const tl=wrapText(x,j.title||'',960).slice(0,2); tl.forEach((l,k)=>x.fillText(l,540,y+48+k*68)); y+=tl.length*68+52;
+    // score box
+    const col=j.batCol||'#2f7bf0'; const bh=j.tgt?330:290;
+    x.fillStyle='rgba(255,255,255,.09)'; rr(x,50,y,980,bh,30); x.fill(); x.fillStyle=col; rr(x,50,y,16,bh,8); x.fill();
+    x.textAlign='left'; x.fillStyle='#ffd45f'; x.font='800 30px system-ui,sans-serif'; x.fillText(j.innL||'',100,y+56);
+    x.fillStyle='#fff'; x.font='900 54px system-ui,sans-serif'; x.fillText(wrapText(x,String(j.bat||''),520)[0]||'',100,y+124);
+    x.textAlign='right'; x.fillStyle='#fff'; x.font='900 120px system-ui,sans-serif'; x.fillText(String(j.r)+'/'+String(j.w),1000,y+140);
+    x.font='700 36px system-ui,sans-serif'; x.fillStyle='#cfe0ff'; x.fillText('('+j.ovs+' / '+j.max+' ov)',1000,y+196);
+    x.textAlign='left'; x.font='700 34px system-ui,sans-serif'; x.fillStyle='#9fe3b5'; x.fillText('CRR '+j.crr+(j.tgt?('   ·   RRR '+j.rrr):''),100,y+196);
+    if(j.tgt){ x.textAlign='center'; x.fillStyle='#ffe9a8'; x.font='900 40px system-ui,sans-serif'; x.fillText(j.need>0?('Target '+j.tgt+'  —  need '+j.need+' from '+j.left+' balls'):'Target paar! 🎉',540,y+290); }
+    else { x.textAlign='center'; if(j.toss){ x.fillStyle='#cfe0ff'; x.font='600 28px system-ui,sans-serif'; x.fillText(wrapText(x,'🪙 '+j.toss,900)[0],540,y+256); } }
+    y+=bh+26; x.textAlign='center';
+    // 1st innings summary
+    if(j.f1){ const d=j.f1d; const bh2=d?250:110; x.fillStyle='rgba(255,212,95,.12)'; rr(x,50,y,980,bh2,26); x.fill();
+      x.fillStyle='#ffd45f'; x.font='900 36px system-ui,sans-serif'; x.fillText(wrapText(x,j.f1,920)[0],540,y+54);
+      if(d){ x.textAlign='left'; x.font='700 28px system-ui,sans-serif'; x.fillStyle='#fff';
+        (d.b||[]).slice(0,3).forEach((q,k)=>x.fillText('🏏 '+String(q[0]).slice(0,18)+'  '+q[1]+'('+q[2]+')',80,y+108+k*44));
+        x.textAlign='right'; (d.w||[]).slice(0,3).forEach((q,k)=>x.fillText('⚾ '+String(q[0]).slice(0,16)+'  '+q[1]+'/'+q[2],1000,y+108+k*44)); x.textAlign='center'; }
+      y+=bh2+22; }
+    // at the crease
+    const bt=[j.st,j.ns].filter(Boolean); if(bt.length&&y<1030){ x.textAlign='left'; x.font='800 32px system-ui,sans-serif';
+      bt.forEach((q,k)=>{ x.fillStyle=k===0?'#fff':'#cfe0ff'; x.fillText((k===0?'🏏 ':'      ')+String(q.n).slice(0,22)+(k===0?' *':''),80,y+40+k*46); x.textAlign='right'; x.fillText(q.r+' ('+q.b+')',1000,y+40+k*46); x.textAlign='left'; });
+      if(j.bw&&j.bw.n){ x.fillStyle='#9fe3b5'; x.fillText('⚾ '+String(j.bw.n).slice(0,22),80,y+40+bt.length*46); x.textAlign='right'; x.fillText(j.bw.fig||'',1000,y+40+bt.length*46); x.textAlign='left'; } }
+    x.textAlign='center'; x.fillStyle='#fff'; x.font='900 44px system-ui,sans-serif'; x.fillText('▶  Watch LIVE ball-by-ball',540,1245); x.font='600 28px system-ui,sans-serif'; x.fillStyle='#9fc4ff'; x.fillText('Open the link shared with this picture',540,1292);
+    return cv; }
+  function liveLink(j){ return base()+'#m='+encodeURIComponent(j.id)+(LS.g('sh104_tag')?'&s='+encodeURIComponent(LS.g('sh104_tag')):''); }
+  function captionLive(j){
+    const L=['🔴 *MATCH IS LIVE NOW!*','','🏏 *'+(j.title||'')+'*'];
+    const ser=[j.series,j.no?('Match '+j.no+(j.of?'/'+j.of:'')):'',j.rd].filter(Boolean).join(' · '); if(ser) L.push('🏆 '+ser);
+    if(j.ground) L.push('📍 '+j.ground);
+    L.push('📊 *'+(j.bat||'')+' '+j.r+'/'+j.w+'* ('+j.ovs+'/'+j.max+' ov)'+(j.innL?' · '+j.innL:''));
+    if(j.tgt) L.push('🎯 Target '+j.tgt+(j.need>0?' · need '+j.need+' from '+j.left+' balls':' · target paar!')); else if(j.f1) L.push('📌 '+j.f1);
+    if(j.tgt&&j.f1) L.push('📌 '+j.f1);
+    L.push('','👇 *To View Live Match click the link below* 👇',liveLink(j)); return L.join('\n'); }
+  async function liveShare(j){ try{ j=j||{}; if(!j.id){ alert('Abhi koi live match nahi.'); return; } if(!askBase()) return; const cv=drawLive(j);
+    await preview(cv,captionLive(j),'Live_'+String(j.title||'match').replace(/\W+/g,'_'),'📤 Share live match',()=>captionLive(j)); }catch(e){ alert('Share nahi khul saka: '+e.message); } }
+  window.__share104={live:liveShare,shareImage,caption,resolve:null,setTime,announce,done,link,fromHash,countdown,fmtDate,fmtTime};
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',fromHash); else fromHash();
 })();
 /* ===== SHARE104 END ===== */
@@ -5650,7 +5694,7 @@ async function chPdf(mid,obj){
 ${j.caps?`<div class="L4cp">${j.caps.split(' · ').map(x=>'<span>🧢 '+E(x)+' <small>(C)</small></span>').join('')}</div>`:''}
 <div class="L4mt"><span class="L4cat">${j.cat==='Tournament'?'🏆 TOURNAMENT':j.cat==='Individual Match'?'⚡ INDIVIDUAL':'📅 SERIES'}</span>${j.series?'<span class="L4sn">'+E(j.series)+'</span>':''}</div>
 <div class="L4mi">${[j.no?('Match '+E(j.no)+(j.of?'/'+E(j.of):'')):'',j.rd?E(j.rd):'',j.date?('📅 '+E(j.date)):'',j.ground?('📍 '+E(j.ground)):''].filter(Boolean).join(' · ')}</div></div>
-<div class="L4ac"><button data-cl="1" id="lvs">📋 Full scorecard</button>${chBtn()}</div>
+<div class="L4ac"><button data-cl="1" id="lvs">📋 Full scorecard</button>${chBtn()}<button data-cl="1" id="lvsh" title="Live match share karein">📤 Share</button></div>
 ${j.toss?`<div class="L4toss">🪙 ${E(j.toss)}</div>`:''}
 <div class="L4tm"><div><div class="L4lb">${E(j.innL||'')}</div><div class="L4nm">${E(j.bat)}</div></div><div class="L4big">${E(j.r)}/${E(j.w)}<small>(${E(j.ovs)}/${E(j.max)})</small></div></div>
 <div class="L4rt"><span>CRR <b>${E(j.crr)}</b></span>${j.tgt?`<span>RRR <b>${E(j.rrr)}</b></span><span>Target <b>${E(j.tgt)}</b></span>`:''}${j.ext?`<span>Extras <b>${E(j.ext)}</b></span>`:''}</div>
@@ -5662,7 +5706,7 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
     cd.innerHTML=body; fx.forEach(f=>cd.appendChild(f));
     cd.querySelector('#lvx').onclick=()=>{ dismissed[j.id]=1; closeBox(); drawChip(j); };
     const bb=cd.querySelector('#lvb'); if(bb) bb.onclick=toggleBell;
-    const jb=cd.querySelector('#lvj'); if(jb) jb.onclick=lvJoin; try{ chBind(cd,j); }catch(e){}
+    const jb=cd.querySelector('#lvj'); if(jb) jb.onclick=lvJoin; const shb=cd.querySelector('#lvsh'); if(shb) shb.onclick=()=>{ try{ window.__share104.live(j); }catch(e){ alert('Share nahi khul saka'); } }; try{ chBind(cd,j); }catch(e){}
     if(W.isAdm()) cd.querySelectorAll('.lvw').forEach(x=>{ x.classList.add('lva'); x.onclick=lvPanel; });
   }
   /* ---- live viewers count (eye + number) ---- */
