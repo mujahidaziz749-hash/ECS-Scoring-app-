@@ -1,7 +1,7 @@
 /* Cricket Apps - offline support (service worker).
    Pehli dafa net ke saath khulne par saari apps phone mein save ho jati hain;
    uske baad bina internet ke bhi khulti hain. Firebase/login ki requests ko ye chhoota nahi. */
-const V = 'cricket-v23';
+const V = 'cricket-v24';
 const CORE = [
   'index.html',
   'RSL_Scoring_App_Connected.html', 'JSL_Scoring_App_Connected.html', 'ECS_System_Connected.html',
@@ -32,14 +32,21 @@ self.addEventListener('activate', e => {
   })());
 });
 
+const sig = r => (r.headers.get('etag') || '') + '|' + (r.headers.get('last-modified') || '') + '|' + (r.headers.get('content-length') || '');
+async function tell() { for (const c of await self.clients.matchAll({ includeUncontrolled: true })) c.postMessage({ type: 'newver' }); }
 async function netFirst(req) {
   const c = await caches.open(V), k = key(req.url);
   const hit = await c.match(k);
-  const net = fetch(req).then(res => { if (res && res.ok) c.put(k, res.clone()); return res; });
+  let lost = false;   // net slow tha aur purani copy dikha di gayi
+  // 'no-cache': browser/GitHub ki 10-minute purani HTTP cache nahi, har dafa server se poochta hai
+  const net = fetch(req.url, { cache: 'no-cache' }).then(res => {
+    if (res && res.ok) { c.put(k, res.clone()); if (lost && hit && sig(hit) !== sig(res)) tell(); }
+    return res;
+  });
   if (!hit) { try { return await net; } catch (_) { const idx = await c.match(key('index.html')); return idx || Response.error(); } }
   net.catch(() => {});
-  // net slow ho to 2.5 second baad saved copy dikhao
-  return Promise.race([net.catch(() => hit), new Promise(r => setTimeout(() => r(hit), 2500))]);
+  // net slow ho to 2.5 second baad saved copy dikhao (aur naya aate hi page par "Refresh" ka banner aata hai)
+  return Promise.race([net.catch(() => hit), new Promise(r => setTimeout(() => { lost = true; r(hit); }, 2500))]);
 }
 async function cacheFirst(req) {
   const c = await caches.open(V), k = key(req.url);
