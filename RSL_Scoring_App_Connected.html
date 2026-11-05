@@ -537,7 +537,8 @@ tr.unp td:nth-child(2){color:#ff8f8f;font-weight:700}
 .modal-overlay #pslots{max-height:150px;overflow:auto}
 .modal-overlay label.row input[type=checkbox]{flex:0 0 auto}
 .toast{z-index:300}
-</style></head><body><div class="w" id="app"></div>
+</style><style id="ORG125">.iog{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 0}.iog>.b,.iog>.btn,.iog>label.btn{width:100%;margin:0!important;box-sizing:border-box;display:flex;align-items:center;justify-content:center;text-align:center;min-height:44px;line-height:1.25;white-space:normal}.iog>.wide2{grid-column:1/-1}.iog>.b.sm,.iog>.btn.small{min-height:40px}.iosec{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;opacity:.75;margin:12px 0 2px;font-weight:800}.iosec:first-child{margin-top:0}#clcard .row,.card .row:has(>#bx),.card .row:has(>button[data-e]){display:grid!important;grid-template-columns:1fr 1fr;gap:8px}#clcard .row>.btn,.card .row>#bx,.card .row>label.btn,.card .row>#bpw,.card .row>button[data-e],.card .row>button[data-po],.card .row>button[data-i]{width:100%;margin:0!important;box-sizing:border-box;display:flex;align-items:center;justify-content:center;text-align:center;min-height:44px;line-height:1.25;white-space:normal}#clcard .row>.btn:last-child:nth-child(odd){grid-column:1/-1}</style>
+</head><body><div class="w" id="app"></div>
 <script>
 const K='rsl_v1';
 const init=()=>({teams:[],tours:[],series:[],matches:[],entries:[],expenses:[],fees:{},rules:[],grounds:[],cur:null,reg:[],pl:[]});
@@ -571,7 +572,7 @@ async function clPull(manual){if(!CL||clBusy)return;clBusy=true;try{const r=awai
  else if(adm&&j.ts<(db._ts||0)){if(manual||SM==='auto'){await clPush()}else{clSt='✋ Is device ke badlao sync baaqi hain - Sync dabao'}}
  else{clSt=(adm?'✅ Sab sync hai (':'👁 Sab latest hai (')+new Date().toLocaleTimeString()+')';if(manual)toast('☁ Sab sync hai')}
 }catch(x){clSt='⚠ Cloud tak nahi pahunch saka (internet / URL check karo)';if(manual)toast(clSt,false)}clBusy=false;clUp()}
-function clCard(){const ad=isAdm();return `<div class="card"><h3 style="margin-top:0">☁ Cloud Sync</h3><div class="m">Data online save hota hai aur kisi bhi device par khul jata hai. <b>Admin</b> badal sakte hain, baaqi sab sirf <b>dekh</b> sakte hain.</div><div class="m" style="margin:6px 0"><b>Status:</b> <span id="clst">${e(clSt)}</span>${CL?'<br><b>Club:</b> '+e(CL.club)+'<br><b>Role:</b> '+(ad?'🟢 '+(window.roleWord?window.roleWord():'Admin')+' ('+e(AD.email)+')':'🟡 Viewer (sirf dekhna)'):''}</div>${CL?(ad?'<button class="b s" data-a="cao">🚪 Admin logout</button>':'<button class="b g" data-a="cal">🔐 Admin login</button>')+(ad?'<button class="b s" data-a="cmode">🔁 Sync tareeqa: '+(SM==='manual'?'✋ Manual (sirf Sync dabane par)':'⚡ Auto (khud)')+' - badlo</button>':'')+'<button class="b s" data-a="csync">🔄 Abhi sync karo</button><button class="b s" data-a="cshare">📋 Cloud code copy (doosre device ke liye)</button><button class="b s" data-a="coff">⏏ Cloud band karo</button>':'<button class="b g" data-a="cset">☁ Cloud connect karo</button>'}</div>`}
+function clCard(){const ad=isAdm();return `<div class="card"><h3 style="margin-top:0">☁ Cloud Sync</h3><div class="m">Data online save hota hai aur kisi bhi device par khul jata hai. <b>Admin</b> badal sakte hain, baaqi sab sirf <b>dekh</b> sakte hain.</div><div class="m" style="margin:6px 0"><b>Status:</b> <span id="clst">${e(clSt)}</span>${CL?'<br><b>Club:</b> '+e(CL.club)+'<br><b>Role:</b> '+(ad?'🟢 '+(window.roleWord?window.roleWord():'Admin')+' ('+e(AD.email)+')':'🟡 Viewer (sirf dekhna)'):''}</div>${CL?'<div class="iog">'+(ad?'<button class="b s" data-a="cao">🚪 Admin logout</button>':'<button class="b g" data-a="cal">🔐 Admin login</button>')+(ad?'<button class="b s" data-a="cmode">🔁 Sync tareeqa: '+(SM==='manual'?'✋ Manual (sirf Sync dabane par)':'⚡ Auto (khud)')+' - badlo</button>':'')+'<button class="b s" data-a="csync">🔄 Abhi sync karo</button><button class="b s" data-a="cshare">📋 Cloud code copy (doosre device ke liye)</button><button class="b s" data-a="coff">⏏ Cloud band karo</button></div>':'<div class="iog"><button class="b g wide2" data-a="cset">☁ Cloud connect karo</button></div>'}</div>`}
 function clConnect(url,club,key){url=(url||'').trim();club=(club||'').trim().replace(/[^\w-]/g,'');key=(key||'').trim();if(!/^https:\/\/[\w.-]+\.(firebaseio\.com|firebasedatabase\.app)\/?$/.test(url))return msgBox('Database URL sahi nahi. Jaise:\nhttps://mera-app-default-rtdb.firebaseio.com');if(!club)return msgBox('Club code likho (jaise RSL).');
  const nc={url:url.replace(/\/+$/,''),club,key};const old=CL;CL=nc;fetch(clUrl()).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(j=>{
   const fin=()=>{try{localStorage.setItem(CK,JSON.stringify(CL));localStorage.removeItem('rsl_cloud_off')}catch(x){}AD=null;try{localStorage.removeItem(AK)}catch(x){}_tok=null;clSt='✅ Connected (viewer)';go('data');toast('☁ Connected - abhi aap viewer hain. Badalne ke liye Admin login karo.')};
@@ -1277,10 +1278,7 @@ function importData(d){if(!d||!d.type)return msgBox('File pehchani nahi gayi.');
   msgBox(L.join('\n'));R()};
  if(d.type==='jsl_backup')cf('Poora data is backup se REPLACE kar dein?',run);else run()}
 V.data=()=>{const row=(k,t)=>`<div class="row" style="margin:4px 0"><span style="flex:3">${t}</span><button class="b g sm" data-a="dx" data-v="${k}|pdf" style="flex:1">🖨 PDF</button></div>`;
- return `<h2 style="margin-top:12px">💾 Import / Export</h2><div class="card"><h3 style="margin-top:0">Export (PDF)</h3><div class="m">Har PDF ke andar app ka data chhupa hota hai - wahi PDF wapas import ho sakti hai.</div>${row('t','🏆 Tournaments')}${row('s','📅 Series')}${row('i','⚡ Individual matches')}${row('tm','👥 Teams')}${row('pl','🧢 Players & lists')}${VW()?'':row('en','💰 Entries & kharche')}${row('ru','📜 Rules')}</div>
- <div class="card"><h3 style="margin-top:0">Import</h3><button class="b g" data-a="bi">⬆ PDF import</button><div class="m">Match, tournament, series, teams, players, entries, rules - koi bhi RSL PDF.</div></div>
- ${clCard()}<div class="card"><h3 style="margin-top:0">Full Backup / Restore</h3><div class="m">Poora data (sab kuch) ek JSON file mein - kabhi issue aaye to yahi bachata hai.</div><button class="b g" data-a="bx">⬇ Full Backup (JSON)</button><button class="b s" data-a="bi">⬆ Restore</button><button class="b s" data-a="chpw">🔑 Edit password</button></div>
- <div class="card" style="border-color:var(--r)"><h3 style="margin-top:0;color:#ff8f8f">Danger</h3><button class="b d" data-a="wipe">🗑 Sab data delete</button></div>`};
+ return `<h2 style="margin-top:12px">💾 Import / Export</h2>${clCard()}<div class="card"><h3 style="margin-top:0">💾 Full Backup / Restore</h3><div class="m">Poora data (sab kuch) ek JSON file mein - kabhi issue aaye to yahi bachata hai.</div><div class="iog"><button class="b g" data-a="bx">⬇ Full Backup (JSON)</button><button class="b s" data-a="bi">⬆ Restore</button><button class="b s wide2" data-a="chpw">🔑 Edit password</button></div></div><div class="card"><h3 style="margin-top:0">📄 Export — alag alag PDF</h3><div class="m">Har PDF ke andar app ka data chhupa hota hai - wahi PDF wapas import ho sakti hai.</div>${row('t','🏆 Tournaments')}${row('s','📅 Series')}${row('i','⚡ Individual matches')}${row('tm','👥 Teams')}${row('pl','🧢 Players & lists')}${VW()?'':row('en','💰 Entries & kharche')}${row('ru','📜 Rules')}</div><div class="card"><h3 style="margin-top:0">📥 Import — PDF se</h3><div class="iog"><button class="b g wide2" data-a="bi">⬆ PDF import</button></div><div class="m" style="margin-top:6px">Match, tournament, series, teams, players, entries, rules - koi bhi PDF.</div></div><div class="card" style="border-color:var(--r)"><h3 style="margin-top:0;color:#ff8f8f">Danger</h3><button class="b d" data-a="wipe">🗑 Sab data delete</button></div>`};
 A.dx=v=>{const[k,f]=v.split('|'),d=today();let L=[],pay,name,ttl;
  if(k==='t'||k==='s'){const C=k==='t'?db.tours:db.series;L=C.flatMap(c=>['# '+c.name,...db.matches.filter(m=>m.comp===c.id&&m.status==='completed').flatMap(mlines)]);pay={type:'jsl_bundle',parts:C.map(c=>cpay(c.id))};name=k==='t'?'RSL_Tournaments':'RSL_Series';ttl=k==='t'?'All Tournaments':'All Series'}
  else if(k==='i'){const ms=db.matches.filter(m=>m.cat==='i'&&m.status==='completed');L=ms.flatMap(mlines);pay={type:'jsl_bundle',parts:ms.map(mpay)};name='RSL_Individual_Matches';ttl='Individual Matches'}
@@ -4795,7 +4793,7 @@ window.gGuard={vault:gVault,me:myRights};
     extra+='<button class="b s" data-a="gme">ℹ️ Mere haq / Kis se kia hoga</button><button class="b s" data-a="gdev">📱 Device ka naam</button>';
     if(isOwner())extra+='<button class="b g" data-a="gadm">👥 Admin Management</button><button class="b g" data-a="gsess">📱 Logged-in Devices</button><button class="b s" data-a="glog">📜 Admin Record</button><button class="b s" data-a="gbk">💾 Cloud Backups</button><button class="b s" data-a="grules">🔐 Firebase Rules</button>'}
   if(isOwner())extra+='<button class="b s" data-a="gsafe">📖 Safety features kya hain?</button>';
-  if(canV())extra+='<button class="b g" data-a="gvault">🛟 Matches Recovery (sab admins)</button>';if(canV()&&CL)extra+='<button class="b g" data-a="lvv">📊 Viewers (live watchers)</button><button class="b g" data-a="lvc">💬 Match Chats (PDF / delete)</button>';
+  if(canV())extra+='<button class="b g" data-a="gvault">🛟 Matches Recovery (sab admins)</button>';if(canV()&&CL)extra+='<button class="b g" data-a="lvv">📊 Viewers (live watchers)</button><button class="b g" data-a="lvc">💬 Match Chats (PDF / delete)</button><button class="b g" data-a="lvd">🎨 Live Designs (popup / chat / PDF)</button>';
   if(extra)h=h.replace(/<\/div>$/,extra+'</div>')}catch(x){}return h}}
 /* ---- MATCH-WISE AUTO MERGE (do phones ke alag matches DONO bachte hain) ---- */
 const midScore=()=>view==='play';
@@ -5415,13 +5413,29 @@ window.__prevMatchTs=function(list){ let mx=0; (list||[]).forEach(x=>{ if(!x) re
 #lv104 .L4hc .L4mi{margin-top:4px;font-size:.68rem;opacity:.78;font-weight:600}
 #lv104 .L4ac{display:flex;gap:8px;margin-top:8px}#lv104 .L4ac button{flex:1;border:0;border-radius:12px;padding:9px 6px;font-weight:800;font-size:.78rem;color:#fff;background:#26376e;cursor:pointer;position:relative}#lv104 .L4ac #lvc.lvun{background:#1f7a4d}#lv104 .L4ac #lvc b{position:absolute;top:-6px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:#ff3b3b;color:#fff;font-size:.68rem;line-height:18px;text-align:center;padding:0 4px}#lv104 .L4ac #lvc b:empty{display:none}
 #lv104.chat{flex-direction:column;justify-content:flex-start;align-items:center;gap:8px;padding:8px}#lv104.chat .L4cd{flex:none;max-height:44vh}
-#lv104 .chp{display:flex;flex-direction:column;width:100%;max-width:410px;flex:1;min-height:0;background:#0d1733;border:1px solid #3c57b0;border-radius:18px;padding:8px;box-shadow:0 18px 50px #000c;color:#eef3ff}
-#lv104 .chh{display:flex;align-items:center;gap:8px;font-size:.86rem}#lv104 .chh .chn{flex:1;font-size:.68rem;opacity:.65}#lv104 .chh button{border:0;border-radius:10px;padding:6px 10px;font-weight:800;font-size:.72rem;background:#26376e;color:#fff}
+#lv104 .chp{--cb:#0d1733;--cbd:#3c57b0;--cf:#eef3ff;--cm:#1b2a58;--cme:#1f6b46;--cmf:#fff;--ci:#0b1428;--cib:#3a5190;--cbt:#26376e;--cbf:#fff;--ct:#142048;--cnl:72%;--cac:#ffd48a;display:flex;flex-direction:column;width:100%;max-width:410px;flex:1;min-height:0;background:var(--cb);border:1px solid var(--cbd);border-radius:18px;padding:8px;box-shadow:0 18px 50px #000c;color:var(--cf)}
+#lv104 .chp[data-ct="1"]{--cb:#0b141a;--cbd:#1f3b33;--cf:#e9edef;--cm:#202c33;--cme:#005c4b;--ci:#202c33;--cib:#2a3942;--cbt:#2a3942;--ct:#111b21}
+#lv104 .chp[data-ct="2"]{--cb:#ffffff;--cbd:#c9d6f2;--cf:#14213d;--cm:#eef2ff;--cme:#d9f7e6;--cmf:#14213d;--ci:#f3f6ff;--cib:#b7c6ec;--cbt:#e3e9fb;--cbf:#1b2a58;--ct:#f3f6ff;--cnl:34%;--cac:#b45309}
+#lv104 .chp[data-ct="3"]{--cb:#1c0f3b;--cbd:#6d3bb0;--cf:#f3eaff;--cm:#34205f;--cme:#5a2d9c;--ci:#140a2b;--cib:#6d3bb0;--cbt:#3d2570;--ct:#281650}
+#lv104 .chp[data-ct="4"]{--cb:#0b0b0b;--cbd:#8a6d1f;--cf:#fff4d6;--cm:#1f1b10;--cme:#4a3a12;--ci:#141108;--cib:#8a6d1f;--cbt:#3a2f10;--ct:#17130a;--cac:#ffd45f}
+#lv104 .chp[data-ct="5"]{--cb:#fff0f6;--cbd:#f3a9c8;--cf:#3b1a2a;--cm:#ffffff;--cme:#ffd1e5;--cmf:#3b1a2a;--ci:#ffffff;--cib:#f0a5c4;--cbt:#f9c8dc;--cbf:#5a1a38;--ct:#ffe6f0;--cnl:34%;--cac:#b4235f}
+#lv104 .chh{display:flex;align-items:center;gap:8px;font-size:.86rem}#lv104 .chh .chn{flex:1;font-size:.68rem;opacity:.65}#lv104 .chh button{border:0;border-radius:10px;padding:6px 10px;font-weight:800;font-size:.72rem;background:var(--cbt);color:var(--cbf)}
 #lv104 .chl{flex:1;min-height:90px;overflow:auto;margin:6px 0;padding:2px 2px}#lv104 .che{text-align:center;opacity:.6;font-size:.8rem;padding:18px 8px}
-#lv104 .chm{display:flex;margin:4px 0}#lv104 .chm.me{justify-content:flex-end}#lv104 .chb{max-width:82%;background:#1b2a58;border-radius:14px 14px 14px 4px;padding:6px 10px;font-size:.84rem;line-height:1.35;word-break:break-word;position:relative}#lv104 .chm.me .chb{background:#1f6b46;border-radius:14px 14px 4px 14px}
-#lv104 .chnm{display:block;font-size:.66rem;font-weight:800;margin-bottom:1px}#lv104 .chb small{display:block;text-align:right;font-size:.58rem;opacity:.55;margin-top:2px}#lv104 .chst{font-size:2rem;display:block;line-height:1.1}#lv104 .chsl{font-weight:900;font-size:.8rem;color:#ffd48a}#lv104 .chb i{position:absolute;top:-6px;left:-6px;background:#8a2a2a;color:#fff;border-radius:50%;width:18px;height:18px;line-height:18px;text-align:center;font-size:.6rem;font-style:normal;cursor:pointer}
-#lv104 .cht{background:#142048;border-radius:12px;padding:6px;margin-bottom:6px;display:none;max-height:21vh;overflow:auto}#lv104 .cht>button{display:inline-flex;flex-direction:column;align-items:center;width:23%;margin:1%;border:0;border-radius:10px;background:#1f2e63;color:#fff;padding:5px 2px}#lv104 .cht>button span{font-size:1.5rem}#lv104 .cht>button small{font-size:.56rem;opacity:.85}#lv104 .che2{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}#lv104 .che2 button{border:0;background:#1f2e63;border-radius:8px;font-size:1.2rem;padding:3px 7px}
-#lv104 .chw{display:flex;gap:6px;align-items:center}#lv104 .chw input{flex:1;min-width:0;padding:10px;border-radius:12px;border:1px solid #3a5190;background:#0b1428;color:#fff;font-size:1rem}#lv104 .chw button{border:0;border-radius:12px;padding:9px 12px;font-size:1.1rem;background:#26376e;color:#fff}#lv104 .chw #chg{background:#1f7a4d}#lv104 .chy{font-size:.62rem;opacity:.55;margin-top:4px;text-align:center}
+#lv104 .chm{display:flex;margin:4px 0}#lv104 .chm.me{justify-content:flex-end}#lv104 .chb{max-width:82%;background:var(--cm);color:var(--cmf);border-radius:14px 14px 14px 4px;border-left:4px solid hsl(var(--h,210) 80% 58%);padding:6px 10px;font-size:.84rem;line-height:1.35;word-break:break-word;position:relative}#lv104 .chm.me .chb{background:var(--cme);border-radius:14px 14px 4px 14px;border-left:0;border-right:4px solid hsl(var(--h,210) 80% 58%)}
+#lv104 .chnm{display:block;font-size:.68rem;font-weight:900;margin-bottom:1px;color:hsl(var(--h,210) 85% var(--cnl))}#lv104 .chnm.chan{opacity:.6;font-weight:700}#lv104 .chb small{display:block;text-align:right;font-size:.58rem;opacity:.6;margin-top:2px}#lv104 .chst{font-size:2rem;display:block;line-height:1.1}#lv104 .chsl{font-weight:900;font-size:.8rem;color:var(--cac)}#lv104 .chb i{position:absolute;top:-6px;left:-6px;background:#8a2a2a;color:#fff;border-radius:50%;width:18px;height:18px;line-height:18px;text-align:center;font-size:.6rem;font-style:normal;cursor:pointer}
+#lv104 .chvp{border:0;border-radius:999px;padding:7px 12px;font-weight:800;font-size:.8rem;background:var(--cbt);color:var(--cbf);cursor:pointer}#lv104 .chvp.on{background:#1f7a4d;color:#fff}
+#lv104 .cht{background:var(--ct);border-radius:12px;padding:6px;margin-bottom:6px;display:none;max-height:21vh;overflow:auto}#lv104 .cht>button{display:inline-flex;flex-direction:column;align-items:center;width:23%;margin:1%;border:0;border-radius:10px;background:var(--cbt);color:var(--cbf);padding:5px 2px}#lv104 .cht>button span{font-size:1.5rem}#lv104 .cht>button small{font-size:.56rem;opacity:.85}#lv104 .che2{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}#lv104 .che2 button{border:0;background:var(--cbt);border-radius:8px;font-size:1.2rem;padding:3px 7px}
+#lv104 .chrec{display:none;align-items:center;gap:8px;background:var(--ct);border-radius:12px;padding:8px 10px;margin-bottom:2px}#lv104 .chrec .chrd{flex:1;color:#ff5a5a;font-size:.9rem}#lv104 .chrec button{border:0;border-radius:10px;padding:8px 12px;font-weight:800;background:#1f7a4d;color:#fff}#lv104 .chrec #chrx{background:#8a2a2a}
+#lv104 .chw{display:flex;gap:6px;align-items:center}#lv104 .chw input{flex:1;min-width:0;padding:10px;border-radius:12px;border:1px solid var(--cib);background:var(--ci);color:var(--cf);font-size:1rem}#lv104 .chw button{border:0;border-radius:12px;padding:9px 12px;font-size:1.1rem;background:var(--cbt);color:var(--cbf)}#lv104 .chw #chg{background:#1f7a4d;color:#fff}#lv104 .chy{font-size:.62rem;opacity:.55;margin-top:4px;text-align:center}
+#lv104[data-th="1"] .L4cd{border-color:#7b4fd0;background:radial-gradient(120% 60% at 15% 0%,#7b3fb5 0%,transparent 60%),radial-gradient(90% 50% at 100% 100%,#c0398f 0%,transparent 60%),linear-gradient(170deg,#2a1457,#12082b)}
+#lv104[data-th="2"] .L4cd{border-color:#b58a1f;background:radial-gradient(120% 60% at 15% 0%,#6b5416 0%,transparent 60%),radial-gradient(90% 50% at 100% 100%,#3a2f10 0%,transparent 60%),linear-gradient(170deg,#161208,#050505)}
+#lv104[data-th="3"] .L4cd{border-color:#2f9e66;background:radial-gradient(120% 60% at 15% 0%,#1f8a55 0%,transparent 60%),radial-gradient(90% 50% at 100% 100%,#0e5a43 0%,transparent 60%),linear-gradient(170deg,#0a3a24,#04180f)}
+#lv104[data-th="4"] .L4cd{border-color:#d9593a;background:radial-gradient(120% 60% at 15% 0%,#c2410c 0%,transparent 60%),radial-gradient(90% 50% at 100% 100%,#8a1f4f 0%,transparent 60%),linear-gradient(170deg,#3b0f26,#1a0712)}
+#lv104[data-th="5"] .L4cd{border-color:#1b8aa6;background:radial-gradient(120% 60% at 15% 0%,#0e8a8a 0%,transparent 60%),radial-gradient(90% 50% at 100% 100%,#1b4f9c 0%,transparent 60%),linear-gradient(170deg,#073a5c,#04182b)}
+#lv104[data-th="6"]{color:#14213d}#lv104[data-th="6"] .L4cd{border-color:#b7c6ec;box-shadow:0 18px 50px #0007;background:linear-gradient(170deg,#ffffff,#e8f0ff)}
+#lv104[data-th="6"] .lvw{background:#e3e9fb;color:#1b2a58}#lv104[data-th="6"] .L4vs i,#lv104[data-th="6"] .L4tm .L4lb,#lv104[data-th="6"] .L4rt span b,#lv104[data-th="6"] .L4pc .L4hd,#lv104[data-th="6"] .L4ic .L4rs{color:#b45309}
+#lv104[data-th="6"] .L4hc{background:#eef3ff;border-color:#d3ddf5}#lv104[data-th="6"] .L4rt span{background:#eef2ff;border-color:#c9d6f2}#lv104[data-th="6"] .L4ch{background:#fff1d6;border-color:#f0c97a;color:#7a4a00}
+#lv104[data-th="6"] td{border-top-color:#dfe5f5}#lv104[data-th="6"] td.L4on{color:#0a7a3a}#lv104[data-th="6"] .L4toss,#lv104[data-th="6"] .L4f1{color:#2b3a63}
 #lv104 .L4toss{font-size:.68rem;opacity:.8;text-align:center;margin:5px 0 2px}
 #lv104 .L4tm{display:flex;align-items:flex-end;justify-content:space-between;margin-top:8px}
 #lv104 .L4tm .L4nm{font-size:.82rem;font-weight:800;opacity:.95}#lv104 .L4tm .L4lb{font-size:.62rem;font-weight:800;color:#ffd48a;letter-spacing:.05em}
@@ -5475,18 +5489,30 @@ window.__prevMatchTs=function(list){ let mx=0; (list||[]).forEach(x=>{ if(!x) re
 
   function bell(){ return typeof Notification!=='undefined'?`<button data-cl="1" id="lvb" title="Notifications on/off">${bellTxt()}</button>`:''; }
   function batRow(p,on){ if(!p||!p.n) return ''; return `<tr><td class="${on?'L4on':''}">${on?'🏏 ':''}${E(p.n)}${on?'*':''}</td><td>${E(p.r)}</td><td>${E(p.b)}</td><td>${E(p.f)}</td><td>${E(p.s)}</td><td>${E(p.sr)}</td></tr>`; }
-/* ===== CHAT122 START: live chat + full scorecard button ===== */
+/* ===== CHAT124 START: live chat (naam lazmi, voice, themes) + full scorecard button ===== */
 const CHS=[['six','🏏','SIX!'],['four','🔥','FOUR!'],['out','☝️','OUT!'],['clap','👏','Well played'],['lol','😂','Haha'],['wow','😮','Wow!'],['sad','😢','Unlucky'],['love','❤️','Love it'],['win','🏆','Champions'],['hund','💯','100%'],['miss','🥲','Miss you all'],['hi','👋','Salaam!'],['bowl','🎯','Great bowling'],['catch','🙌','What a catch!']];
 const CHE=['😀','😂','😍','👍','🙏','🔥','🏏','👏','😮','😢','❤️','💪'];
-const CH={mid:null,es:null,msgs:{},open:false,lastSend:0,j:null,tray:0,seen:'',meta:''};
+const POPT=[['Classic Navy','linear-gradient(135deg,#1c2b6b,#0e5a43)'],['Royal Purple','linear-gradient(135deg,#3b1d73,#7b3fb5)'],['Midnight Gold','linear-gradient(135deg,#0d0d0d,#3a2f10)'],['Forest Green','linear-gradient(135deg,#0b3b24,#1f7a4d)'],['Sunset Red','linear-gradient(135deg,#5a1230,#c2410c)'],['Ocean Teal','linear-gradient(135deg,#06395a,#0e8a8a)'],['Clean White','linear-gradient(135deg,#ffffff,#dfe8ff)']];
+const CHTT=[['Match Navy','linear-gradient(135deg,#0d1733,#1b2a58)'],['WhatsApp Dark','linear-gradient(135deg,#0b141a,#1f6b46)'],['Clean White','linear-gradient(135deg,#ffffff,#e6efff)'],['Royal Purple','linear-gradient(135deg,#25104a,#6d3bb0)'],['Black Gold','linear-gradient(135deg,#0b0b0b,#4a3a12)'],['Soft Pink','linear-gradient(135deg,#fff0f6,#ffd6e7)']];
+const PDFT=[
+ {n:'Colorful Night',sw:'linear-gradient(135deg,#1d2b6b,#0f7a55)',h1:'#1d2b6b',h2:'#0f7a55',hf:'#fff',ha:'#ffd45f',pg:'#f5f7ff',bub:['#e6eeff','#e3f7ec','#fff3d9','#fde7ef','#efe7ff'],fg:'#16213e',nl:32,tm:'#7b84a3'},
+ {n:'Clean White',sw:'linear-gradient(135deg,#ffffff,#d9e4ff)',h1:'#ffffff',h2:'#ffffff',hf:'#14213d',ha:'#d9480f',pg:'#ffffff',bub:['#ffffff'],fg:'#14213d',nl:34,tm:'#6b7488',line:1},
+ {n:'Dark Midnight',sw:'linear-gradient(135deg,#0b1020,#27325f)',h1:'#0b1020',h2:'#27325f',hf:'#fff',ha:'#ffd45f',pg:'#101830',bub:['#1b2a58','#173a36','#3a2a18','#2f1d3d'],fg:'#eef3ff',nl:72,tm:'#9aa6cc'},
+ {n:'Fresh Green',sw:'linear-gradient(135deg,#0b3b24,#2fa56a)',h1:'#0b3b24',h2:'#2fa56a',hf:'#fff',ha:'#d9ffb8',pg:'#f1fbf4',bub:['#dff5e7','#fff6d6','#e3efff'],fg:'#12311f',nl:28,tm:'#5f7d6b'},
+ {n:'Sunset',sw:'linear-gradient(135deg,#5a1230,#f08c00)',h1:'#5a1230',h2:'#f08c00',hf:'#fff',ha:'#ffe29a',pg:'#fff7ee',bub:['#ffe8d6','#ffe3ec','#fff3c9'],fg:'#3b1a10',nl:30,tm:'#8a6a58'},
+ {n:'Royal Purple',sw:'linear-gradient(135deg,#25104a,#7b3fb5)',h1:'#25104a',h2:'#7b3fb5',hf:'#fff',ha:'#ffd45f',pg:'#f7f1ff',bub:['#ece2ff','#ffe9f3','#e3f0ff'],fg:'#24123f',nl:34,tm:'#7a6a99'}];
+const TH=()=>{ try{ return (typeof root!=='undefined'&&root&&root.lvTheme)||(typeof db!=='undefined'&&db&&db.lvTheme)||{}; }catch(e){ return {}; } };
+const THSAVE=()=>{ try{ if(typeof saveState==='function') saveState(); else if(typeof save==='function') save(); }catch(e){} };
+const CH={mid:null,es:null,msgs:{},open:false,lastSend:0,j:null,meta:'',seen:'',audio:null,vc:{},rec:null};
 const chOK=k=>k&&k!=='_m';
 const chMid=j=>String(j.id).replace(/[^A-Za-z0-9_-]/g,'_');
 const chUrl=mid=>vbase()+'_chat/'+encodeURIComponent(mid||CH.mid);
+const vcUrl=(mid,k)=>vbase()+'_voice/'+encodeURIComponent(mid||CH.mid)+(k?'/'+encodeURIComponent(k):'');
 const chKeys=()=>Object.keys(CH.msgs).filter(chOK).sort();
 const chUn=()=>chKeys().filter(k=>k>CH.seen&&(CH.msgs[k]||{}).v!==VID).length;
 const chBtn=()=>{ const n=CH.open?0:chUn(); return '<button data-cl="1" id="lvc"'+(n>0?' class="lvun"':'')+'>💬 Chat<b>'+(n>0?(n>9?'9+':n):'')+'</b></button>'; };
 function chBadge(){ const b=box&&box.querySelector('#lvc'); if(!b) return; const n=CH.open?0:chUn(); b.classList.toggle('lvun',n>0); const s=b.querySelector('b'); if(s) s.textContent=n>0?(n>9?'9+':String(n)):''; }
-function chStop(){ try{ CH.es&&CH.es.close(); }catch(e){} CH.es=null; CH.mid=null; CH.msgs={}; CH.meta=''; if(CH.open) chClose(); }
+function chStop(){ try{ CH.es&&CH.es.close(); }catch(e){} CH.es=null; CH.mid=null; CH.msgs={}; CH.meta=''; try{ vcStopPlay(); vcCancel(); }catch(e){} if(CH.open) chClose(); }
 function chStart(j){ if(!CL||typeof EventSource==='undefined') return; const mid=chMid(j); CH.j=j; if(CH.mid===mid&&CH.es) return; chStop(); CH.mid=mid; CH.seen=ls.g('lv_cs_'+mid)||'';
   try{ const es=new EventSource(chUrl()+'.json'); CH.es=es;
     const h=patch=>ev=>{ try{ const d=JSON.parse(ev.data), p=d.path||'/', v=d.data;
@@ -5495,43 +5521,87 @@ function chStart(j){ if(!CL||typeof EventSource==='undefined') return; const mid
       chChanged(); }catch(e){} };
     es.addEventListener('put',h(0)); es.addEventListener('patch',h(1)); }catch(e){} }
 function chChanged(){ if(CH.open){ chDraw(); const ks=chKeys(); CH.seen=ks[ks.length-1]||CH.seen; ls.s('lv_cs_'+CH.mid,CH.seen); } else chBadge(); }
-const chHue=s=>{ let h=0; for(const c of String(s)) h=(h*31+c.charCodeAt(0))%360; return h; };
+const chPal=n=>(n*47+8)%360;
+function chColors(ks){ const map={}; let c=0; ks.forEach(k=>{ const m=CH.msgs[k]||{}; const id=m.n?('n:'+m.n.toLowerCase()):('v:'+(m.v||'')); if(!(id in map)) map[id]=chPal(c++); }); return map; }
 const chTm=t=>{ try{ return new Date(t).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } };
-function chDraw(first){ const p=box&&box.querySelector('.chp'); if(!p) return; const L=p.querySelector('.chl'); const near=L.scrollHeight-L.scrollTop-L.clientHeight<90; const adm=W.isAdm(); const ks=chKeys().slice(-200);
+const vcFmt=s=>'0:'+String(Math.max(0,Math.round(s||0))).padStart(2,'0');
+function chDraw(first){ const p=box&&box.querySelector('.chp'); if(!p) return; const L=p.querySelector('.chl'); const near=L.scrollHeight-L.scrollTop-L.clientHeight<90; const adm=W.isAdm(); const ks=chKeys().slice(-200); const col=chColors(chKeys());
   p.querySelector('.chn').textContent=ks.length?(ks.length+' messages'):'';
-  L.innerHTML=ks.map(k=>{ const m=CH.msgs[k]||{}; const st=m.s&&CHS.find(x=>x[0]===m.s); const mine=m.v===VID;
-    const body=st?'<span class="chst">'+st[1]+'</span><span class="chsl">'+E(st[2])+'</span>':'<span>'+E(m.x||'')+'</span>';
-    return '<div class="chm'+(mine?' me':'')+'"><div class="chb">'+(m.n?'<span class="chnm" style="color:hsl('+chHue(m.n)+' 85% 72%)">'+E(m.n)+(m.f?' ✔':'')+'</span>':'')+body+'<small>'+chTm(m.t)+'</small>'+(adm?'<i data-del="'+E(k)+'" title="Delete">✕</i>':'')+'</div></div>'; }).join('')||'<div class="che">Abhi koi message nahi — pehla message aap bhejein! 👋</div>';
+  L.innerHTML=ks.map(k=>{ const m=CH.msgs[k]||{}; const st=m.s&&CHS.find(x=>x[0]===m.s); const mine=m.v===VID; const id=m.n?('n:'+m.n.toLowerCase()):('v:'+(m.v||'')); const h=col[id]==null?210:col[id];
+    const body=m.vc?'<button class="chvp" data-cl="1" data-vp="'+E(k)+'" data-sec="'+(+m.vc||0)+'">▶ 🎤 Voice · '+vcFmt(m.vc)+'</button>':(st?'<span class="chst">'+st[1]+'</span><span class="chsl">'+E(st[2])+'</span>':'<span>'+E(m.x||'')+'</span>');
+    return '<div class="chm'+(mine?' me':'')+'" style="--h:'+h+'"><div class="chb">'+(m.n?'<span class="chnm">'+E(m.n)+(m.f?' ✔':'')+'</span>':'<span class="chnm chan">Viewer</span>')+body+'<small>'+chTm(m.t)+'</small>'+(adm?'<i data-del="'+E(k)+'" title="Delete">✕</i>':'')+'</div></div>'; }).join('')||'<div class="che">Abhi koi message nahi — pehla message aap bhejein! 👋</div>';
   if(first||near||ks.length&&CH.msgs[ks[ks.length-1]].v===VID) L.scrollTop=L.scrollHeight;
-  L.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>chDel(b.dataset.del)); }
-async function chDel(k){ try{ const t=encodeURIComponent(await clToken()); const r=await fetch(chUrl()+'/'+encodeURIComponent(k)+'.json?auth='+t,{method:'DELETE'}); if(!r.ok) throw 0; delete CH.msgs[k]; chDraw(); }catch(e){ lvToast('Message delete nahi hua',false); } }
-function chOpen(){ if(!box||CH.open||!CH.mid) return; CH.open=true; box.classList.add('chat');
+  L.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>chDel(b.dataset.del)); L.querySelectorAll('[data-vp]').forEach(b=>b.onclick=()=>vcPlay(b)); }
+async function chDel(k){ try{ const t=encodeURIComponent(await clToken()); const r=await fetch(chUrl()+'/'+encodeURIComponent(k)+'.json?auth='+t,{method:'DELETE'}); if(!r.ok) throw 0; fetch(vcUrl(null,k)+'.json?auth='+t,{method:'DELETE'}).catch(()=>{}); delete CH.msgs[k]; chDraw(); }catch(e){ lvToast('Message delete nahi hua',false); } }
+/* ---- naam lazmi ---- */
+function chNeedName(cb){ if(myNm().n){ cb(); return; } if(document.getElementById('chname')) return;
+  const o=document.createElement('div'); o.id='chname'; o.setAttribute('data-cl','1'); o.style.cssText='position:fixed;inset:0;z-index:2147483300;background:rgba(3,8,22,.88);display:flex;align-items:center;justify-content:center;padding:12px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif';
+  o.innerHTML='<div style="width:100%;max-width:380px;background:#101c33;color:#eef3ff;border-radius:18px;padding:16px"><h3 style="margin:0 0 6px">💬 Chat mein aane ke liye naam likhein</h3><div style="font-size:.8rem;opacity:.85;margin-bottom:8px">Aapka naam har message ke saath dikhega. Yahi naam is device ka naam bhi ban jayega.</div><input id="chn1" autocomplete="off" maxlength="30" placeholder="Aapka naam" style="'+inp+'"><div id="chnm" style="font-size:.82rem;min-height:1.2em;color:#ff9a9a"></div><button data-cl="1" id="chns" style="'+btn('#1f7a4d')+'">✅ Chat kholo</button><button data-cl="1" id="chnc" style="'+btn('#3a3f55')+'">Cancel</button><button data-cl="1" id="chnk" style="'+btn('#26376e')+'">Member code hai?</button></div>';
+  document.body.appendChild(o); const q=s=>o.querySelector(s); setTimeout(()=>q('#chn1').focus(),50);
+  q('#chnc').onclick=()=>o.remove(); q('#chnk').onclick=()=>{ o.remove(); lvJoin(); };
+  const go=()=>{ const nm=q('#chn1').value.trim(); if(nm.length<2){ q('#chnm').textContent='Kam az kam 2 harf ka naam likhein.'; return; } ls.s('lv_name',nm.slice(0,30)); ls.s('lv_vname',''); try{ if(!W.isAdm()&&typeof DVK!=='undefined') localStorage.setItem(DVK,nm.slice(0,40)); }catch(e){} vwLast=0; document.querySelectorAll('#lvj').forEach(b=>{ b.textContent='👤✓'; }); o.remove(); lvToast('✅ Welcome, '+nm.slice(0,30)+'!'); cb(); };
+  q('#chns').onclick=go; q('#chn1').onkeydown=e=>{ if(e.key==='Enter') go(); }; }
+function chOpen(){ if(!box||CH.open||!CH.mid) return; if(!myNm().n){ chNeedName(()=>chOpen()); return; } CH.open=true; box.classList.add('chat');
   if(!box._ch){ box._ch=1; box.addEventListener('click',e=>{ if(CH.open&&e.target===box) e.stopImmediatePropagation(); },true); }
-  const p=document.createElement('div'); p.className='chp';
-  p.innerHTML='<div class="chh"><b>💬 Live Chat</b><span class="chn"></span><button data-cl="1" id="chm">▾ Minimize</button></div><div class="chl"></div><div class="cht" style="display:none">'+CHS.map(x=>'<button data-cl="1" data-st="'+x[0]+'"><span>'+x[1]+'</span><small>'+E(x[2])+'</small></button>').join('')+'<div class="che2">'+CHE.map(e=>'<button data-cl="1" data-em="'+e+'">'+e+'</button>').join('')+'</div></div><div class="chw"><button data-cl="1" id="chs" title="Stickers">😊</button><input id="chi" maxlength="300" placeholder="Message likho…" autocomplete="off" enterkeyhint="send"><button data-cl="1" id="chg">➤</button></div><div class="chy"></div>';
-  box.appendChild(p);
-  const nm=myNm().n; p.querySelector('.chy').textContent=nm?('Aap: '+nm):'Aap anonymous hain — naam ke liye upar 👤 dabayein';
-  p.querySelector('#chm').onclick=chClose; const inp=p.querySelector('#chi');
-  const send=async()=>{ const v=inp.value.trim(); if(!v) return; const ok=await chSend({x:v.slice(0,300)}); if(ok) inp.value=''; };
-  p.querySelector('#chg').onclick=send; inp.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); send(); } };
+  const p=document.createElement('div'); p.className='chp'; p.setAttribute('data-ct',String(chTheme()));
+  const mic=(navigator.mediaDevices&&window.MediaRecorder&&window.isSecureContext)?'<button data-cl="1" id="chv" title="Voice message (max 15 sec)">🎤</button>':'';
+  p.innerHTML='<div class="chh"><b>💬 Live Chat</b><span class="chn"></span><button data-cl="1" id="chm">▾ Minimize</button></div><div class="chl"></div><div class="cht" style="display:none">'+CHS.map(x=>'<button data-cl="1" data-st="'+x[0]+'"><span>'+x[1]+'</span><small>'+E(x[2])+'</small></button>').join('')+'<div class="che2">'+CHE.map(e=>'<button data-cl="1" data-em="'+e+'">'+e+'</button>').join('')+'</div></div><div class="chrec" style="display:none"><b class="chrd">● 0:00 / 0:15</b><button data-cl="1" id="chrs">⏹ Bhejo</button><button data-cl="1" id="chrx">✕</button></div><div class="chw"><button data-cl="1" id="chs" title="Stickers">😊</button><input id="chi" maxlength="300" placeholder="Message likho…" autocomplete="off" enterkeyhint="send">'+mic+'<button data-cl="1" id="chg">➤</button></div><div class="chy"></div>';
+  box.appendChild(p); p.querySelector('.chy').textContent='Aap: '+myNm().n;
+  p.querySelector('#chm').onclick=chClose; const inp_=p.querySelector('#chi');
+  const send=async()=>{ const v=inp_.value.trim(); if(!v) return; const ok=await chSend({x:v.slice(0,300)}); if(ok) inp_.value=''; };
+  p.querySelector('#chg').onclick=send; inp_.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); send(); } };
   const tr=p.querySelector('.cht'); p.querySelector('#chs').onclick=()=>{ tr.style.display=tr.style.display==='none'?'block':'none'; };
   tr.querySelectorAll('[data-st]').forEach(b=>b.onclick=async()=>{ if(await chSend({s:b.dataset.st})) tr.style.display='none'; });
-  tr.querySelectorAll('[data-em]').forEach(b=>b.onclick=()=>{ inp.value+=b.dataset.em; inp.focus(); });
+  tr.querySelectorAll('[data-em]').forEach(b=>b.onclick=()=>{ inp_.value+=b.dataset.em; inp_.focus(); });
+  const mb=p.querySelector('#chv'); if(mb) mb.onclick=vcStart; p.querySelector('#chrs').onclick=()=>vcStop(true); p.querySelector('#chrx').onclick=vcCancel;
   chDraw(true); const ks=chKeys(); CH.seen=ks[ks.length-1]||CH.seen; ls.s('lv_cs_'+CH.mid,CH.seen); chBadge(); }
-function chClose(){ CH.open=false; if(box){ box.classList.remove('chat'); const p=box.querySelector('.chp'); if(p) p.remove(); } chBadge(); }
-async function chSend(o){ if(!CH.mid) return false; const now=Date.now(); if(now-CH.lastSend<2000){ lvToast('Thora ruk kar bhejein',false); return false; }
+function chClose(){ vcCancel(); vcStopPlay(); CH.open=false; if(box){ box.classList.remove('chat'); const p=box.querySelector('.chp'); if(p) p.remove(); } chBadge(); }
+async function chSend(o){ if(!CH.mid) return false; if(!myNm().n){ chNeedName(()=>{}); return false; } const now=Date.now(); if(now-CH.lastSend<2000){ lvToast('Thora ruk kar bhejein',false); return false; }
   CH.lastSend=now; const me=myNm(); const k=String(now).padStart(14,'0')+VID.slice(0,3);
-  const body=Object.assign({t:{'.sv':'timestamp'},v:VID},me.n?{n:me.n.slice(0,30)}:{},me.vf?{f:1}:{},o);
+  const body=Object.assign({t:{'.sv':'timestamp'},v:VID,n:me.n.slice(0,30)},me.vf?{f:1}:{},o);
   try{ if(CH.meta!==CH.mid&&CH.j){ CH.meta=CH.mid; fetch(chUrl()+'/_m.json',{method:'PUT',body:JSON.stringify({ti:String(CH.j.title||'').slice(0,100),sr:String(CH.j.series||'').slice(0,60),d:String(CH.j.date||'').slice(0,20),no:String(CH.j.no||'').slice(0,6)})}).catch(()=>{}); }
+    if(o.vc&&o._d){ const rv=await fetch(vcUrl(null,k)+'.json',{method:'PUT',body:JSON.stringify({d:o._d,s:o.vc})}); if(!rv.ok) throw new Error(String(rv.status)); delete body._d; }
     const r=await fetch(chUrl()+'/'+k+'.json',{method:'PUT',body:JSON.stringify(body)}); if(!r.ok) throw new Error(String(r.status));
     CH.msgs[k]=Object.assign({},body,{t:now}); chChanged(); return true;
   }catch(e){ lvToast((e&&(e.message==='401'||e.message==='403'))?'Chat abhi on nahi hui — Owner ko Firebase rules update karni hain':'Message nahi gaya — internet check karein',false); return false; } }
+/* ---- voice (sirf live match tak, max 15 sec) ---- */
+function vcCancel(){ const r=CH.rec; if(!r) return; CH.rec=null; clearInterval(r.iv); try{ r.mr.onstop=null; if(r.mr.state!=='inactive') r.mr.stop(); }catch(e){} try{ r.st.getTracks().forEach(t=>t.stop()); }catch(e){} const p=box&&box.querySelector('.chp'); if(p){ p.querySelector('.chrec').style.display='none'; p.querySelector('.chw').style.display=''; } }
+async function vcStart(){ if(CH.rec) return; if(!CH.mid) return; let st; try{ st=await navigator.mediaDevices.getUserMedia({audio:true}); }catch(e){ lvToast('Mic ki ijazat nahi mili — browser settings mein allow karein',false); return; }
+  const types=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus']; const mt=types.find(t=>{ try{ return MediaRecorder.isTypeSupported(t); }catch(e){ return false; } })||'';
+  let mr; try{ mr=new MediaRecorder(st,Object.assign({audioBitsPerSecond:20000},mt?{mimeType:mt}:{})); }catch(e){ try{ st.getTracks().forEach(t=>t.stop()); }catch(x){} lvToast('Is phone par voice record nahi ho sakti',false); return; }
+  const chunks=[]; const r={mr,st,t0:Date.now(),iv:0,send:false}; CH.rec=r; mr.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
+  mr.onstop=async()=>{ clearInterval(r.iv); try{ st.getTracks().forEach(t=>t.stop()); }catch(e){} const doSend=r.send; if(CH.rec===r) CH.rec=null; const p=box&&box.querySelector('.chp'); if(p){ p.querySelector('.chrec').style.display='none'; p.querySelector('.chw').style.display=''; } if(!doSend) return;
+    const secs=Math.min(15,Math.max(1,Math.round((Date.now()-r.t0)/1000))); const blob=new Blob(chunks,{type:mr.mimeType||mt||'audio/webm'});
+    const d=await new Promise(res=>{ const f=new FileReader(); f.onload=()=>res(f.result); f.onerror=()=>res(null); f.readAsDataURL(blob); });
+    if(!d){ lvToast('Voice save nahi hui',false); return; } if(d.length>140000){ lvToast('Voice bahut bari hai — chhoti record karein',false); return; }
+    await chSend({vc:secs,_d:d}); };
+  const p=box&&box.querySelector('.chp'); if(p){ p.querySelector('.chw').style.display='none'; const rc=p.querySelector('.chrec'); rc.style.display='flex'; const rd=rc.querySelector('.chrd'); r.iv=setInterval(()=>{ const s=Math.floor((Date.now()-r.t0)/1000); rd.textContent='● '+vcFmt(s)+' / 0:15'; if(s>=15) vcStop(true); },200); }
+  mr.start(); }
+function vcStop(send){ const r=CH.rec; if(!r) return; r.send=!!send; try{ if(r.mr.state!=='inactive') r.mr.stop(); }catch(e){} }
+function vcStopPlay(){ try{ if(CH.audio){ CH.audio.pause(); CH.audio=null; } }catch(e){} document.querySelectorAll('.chvp.on').forEach(b=>{ b.classList.remove('on'); b.textContent='▶ 🎤 Voice · '+vcFmt(b.dataset.sec); }); }
+async function vcPlay(b){ const k=b.dataset.vp; if(b.classList.contains('on')){ vcStopPlay(); return; } vcStopPlay(); b.textContent='⏳ …';
+  let v=CH.vc[k]; if(!v){ try{ const r=await fetch(vcUrl(null,k)+'.json'); v=r.ok?await r.json():null; }catch(e){ v=null; } if(v&&v.d) CH.vc[k]=v; }
+  if(!v||!v.d){ b.textContent='🚫 Voice delete ho chuki hai'; return; }
+  try{ const a=new Audio(v.d); CH.audio=a; b.classList.add('on'); b.textContent='⏸ Chal rahi hai…'; a.onended=()=>vcStopPlay(); a.onerror=()=>{ vcStopPlay(); lvToast('Voice chal nahi saki',false); }; await a.play(); }catch(e){ vcStopPlay(); lvToast('Voice chal nahi saki',false); } }
+const vcClean=async mid=>{ try{ const t=encodeURIComponent(await clToken()); await fetch(vcUrl(mid)+'.json?auth='+t,{method:'DELETE'}); }catch(e){} };
+const vcDone={};
+function vcAutoClean(j){ try{ if(!j||j.status!=='done'||!W.isAdm()||!CL) return; const mid=chMid(j); if(vcDone[mid]) return; vcDone[mid]=1; vcClean(mid); }catch(e){} }
+/* ---- themes ---- */
+const popTheme=j=>{ const t=(j&&j.th&&j.th.p!=null)?j.th.p:TH().p; return (+t>=0&&+t<POPT.length)?+t:0; };
+function chTheme(){ const t=(CH.j&&CH.j.th&&CH.j.th.c!=null)?CH.j.th.c:TH().c; return (+t>=0&&+t<CHTT.length)?+t:0; }
+function chBind(cd,j){ const s=cd.querySelector('#lvs'); if(s) s.onclick=()=>chScore(j); const c=cd.querySelector('#lvc'); if(c) c.onclick=()=>CH.open?chClose():chOpen(); CH.j=j; if(box){ box.dataset.th=String(popTheme(j)); const p=box.querySelector('.chp'); if(p) p.setAttribute('data-ct',String(chTheme())); } chStart(j); chBadge(); }
 async function chScore(j){ try{ if(typeof clPull==='function'&&!W.isAdm()) await Promise.race([clPull(false),new Promise(r=>setTimeout(r,6000))]); }catch(e){}
   let st='none'; try{ st=LV.stat?LV.stat(j.id):'none'; }catch(e){}
   if(st==='none'){ lvToast('Scorecard abhi sync nahi hua — thori der baad dobara dabayein',false); return; }
   try{ window.__raise104?window.__raise104(()=>LV.open(j.id)):LV.open(j.id); }catch(e){} }
-function chBind(cd,j){ const s=cd.querySelector('#lvs'); if(s) s.onclick=()=>chScore(j); const c=cd.querySelector('#lvc'); if(c) c.onclick=()=>CH.open?chClose():chOpen(); CH.j=j; chStart(j); chBadge(); }
 setInterval(()=>{ if(!box&&CH.es) chStop(); },4000);
+/* ---- Owner / Admin: Live Designs ---- */
+function lvDesign(){ if(!W.isAdm()){ lvToast('Only the Owner / Admin can change designs',false); return; }
+  const o=ovl('🎨 Live Designs'), bd=o.querySelector('[data-bd]'); const cur=TH();
+  const rows=[['p','Live popup design',POPT.map(x=>[x[0],x[1]])],['c','Live chat design',CHTT.map(x=>[x[0],x[1]])],['f','Chat PDF design',PDFT.map(x=>[x.n,x.sw])]];
+  const draw=()=>{ const c=TH(); bd.innerHTML='<div style="font-size:.78rem;opacity:.8;margin-bottom:6px">Jo design chunenge wo sab viewers ko dikhega (agle live update par). Default pehla wala hai.</div>'+rows.map(r=>'<div style="margin:12px 0 4px;font-weight:800">'+r[1]+'</div><div style="display:flex;flex-wrap:wrap;gap:8px">'+r[2].map((x,i)=>{ const on=(+c[r[0]]||0)===i; return '<button data-cl="1" data-k="'+r[0]+'" data-i="'+i+'" style="width:30%;min-width:96px;border:2px solid '+(on?'#ffd48a':'#3a5190')+';border-radius:12px;background:#0b1428;color:#fff;padding:6px;font-size:.7rem"><div style="height:34px;border-radius:8px;background:'+x[1]+';border:1px solid #ffffff33;margin-bottom:4px"></div>'+(on?'✔ ':'')+E(x[0])+'</button>'; }).join('')+'</div>').join('');
+    bd.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{ const o2=(typeof root!=='undefined'&&root)||db; o2.lvTheme=Object.assign({},o2.lvTheme||{},{[b.dataset.k]:+b.dataset.i}); THSAVE(); if(box&&b.dataset.k==='p') box.dataset.th=String(+b.dataset.i); const p=box&&box.querySelector('.chp'); if(p&&b.dataset.k==='c') p.setAttribute('data-ct',b.dataset.i); draw(); lvToast('✅ Design save ho gaya'); }); };
+  draw(); }
 /* ---- Owner / Admin: har match ki chat, PDF, delete ---- */
 async function chatAdmin(){
   if(!CL||!W.isAdm()){ lvToast('Only the Owner / Admin can open this',false); return; }
@@ -5539,31 +5609,37 @@ async function chatAdmin(){
   const load=async()=>{ try{ const r=await fetch(vbase()+'_chat.json'); all=r.ok?(await r.json()):null; }catch(e){ bd.textContent='Internet problem — dobara try karein.'; return false; } return true; };
   const draw=()=>{ const ids=Object.keys(all||{}); if(!ids.length){ bd.innerHTML='<div style="padding:10px;opacity:.8">Abhi kisi match ki chat save nahi hai.</div>'; return; }
     const info=ids.map(id=>{ const ks=Object.keys(all[id]||{}).filter(chOK).sort(); return {id,m:(all[id]||{})._m||{},n:ks.length,last:ks.length?(+ks[ks.length-1].slice(0,14)):0}; }).sort((a,b)=>b.last-a.last);
-    bd.innerHTML='<div style="font-size:.76rem;opacity:.75;margin-bottom:6px">Har match ki chat Firebase mein save hai. PDF banayein ya delete karke jagah khali karein.</div>'+info.map(x=>'<div style="background:#0b1428;border-radius:14px;padding:10px;margin:8px 0"><div style="font-weight:800">'+E(x.m.ti||x.id)+'</div><div style="font-size:.74rem;opacity:.7">'+E([x.m.sr,x.m.no?'Match '+x.m.no:'',x.m.d].filter(Boolean).join(' · '))+'</div><div style="font-size:.78rem;margin:3px 0 7px">'+x.n+' messages'+(x.last?' · aakhri: '+E(new Date(x.last).toLocaleString()):'')+'</div><button data-cl="1" data-pdf="'+E(x.id)+'" style="border:0;border-radius:10px;padding:8px 12px;font-weight:800;background:#1f7a4d;color:#fff;margin-right:6px">📄 PDF</button><button data-cl="1" data-rm="'+E(x.id)+'" style="border:0;border-radius:10px;padding:8px 12px;font-weight:800;background:#8a2a2a;color:#fff">🗑 Delete chat</button></div>').join('')+'<button data-cl="1" id="chold" style="border:0;border-radius:10px;padding:9px 12px;font-weight:800;background:#7a5a1f;color:#fff;margin-top:6px">🧹 30 din se purani chats delete</button>';
+    bd.innerHTML='<div style="font-size:.76rem;opacity:.75;margin-bottom:6px">Har match ki chat save hai (voice match khatam hote hi khud delete ho jati hai). PDF banayein ya delete karein.</div>'+info.map(x=>'<div style="background:#0b1428;border-radius:14px;padding:10px;margin:8px 0"><div style="font-weight:800">'+E(x.m.ti||x.id)+'</div><div style="font-size:.74rem;opacity:.7">'+E([x.m.sr,x.m.no?'Match '+x.m.no:'',x.m.d].filter(Boolean).join(' · '))+'</div><div style="font-size:.78rem;margin:3px 0 7px">'+x.n+' messages'+(x.last?' · aakhri: '+E(new Date(x.last).toLocaleString()):'')+'</div><button data-cl="1" data-pdf="'+E(x.id)+'" style="border:0;border-radius:10px;padding:8px 12px;font-weight:800;background:#1f7a4d;color:#fff;margin-right:6px">📄 PDF</button><button data-cl="1" data-rm="'+E(x.id)+'" style="border:0;border-radius:10px;padding:8px 12px;font-weight:800;background:#8a2a2a;color:#fff">🗑 Delete chat</button></div>').join('')+'<button data-cl="1" id="chold" style="border:0;border-radius:10px;padding:9px 12px;font-weight:800;background:#7a5a1f;color:#fff;margin:6px 6px 0 0">🧹 30 din se purani chats delete</button><button data-cl="1" id="chvo" style="border:0;border-radius:10px;padding:9px 12px;font-weight:800;background:#5a3a7a;color:#fff;margin-top:6px">🎤 Saari voices delete</button>';
     bd.querySelectorAll('[data-pdf]').forEach(b=>b.onclick=()=>chPdf(b.dataset.pdf,all[b.dataset.pdf]));
-    bd.querySelectorAll('[data-rm]').forEach(b=>b.onclick=async()=>{ if(!confirm('Is match ki poori chat delete karein? Wapas nahi aayegi.')) return; try{ const t=encodeURIComponent(await clToken()); const r=await fetch(vbase()+'_chat/'+encodeURIComponent(b.dataset.rm)+'.json?auth='+t,{method:'DELETE'}); if(!r.ok) throw 0; delete all[b.dataset.rm]; draw(); lvToast('Chat delete ho gayi'); }catch(e){ lvToast('Delete nahi hua — admin login check karein',false); } });
-    const old=bd.querySelector('#chold'); if(old) old.onclick=async()=>{ const lim=Date.now()-30*864e5, tg=info.filter(x=>x.last&&x.last<lim); if(!tg.length){ lvToast('30 din se purani koi chat nahi'); return; } if(!confirm(tg.length+' purani chat(s) delete karein?')) return; try{ const t=encodeURIComponent(await clToken()); for(const x of tg){ await fetch(vbase()+'_chat/'+encodeURIComponent(x.id)+'.json?auth='+t,{method:'DELETE'}); delete all[x.id]; } draw(); lvToast('Purani chats delete ho gayin'); }catch(e){ lvToast('Delete nahi hua',false); } };
+    bd.querySelectorAll('[data-rm]').forEach(b=>b.onclick=async()=>{ if(!confirm('Is match ki poori chat delete karein? Wapas nahi aayegi.')) return; try{ const t=encodeURIComponent(await clToken()); const r=await fetch(vbase()+'_chat/'+encodeURIComponent(b.dataset.rm)+'.json?auth='+t,{method:'DELETE'}); if(!r.ok) throw 0; fetch(vcUrl(b.dataset.rm)+'.json?auth='+t,{method:'DELETE'}).catch(()=>{}); delete all[b.dataset.rm]; draw(); lvToast('Chat delete ho gayi'); }catch(e){ lvToast('Delete nahi hua — admin login check karein',false); } });
+    const old=bd.querySelector('#chold'); if(old) old.onclick=async()=>{ const lim=Date.now()-30*864e5, tg=info.filter(x=>x.last&&x.last<lim); if(!tg.length){ lvToast('30 din se purani koi chat nahi'); return; } if(!confirm(tg.length+' purani chat(s) delete karein?')) return; try{ const t=encodeURIComponent(await clToken()); for(const x of tg){ await fetch(vbase()+'_chat/'+encodeURIComponent(x.id)+'.json?auth='+t,{method:'DELETE'}); fetch(vcUrl(x.id)+'.json?auth='+t,{method:'DELETE'}).catch(()=>{}); delete all[x.id]; } draw(); lvToast('Purani chats delete ho gayin'); }catch(e){ lvToast('Delete nahi hua',false); } };
+    const vo=bd.querySelector('#chvo'); if(vo) vo.onclick=async()=>{ if(!confirm('Saare matches ki voice messages delete karein? (Text chat rahegi)')) return; try{ const t=encodeURIComponent(await clToken()); const r=await fetch(vbase()+'_voice.json?auth='+t,{method:'DELETE'}); if(!r.ok) throw 0; lvToast('Saari voices delete ho gayin'); }catch(e){ lvToast('Delete nahi hua',false); } };
   };
   if(await load()) draw();
 }
 async function chPdf(mid,obj){
   const J=window.jspdf; if(!J){ lvToast('PDF library load nahi hui — internet check karein',false); return; }
+  const T=PDFT[(+TH().f>=0&&+TH().f<PDFT.length)?+TH().f:0];
   const meta=(obj&&obj._m)||{}, ks=Object.keys(obj||{}).filter(chOK).sort(), msgs=ks.map(k=>obj[k]); const W0=1190,H0=1684,P=60; const pages=[]; let cv,x,y;
+  const col={}; let ci=0; msgs.forEach(m=>{ const id=m.n?('n:'+m.n.toLowerCase()):('v:'+(m.v||'')); if(!(id in col)) col[id]=chPal(ci++); });
   const fit=(t,px,py,mw,sz)=>{ let s=sz; do{ x.font='900 '+s+'px system-ui,sans-serif'; s-=2; }while(x.measureText(t).width>mw&&s>22); x.fillText(t,px,py); };
   const wrap=(t,mw)=>{ const out=[]; String(t).split('\n').forEach(par=>{ let l=''; par.split(/(\s+)/).forEach(w=>{ if(x.measureText(l+w).width>mw&&l){ out.push(l.trimEnd()); l=w.trimStart(); } else l+=w; if(x.measureText(l).width>mw){ out.push(l); l=''; } }); out.push(l.trimEnd()); }); return out.filter((s,i)=>s||i===0); };
-  const newPage=first=>{ cv=document.createElement('canvas'); cv.width=W0; cv.height=H0; x=cv.getContext('2d'); x.fillStyle='#f5f7ff'; x.fillRect(0,0,W0,H0); const g=x.createLinearGradient(0,0,W0,0); g.addColorStop(0,'#1d2b6b'); g.addColorStop(1,'#0f7a55'); x.fillStyle=g;
-    if(first){ x.fillRect(0,0,W0,260); x.fillStyle='#ffd45f'; x.font='800 30px system-ui,sans-serif'; x.fillText('💬  LIVE CHAT',P,72); x.fillStyle='#fff'; fit(meta.ti||mid,P,140,W0-2*P,54); x.font='600 28px system-ui,sans-serif'; x.fillText([meta.sr,meta.no?'Match '+meta.no:'',meta.d].filter(Boolean).join('  ·  '),P,192); const t0=msgs.length&&msgs[0].t?new Date(msgs[0].t).toLocaleString():''; x.fillText(msgs.length+' messages'+(t0?'  ·  '+t0:''),P,235); y=310; }
-    else{ x.fillRect(0,0,W0,80); x.fillStyle='#fff'; x.font='800 28px system-ui,sans-serif'; x.fillText('💬 '+String(meta.ti||mid).slice(0,70),P,52); y=120; } pages.push(cv); };
-  newPage(true); const cols=['#e6eeff','#e3f7ec','#fff3d9','#fde7ef','#efe7ff'];
-  if(!msgs.length){ x.fillStyle='#555'; x.font='600 32px system-ui,sans-serif'; x.fillText('Is match mein koi message nahi.',P,y+20); }
-  msgs.forEach(m=>{ const st=m.s&&CHS.find(q=>q[0]===m.s); const txt=st?(st[1]+'  '+st[2]):String(m.x||''); x.font='500 30px system-ui,sans-serif'; const ls_=wrap(txt,W0-2*P-80); const h=ls_.length*40+(m.n?44:22)+34;
-    if(y+h>H0-90) newPage(false); const hue=m.n?chHue(m.n):210; x.fillStyle=cols[hue%cols.length]; x.beginPath(); x.roundRect?x.roundRect(P,y,W0-2*P,h,18):x.rect(P,y,W0-2*P,h); x.fill(); x.fillStyle='hsl('+hue+' 65% 45%)'; x.fillRect(P,y+8,8,h-16);
-    let yy=y+(m.n?40:34); if(m.n){ x.fillStyle='hsl('+hue+' 70% 32%)'; x.font='800 28px system-ui,sans-serif'; x.fillText(m.n+(m.f?' ✔':''),P+30,yy); yy+=44; }
-    x.fillStyle='#16213e'; x.font=(st?'700 ':'500 ')+'30px system-ui,sans-serif'; ls_.forEach(l=>{ x.fillText(l,P+30,yy); yy+=40; }); x.fillStyle='#7b84a3'; x.font='500 22px system-ui,sans-serif'; const tt=m.t?new Date(m.t).toLocaleString([], {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):''; x.fillText(tt,W0-P-20-x.measureText(tt).width,y+h-14); y+=h+16; });
-  pages.forEach((c,i)=>{ const g=c.getContext('2d'); g.fillStyle='#7b84a3'; g.font='500 22px system-ui,sans-serif'; g.fillText('Page '+(i+1)+' / '+pages.length,W0/2-40,H0-30); });
+  const hdr=(h)=>{ const g=x.createLinearGradient(0,0,W0,0); g.addColorStop(0,T.h1); g.addColorStop(1,T.h2); x.fillStyle=g; x.fillRect(0,0,W0,h); };
+  const newPage=first=>{ cv=document.createElement('canvas'); cv.width=W0; cv.height=H0; x=cv.getContext('2d'); x.fillStyle=T.pg; x.fillRect(0,0,W0,H0);
+    if(first){ hdr(260); if(T.line){ x.fillStyle=T.ha; x.fillRect(0,252,W0,8); } x.fillStyle=T.ha; x.font='800 30px system-ui,sans-serif'; x.fillText('💬  LIVE CHAT',P,72); x.fillStyle=T.hf; fit(meta.ti||mid,P,140,W0-2*P,54); x.font='600 28px system-ui,sans-serif'; x.fillText([meta.sr,meta.no?'Match '+meta.no:'',meta.d].filter(Boolean).join('  ·  '),P,192); const t0=msgs.length&&msgs[0].t?new Date(msgs[0].t).toLocaleString():''; x.fillText(msgs.length+' messages'+(t0?'  ·  '+t0:''),P,235); y=310; }
+    else{ hdr(80); if(T.line){ x.fillStyle=T.ha; x.fillRect(0,76,W0,4); } x.fillStyle=T.hf; x.font='800 28px system-ui,sans-serif'; x.fillText('💬 '+String(meta.ti||mid).slice(0,70),P,52); y=120; } pages.push(cv); };
+  newPage(true);
+  if(!msgs.length){ x.fillStyle=T.fg; x.font='600 32px system-ui,sans-serif'; x.fillText('Is match mein koi message nahi.',P,y+20); }
+  msgs.forEach(m=>{ const st=m.s&&CHS.find(q=>q[0]===m.s); const txt=m.vc?('🎤  Voice message ('+vcFmt(m.vc)+')'):(st?(st[1]+'  '+st[2]):String(m.x||'')); x.font='500 30px system-ui,sans-serif'; const ls_=wrap(txt,W0-2*P-80); const h=ls_.length*40+(m.n?44:22)+34;
+    if(y+h>H0-90) newPage(false); const id=m.n?('n:'+m.n.toLowerCase()):('v:'+(m.v||'')); const hue=col[id]==null?210:col[id]; const bi=Math.abs(hue/47|0)%T.bub.length;
+    x.fillStyle=T.bub[bi]; x.beginPath(); x.roundRect?x.roundRect(P,y,W0-2*P,h,18):x.rect(P,y,W0-2*P,h); x.fill(); if(T.line){ x.strokeStyle='#dfe4f1'; x.lineWidth=2; x.stroke(); }
+    x.fillStyle='hsl('+hue+' 70% '+(T.nl>50?60:50)+'%)'; x.fillRect(P,y+8,8,h-16);
+    let yy=y+(m.n?40:34); if(m.n){ x.fillStyle='hsl('+hue+' 75% '+T.nl+'%)'; x.font='800 28px system-ui,sans-serif'; x.fillText(m.n+(m.f?' ✔':''),P+30,yy); yy+=44; }
+    x.fillStyle=T.fg; x.font=((st||m.vc)?'700 ':'500 ')+'30px system-ui,sans-serif'; ls_.forEach(l=>{ x.fillText(l,P+30,yy); yy+=40; }); x.fillStyle=T.tm; x.font='500 22px system-ui,sans-serif'; const tt=m.t?new Date(m.t).toLocaleString([], {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):''; x.fillText(tt,W0-P-20-x.measureText(tt).width,y+h-14); y+=h+16; });
+  pages.forEach((c,i)=>{ const g=c.getContext('2d'); g.fillStyle=T.tm; g.font='500 22px system-ui,sans-serif'; g.fillText('Page '+(i+1)+' / '+pages.length,W0/2-40,H0-30); });
   try{ const doc=new J.jsPDF({unit:'pt',format:'a4'}); pages.forEach((c,i)=>{ if(i) doc.addPage(); doc.addImage(c.toDataURL('image/jpeg',.88),'JPEG',0,0,595.28,841.89); }); doc.save('Chat_'+String(meta.ti||mid).replace(/[^A-Za-z0-9]+/g,'_').slice(0,50)+'.pdf'); lvToast('✅ PDF ban gayi'); }catch(e){ lvToast('PDF nahi bani: '+e.message,false); }
 }
-/* ===== CHAT122 END ===== */
+/* ===== CHAT124 END ===== */
 
   function render(j){
     if(!box) return; const keep=box.querySelector('.L4fx, .L4pc'); 
@@ -5647,7 +5723,7 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
       const code=q('#lvj1').value.trim().toUpperCase(), nm=q('#lvj2').value.trim();
       if(code){ msg('Checking code…',true); try{ const r=await fetch(vbase()+'_mh/'+hashCode(code)+'.json'); const j=r.ok?await r.json():null; if(j&&j.n){ ls.s('lv_vname',String(j.n)); ls.s('lv_name',''); done(); lvToast('✅ Welcome, '+j.n+'!'); } else msg('Code not found — check it and try again.',false); }catch(e){ msg('Could not check the code. Check your internet.',false); } return; }
       if(!nm){ msg('Type a name or a member code (or press Cancel).',false); return; }
-      ls.s('lv_name',nm.slice(0,30)); ls.s('lv_vname',''); done(); lvToast('✅ Saved: '+nm.slice(0,30));
+      ls.s('lv_name',nm.slice(0,30)); ls.s('lv_vname',''); try{ if(!W.isAdm()&&typeof DVK!=='undefined') localStorage.setItem(DVK,nm.slice(0,40)); }catch(e){} done(); lvToast('✅ Saved: '+nm.slice(0,30));
     };
   }
   const memBase=()=>CL.url.replace(/\/+$/,'')+'/ecsmeta/'+encodeURIComponent(CL.club)+'/members';
@@ -5695,7 +5771,7 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
     document.querySelectorAll('#lvb').forEach(b=>{ b.textContent=on?'🔔 ON':'🔕 OFF'; });
     return on;
   }
-  try{ if(typeof A!=='undefined'){ A.lvv=()=>lvPanel(); A.lvc=()=>chatAdmin(); } }catch(e){}
+  try{ if(typeof A!=='undefined'){ A.lvv=()=>lvPanel(); A.lvc=()=>chatAdmin(); A.lvd=()=>lvDesign(); } }catch(e){}
   function closeBox(){ if(box){ box.remove(); box=null; fxQ=[]; fxBusy=false; } }
   function drawChip(j){
     if(!chipEl){ chipEl=document.createElement('div'); chipEl.id='lvchip'; document.body.appendChild(chipEl); chipEl.onclick=()=>{ if(lastJ){ delete dismissed[lastJ.id]; showBox(lastJ); } }; }
@@ -5780,7 +5856,7 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
   function onLive(j){
     if(!j||!j.id) return; lastRecv=Date.now(); const key=j.id+'|'+(j.t||0); if(key===lastKey) return; lastKey=key; lastChange=Date.now();
     const prev=lastJ&&lastJ.id===j.id?lastJ:null; lastJ=j;
-    if(j.status==='done'){ if(j.t) doneT[j.id]=j.t; hideChip(); closeBox(); setTimeout(async()=>{ try{ if(typeof clPull==='function'&&!W.isAdm()) await clPull(false); }catch(e){} checkDone(true); },1200); return; }
+    if(j.status==='done'){ vcAutoClean(j); if(j.t) doneT[j.id]=j.t; hideChip(); closeBox(); setTimeout(async()=>{ try{ if(typeof clPull==='function'&&!W.isAdm()) await clPull(false); }catch(e){} checkDone(true); },1200); return; }
     if(j.status!=='live'||stale(j)){ hideChip(); closeBox(); return; }
     if(!prev&&!firstSeen[j.id]){ firstSeen[j.id]=1; if(document.hidden) notify('🔴 Match started: '+j.title,(j.series||'')+(j.toss?'\n'+j.toss:''),'lv-start',true); }
     refresh(); detectFx(j,!!box); backgroundAlerts(j,prev);
@@ -5810,13 +5886,17 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
   document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&CL){ if(!es) openStream(); livePoll(); } });
 
   /* ---- scorer side ---- */
+  let myPushKey='', staleWarn=0; const liveKey=j=>[j.id,(j.ev&&j.ev.n)||0,j.r,j.w,j.ovs,j.innL].join('/');
   async function livePush(){
     if(!CL||!W.isAdm()||busy) return; const p=LV.cur?LV.cur():null; let body=null;
-    if(p){ const sig=JSON.stringify(p); if(sig===lastSig&&Date.now()-lastPushAt<45000) return; lastSig=sig; lastP=p; pushed[p.id]=1; known[p.id]=1; body=Object.assign({},p,{t:{'.sv':'timestamp'}}); }
+    if(p){ const sig=JSON.stringify(p); if(sig===lastSig&&Date.now()-lastPushAt<45000) return;
+      /* peeche wala phone aage wale ka score na mitaye */
+      if(lastJ&&lastJ.id===p.id&&lastJ.status==='live'&&liveKey(lastJ)!==myPushKey){ const cn=(lastJ.ev&&lastJ.ev.n)||0, pn=(p.ev&&p.ev.n)||0; if(cn>pn){ lastSig=null; if(Date.now()-staleWarn>60000){ staleWarn=Date.now(); try{ lvToast('⚠️ Doosre device par is match ka naya score hai — aapka phone peeche hai, isliye live score nahi bhej raha. Sync dabayein.',false); }catch(e){} } return; } }
+      lastSig=sig; lastP=p; pushed[p.id]=1; known[p.id]=1; body=Object.assign({},p,{t:{'.sv':'timestamp'},th:{p:TH().p||0,c:TH().c||0}}); }
     else if(lastJ&&lastJ.status==='live'&&LV.stat&&(!lastP||lastP.id!==lastJ.id)){ const st=LV.stat(lastJ.id); if(st==='live'){ known[lastJ.id]=1; return; } if(!known[lastJ.id]) return; const d=st==='done'&&LV.doneOf?LV.doneOf(lastJ.id):null; body=Object.assign({},lastJ,{status:st==='none'?'gone':(d?'done':'paused'),res:d?d.res:'',t:{'.sv':'timestamp'}}); lastSig='x'+Math.random(); }
     else if(lastP&&lastP.status==='live'){ const d=LV.doneOf?LV.doneOf(lastP.id):null; body=Object.assign({},lastP,{status:d?'done':'paused',res:d?d.res:'',t:{'.sv':'timestamp'}}); lastP=Object.assign({},body,{t:0}); lastSig='x'+Math.random(); }
     else return;
-    busy=true; try{ const t=await clToken(); await fetch(liveUrl()+'?auth='+encodeURIComponent(t),{method:'PUT',body:JSON.stringify(body)}); lastPushAt=Date.now(); }catch(e){} busy=false;
+    busy=true; try{ const t=await clToken(); const rr_=await fetch(liveUrl()+'?auth='+encodeURIComponent(t),{method:'PUT',body:JSON.stringify(body)}); lastPushAt=Date.now(); if(rr_&&rr_.ok){ myPushKey=liveKey(body); if(body.status==='done') vcAutoClean(body); } }catch(e){} busy=false;
   }
   setInterval(()=>{ if(!document.hidden) livePush(); },1000);
 
@@ -5843,7 +5923,7 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
     const x=fresh[fresh.length-1]; if(doneT[x.id]){ try{ x.time=new Date(doneT[x.id]).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }catch(e){} } showDone(x);
   }
   setInterval(checkDone,4000); setTimeout(checkDone,3000);
-  window.__lv104={join:lvJoin,viewers:lvPanel,chats:chatAdmin,notifOn,bell:()=>toggleBell(),onLive:j=>{lastKey=null;onLive(j)},checkDone,drop:()=>{closeBox();hideChip()}};
+  window.__lv104={join:lvJoin,viewers:lvPanel,chats:chatAdmin,design:lvDesign,notifOn,bell:()=>toggleBell(),onLive:j=>{lastKey=null;onLive(j)},checkDone,drop:()=>{closeBox();hideChip()}};
 })();
 
 })();
