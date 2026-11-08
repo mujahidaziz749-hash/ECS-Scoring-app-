@@ -1307,6 +1307,36 @@ function importData(d){if(!d||!d.type)return msgBox('File pehchani nahi gayi.');
   const orphan=(d.entries||[]).some(x=>x.cat==='i'?!db.matches.find(m=>m.id===x.comp):!findc(x.comp));if(orphan)L.push('⚠ Ye entries jis tournament/series ki hain wo is device par nahi hai - pehle us ka PDF import karo.');
   msgBox(L.join('\n'));R()};
  if(d.type==='jsl_backup')cf('Poora data is backup se REPLACE kar dein?',run);else run()}
+/* ===== v130: orphan match import -> Individual ===== */
+{const _impD=importData;let ORPH=null;
+const tomb=id=>!!(db.delIds&&db.delIds[id]);
+importData=function(d){
+ try{
+  if(d&&d.type==='jsl_match'&&d.match){
+   const m=d.match;
+   if(m.cat!=='i'&&m.comp&&!findc(m.comp)){
+    ORPH=d;const nums=new Set(db.matches.filter(x=>x.cat==='i').map(x=>+x.no));let n=1;while(nums.has(n))n++;
+    const nmT=id=>{const t=(d.teams||[]).find(x=>x.id===id)||db.teams.find(x=>x.id===id);return t?t.name:'?'};
+    M(`<h2>⚠ Ye match kisi aise ${m.cat==='s'?'series':'tournament'} ka hai jo is app me nahi</h2><div class="m" style="margin-bottom:6px"><b>${e(nmT(m.a))} vs ${e(nmT(m.b))}</b><br>${e(m.result||'')}<br><br>Jis ${m.cat==='s'?'series':'tournament'} ka ye match tha wo is app me maujood nahi (delete ho chuka), isliye ye history me nazar nahi aata. Isko <b>Individual Match</b> ke taur par import kar do - record save rahega.</div><label>Individual match number (koi bhi)</label><input id="oin" type="number" min="1" value="${n}"><label>Tournament / series ka naam (optional)</label><input id="oic" placeholder="e.g. Peer Eessa Tournament"><label>Match ka naam (optional)</label><input id="oim" placeholder="e.g. Challenge Match"><button class="b g wide" data-a="orph" style="margin-top:10px">⚡ Individual me import karo</button><button class="b s wide" data-a="x">Cancel</button>`);
+    return}
+   if(db.delIds&&db.delIds[m.id])m.id=uid();
+  }
+ }catch(x){}
+ return _impD(d)};
+A.orph=()=>{const d=ORPH;if(!d)return X();
+ const n=parseInt($('#oin').value,10);if(!n||n<1)return msgBox('Sahi match number likho.');
+ if(db.matches.some(x=>x.cat==='i'&&+x.no===n))return msgBox('Individual Match '+n+' pehle se maujood hai - koi aur number chuno.');
+ const mm=JSON.parse(JSON.stringify(d.match)),tm={};
+ (d.teams||[]).forEach(t=>{
+  const same=db.teams.find(x=>x.id===t.id),byName=db.teams.find(x=>rk(x.name)===rk(t.name)),ex=same||byName||null;
+  if(ex){tm[t.id]=ex.id;if(db.delIds)delete db.delIds[ex.id];(t.players||[]).forEach(p=>{if(!ex.players.some(q=>q.id===p.id))ex.players.push(JSON.parse(JSON.stringify(p)))});return}
+  const nt=normTeam(JSON.parse(JSON.stringify(t)));if(tomb(nt.id)||db.teams.some(x=>x.id===nt.id))nt.id=uid();tm[t.id]=nt.id;db.teams.push(nt);try{(nt.players||[]).forEach(q=>regAdd(q.name))}catch(z){}});
+ let s=JSON.stringify(mm);Object.keys(tm).forEach(k=>{if(tm[k]!==k)s=s.split('"'+k+'"').join('"'+tm[k]+'"')});
+ const m2=JSON.parse(s);m2.id=uid();m2.cat='i';m2.comp=null;m2.fix=null;m2.no=n;m2.ino='';
+ m2.ird=(m2.rd&&!/^(match|league)$/i.test(m2.rd))?m2.rd:'';m2.icomp=$('#oic').value.trim();m2.iname=$('#oim').value.trim();
+ db.matches.push(m2);ORPH=null;X();save();R();
+ msgBox('Import ho gaya ✅\nIndividual Match '+n+' ban gaya.\nAb ye ⚡ Individual Match aur 📋 History me nazar aayega.');};
+}
 V.data=()=>{const row=(k,t)=>`<div class="row" style="margin:4px 0"><span style="flex:3">${t}</span><button class="b g sm" data-a="dx" data-v="${k}|pdf" style="flex:1">🖨 PDF</button></div>`;
  return `<h2 style="margin-top:12px">💾 Import / Export</h2>${clCard()}<div class="card"><h3 style="margin-top:0">💾 Full Backup / Restore</h3><div class="m">Poora data (sab kuch) ek JSON file mein - kabhi issue aaye to yahi bachata hai.</div><div class="iog"><button class="b g" data-a="bx">⬇ Full Backup (JSON)</button><button class="b s" data-a="bi">⬆ Restore</button><button class="b s wide2" data-a="chpw">🔑 Edit password</button></div></div><div class="card"><h3 style="margin-top:0">📄 Export — alag alag PDF</h3><div class="m">Har PDF ke andar app ka data chhupa hota hai - wahi PDF wapas import ho sakti hai.</div>${row('t','🏆 Tournaments')}${row('s','📅 Series')}${row('i','⚡ Individual matches')}${row('tm','👥 Teams')}${row('pl','🧢 Players & lists')}${VW()?'':row('en','💰 Entries & kharche')}${row('ru','📜 Rules')}</div><div class="card"><h3 style="margin-top:0">📥 Import — PDF se</h3><div class="iog"><button class="b g wide2" data-a="bi">⬆ PDF import</button></div><div class="m" style="margin-top:6px">Match, tournament, series, teams, players, entries, rules - koi bhi PDF.</div></div><div class="card" style="border-color:var(--r)"><h3 style="margin-top:0;color:#ff8f8f">Danger</h3><button class="b d" data-a="wipe">🗑 Sab data delete</button></div>`};
 A.dx=v=>{const[k,f]=v.split('|'),d=today();let L=[],pay,name,ttl;
