@@ -1161,7 +1161,9 @@ function sc(m){return m.inns.filter(i=>i.balls.length).map((i,n)=>{const x=ext(i
  <div class="m" style="margin:2px 0">M, WD, NB har bowler ke poore figures PDF export mein mil jate hain.</div>
  ${F.length?`<div class="m"><b>Fall of wickets:</b> ${F.map(z=>`${z.n}-${z.s} (${e(z.p)}, ${z.o} ov)`).join(' · ')}</div>`:''}
  <details><summary>▸ Over-by-over</summary>${obo(i).map(o=>`<div class="m">Ov ${o.n} (${e(PN(i.bowl,o.w))}): ${o.b.join(' ')}</div>`).join('')}</details></div>`}).join('')}
-function cname(m){if(m.cat==='i')return 'Individual Match';const z=findc(m.comp);return z?z.c.name+(m.rd?' - '+m.rd:''):'?'}
+const mno=m=>(m.cat==='i'&&m.ino)||m.no;
+const indT=o=>[o.icomp,o.iname].filter(Boolean).join(' · ');
+function cname(m){if(m.cat==='i')return [m.icomp,m.iname,(m.ird&&!/^(match|league)$/i.test(m.ird))?m.ird:''].filter(Boolean).join(' · ')||'Individual Match';const z=findc(m.comp);return z?z.c.name+(m.rd?' - '+m.rd:''):'?'}
 function minfo(m){if(m.cat==='i'){const p=[m.icomp||'Individual Match'];if(m.iname)p.push(m.iname);if(m.ird)p.push(m.ird);p.push('Match '+(m.ino||m.no));return{txt:p.join(' | ')}};const z=findc(m.comp),c=z?z.c:null,k=m.cat==='t'?'Tournament':'Series';return{txt:k+': '+(c?c.name:'?')+' | '+(m.rd&&!['Match','League'].includes(m.rd)?m.rd+' | ':'')+'Match '+m.no+(c&&c.type==='bi'?' of '+c.total:'')}}
 function mlines(m){const o=['# '+minfo(m).txt,T(m.a).name+' vs '+T(m.b).name+' | '+m.date+' | '+m.overs+' overs | '+(m.venue||'-')+' | Toss: '+T(m.toss).name+' ('+(m.dec==='bat'?'bat':'bowl')+')','Result: '+m.result];
  m.inns.filter(i=>i.balls.length).forEach((i,n)=>{const c=/^#[0-9a-fA-F]{6}$/.test(T(i.bat).color)?T(i.bat).color:null,x=ext(i),F=fow(i);
@@ -1445,7 +1447,7 @@ A.psh=()=>$('#pcv').toBlob(async b=>{const f=new File([b],'JSL_Poster.png',{type
 A.pcomp=v=>{const z=findc(v).c,up=z.fx.filter(f=>!f.mid&&f.b);M(`<h2>🖼 ${e(z.name)} - Posters</h2><button class="mlb" data-a="pgo" data-v="fixtures|${v}">📅 Full schedule poster</button><button class="mlb" data-a="pgo" data-v="table|${v}">🏅 Points table / standings poster</button><button class="mlb" data-a="pgo" data-v="teams|${v}">👥 Participating teams poster</button><button class="mlb" data-a="pgo" data-v="rep|${v}">📚 Full Report poster (sab pages)</button><button class="mlb" data-a="lbo" data-v="${v}">🏅 Leaderboard (sab categories ke posters + PDF)</button><button class="mlb" data-a="pgo" data-v="lead|${v}">⭐ Leaderboard poster</button><div class="m" style="margin:8px 0 2px">Pre-match day posters (captains ki photo ke saath):</div>${up.map(f=>`<button class="mlb" data-a="pgo" data-v="mfx|${v}|${f.id}">#${f.no} ${e(T(f.a).name)} vs ${e(T(f.b).name)} <span class="m">${e(f.rd)}</span></button>`).join('')||'<div class="m">Koi schedule shuda match baqi nahi.</div>'}<button class="mlb" style="text-align:center;color:var(--m)" data-a="x">Close</button>`)};
 A.pgo=v=>{const[k,a,b]=v.split('|');X();
  if(k==='team')return pOpen('team',{id:a},T(a).name+' - Squad');
- if(k==='mfx'){const z=findc(a).c,f=z.fx.find(x=>x.id===b);return pOpen('match',{a:f.a,b:f.b,no:f.no,rd:f.rd,title:z.name,venue:db.grounds[db.grounds.length-1]||'',overs:8,date:today()},'Match #'+f.no+' - Pre-match')}
+ if(k==='mfx'){const z=findc(a).c,f=z.fx.find(x=>x.id===b);return pOpen('match',{a:f.a,b:f.b,no:(z.type==='ind'&&f.ino)||f.no,rd:f.rd,title:z.type==='ind'?(indT(f)||'Individual Match'):z.name,venue:db.grounds[db.grounds.length-1]||'',overs:8,date:today()},'Match #'+f.no+' - Pre-match')}
  if(k==='fixtures'||k==='table'||k==='lead')return pOpen(k,{id:a},findc(a).c.name);
  if(k==='mres')return pOpen('result',{mid:a},'Match Result');
  if(k==='prof'){const r=db.reg.find(x=>x.id===a);return pOpen('prof',{name:r.name},r.name)}
@@ -1491,7 +1493,7 @@ pDraw=async()=>{const cv=$('#pcv');if(!cv||!PZ)return;await pPaint(cv.getContext
 
 A.pdl=async()=>{const b=await pHD(),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='JSL_Poster_'+PZ.kind+'_HD_'+Date.now()+'.png';document.body.appendChild(a);a.click();a.remove();toast('✅ HD poster (2160x2700) download ho gaya')};
 A.psh=async()=>{const b=await pHD(),f=new File([b],'JSL_Poster.png',{type:'image/png'});try{if(navigator.canShare&&navigator.canShare({files:[f]}))await navigator.share({files:[f],title:'JSL Poster'});else{A.pdl()}}catch(x){}};
-const _pgo=A.pgo;A.pgo=v=>{_pgo(v);const[k,a,b]=v.split('|');if(k==='mfx'&&PZ&&PZ.kind==='match'){const f=findc(a).c.fx.find(x=>x.id===b);PZ.fx=f;Object.assign(PZ.o,{time:'4:30 PM',tag:"DON'T MISS THIS ROUND",kind:'CRICKET TOURNAMENT',lay:'A',sq:1},f.pd||{});pUI()}};
+const _pgo=A.pgo;A.pgo=v=>{_pgo(v);const[k,a,b]=v.split('|');if(k==='mfx'&&PZ&&PZ.kind==='match'){const f=findc(a).c.fx.find(x=>x.id===b);PZ.fx=f;Object.assign(PZ.o,{time:'4:30 PM',tag:"DON'T MISS THIS ROUND",kind:a==='__ind'?'INDIVIDUAL MATCH':'CRICKET TOURNAMENT',lay:'A',sq:1},f.pd||{});pUI()}};
 
 /* ===== POSTER v3 ===== */
 db.tents=db.tents||[];
@@ -1983,7 +1985,7 @@ A.pfundo=()=>{X();if(PKP&&PKP.open&&OS)osShow();else autoSel(true)};
 function mstDecor(c){c.fillStyle='#d7263d';c.beginPath();c.arc(105,125,40,0,7);c.fill();c.strokeStyle='#fff';c.lineWidth=3;c.beginPath();c.arc(70,125,28,-.9,.9);c.stroke();c.beginPath();c.arc(140,125,28,Math.PI-.9,Math.PI+.9);c.stroke();c.save();c.translate(985,130);c.rotate(.5);c.fillStyle='#d9a45a';c.beginPath();c.roundRect(-20,-70,40,100,10);c.fill();c.fillStyle='#6b3e1b';c.fillRect(-7,30,14,50);c.restore()}
 PK.mstat=(c,s,o)=>{const m=db.matches.find(x=>x.id===o.mid);if(!m)return;const st=m.status,done=st==='completed',i=m.inns.filter(q=>q.balls.length||q.st).pop()||m.inns[m.inns.length-1],A=T(m.a),B=T(m.b);
  rb(c,18,18,1044,1314,40,null,s.c);tx(c,done?'MATCH RESULT':st==='paused'?'MATCH PAUSED':'LIVE MATCH',540,62,26,s.c,'center',700,600);mstDecor(c);
- tx(c,A.name+' vs '+B.name,540,128,54,'#f6e3a1','center',800,780,6);tx(c,cname(m)+' · Match #'+m.no+' · '+m.overs+' overs',540,190,28,'#e9d49a','center',600,900);c.fillStyle=s.c;c.fillRect(445,222,190,4);
+ tx(c,A.name+' vs '+B.name,540,128,54,'#f6e3a1','center',800,780,6);tx(c,cname(m)+' · Match #'+mno(m)+' · '+m.overs+' overs',540,190,28,'#e9d49a','center',600,900);c.fillStyle=s.c;c.fillRect(445,222,190,4);
  const l1=done?m.result:(st==='paused'?'PAUSED'+(o.reason?' — '+o.reason:''):'MATCH IN PROGRESS'),l2=done?[m.date,m.venue].filter(Boolean).join(' · '):(st==='paused'?'Resume baad mein hoga'+(m.pausedAt?' · '+m.pausedAt:''):m.date);
  rb(c,40,262,1000,104,24,s.c);tx(c,l1,540,300,Math.min(44,1900/Math.max(l1.length,1)*1.15),'#111','center',800,960);tx(c,l2,540,342,22,'#111','center',700,960);
  [[m.inns[0].bat,m.inns[0]],[m.inns[0].bowl,m.inns[1]||null]].forEach(([id,inn],k)=>{const y=388+k*184,col=_hx(T(id).color),bt=!done&&inn&&inn===m.inns[m.inns.length-1],lab=!inn?'YET TO BAT':bt?'BATTING':'BATTED';
@@ -4340,8 +4342,8 @@ ECS_PK.fixture.data=async sp=>{const z=findc(sp.cid).c,f=z.fx.find(x=>x.id===sp.
  const Tm=await Promise.all([f.a,f.b].map(i=>pTeamObj(T(i))));
  const dt=pd.date||(m?pdate(m.date):'Date TBA'),gr=pd.venue||(m&&m.venue)||db.grounds[db.grounds.length-1]||'Ground',ovs=m?m.overs:(pd.overs||8);
  const tw=m&&m.toss?(T(m.toss).name+' — '+(m.dec==='bat'?'bat first':'bowl first')):'abhi nahi hua',st=m?(m.status==='completed'?m.result:m.status):'baqi';
- const lab=sp.label||(/^(final|semi|quarter)/i.test(f.rd||'')?f.rd.toUpperCase():'MATCH '+f.no);
- return{teams:Tm,series:z.name,statusText:String(st).replace(/^[^\w]+/,''),matchLabel:lab,date:dt,ground:gr,toss:tw,overs:ovs+' OVERS / SIDE',sub:z.name+' · '+dt,
+ const lab=sp.label||(z.type==='ind'?((f.rd&&!/^(match|league)$/i.test(f.rd)?f.rd.toUpperCase()+' · ':'')+'MATCH '+(f.ino||f.no)):(/^(final|semi|quarter)/i.test(f.rd||'')?f.rd.toUpperCase():'MATCH '+f.no));
+ const zn=z.type==='ind'?(indT(f)||'Individual Match'):z.name;return{teams:Tm,series:zn,statusText:String(st).replace(/^[^\w]+/,''),matchLabel:lab,date:dt,ground:gr,toss:tw,overs:ovs+' OVERS / SIDE',sub:zn+' · '+dt,
   info:[['DATE',dt],['GROUND',gr],['OVERS',ovs+' per side'],['TOSS',tw],['MATCH',lab.replace(/^MATCH\s*/,'#')],['STATUS',String(st).replace(/^[^\w]+/,'')||'baqi']]}};
 ECS_PK.fixtures.data=async sp=>{const z=findc(sp.cid).c;if(!z.fx.length){alert('Abhi koi fixture nahi bana. Pehle "+ Fixture" se schedule banao.');return null}
  let fx=z.fx;if(sp.mode==='day'){const td=today();fx=fx.filter(f=>{const m=db.matches.find(x=>x.id===f.mid);return m&&m.date===td||(!f.mid&&f.pd&&f.pd.date&&String(f.pd.date).includes(td))});if(!fx.length){alert('Aaj ke liye koi fixture nahi mila.');return null}}
@@ -4367,14 +4369,14 @@ function bestBat(m){let b=null;m.inns.forEach(i=>bat_(i).forEach(z=>{if(!b||z.r>
 function bestBowl(m){let b=null;m.inns.forEach(i=>bowl_(i).forEach(z=>{if(!b||z.w>b.w||(z.w===b.w&&z.r<b.r))b=z}));return b&&b.w>0?{name:b.n,line:b.w+' wkts / '+b.r+' runs'}:null}
 ECS_PK.result.data=async sp=>{const m=db.matches.find(x=>x.id===sp.mid);if(!m)return null;
  const out={A:{name:T(m.a).name,score:'-',color:tcolor(m.a)},B:{name:T(m.b).name,score:'-',color:tcolor(m.b)},winner:m.win?T(m.win).name:null,
-  result:m.status==='completed'?m.result:(m.status==='paused'?'⏸ Match paused — abhi jaari hai':'🔴 Match chal raha hai'),sub:'Match #'+m.no+' · '+pdate(m.date)+' · '+m.overs+' overs',series:cname(m),topBat:bestBat(m),topBowl:bestBowl(m)};
+  result:m.status==='completed'?m.result:(m.status==='paused'?'⏸ Match paused — abhi jaari hai':'🔴 Match chal raha hai'),sub:'Match #'+mno(m)+' · '+pdate(m.date)+' · '+m.overs+' overs',series:cname(m),topBat:bestBat(m),topBowl:bestBowl(m)};
  m.inns.forEach(i=>{const o=i.bat===m.a?out.A:out.B;o.score=i.runs+'/'+i.wk;o.overs=ov(i.lb)+' ov';o.sub='Batting'});return out};
 ECS_PK.scorecard.data=async sp=>{const m=db.matches.find(x=>x.id===sp.mid);if(!m||!m.inns.some(i=>i.balls.length)){alert('Is match ka scorecard abhi nahi bana.');return null}
  const inns=m.inns.filter(i=>i.balls.length).map((i,n)=>{const x=ext(i),F=fow(i);return{label:(n?'2nd':'1st')+' Innings',team:T(i.bat).name,bowlTeam:T(i.bowl).name,color:tcolor(i.bat),score:i.runs,wk:i.wk,ov:ov(i.lb),
   bat:bat_(i).map(z=>({name:z.n,dismissal:z.d,runs:z.r,balls:z.b,fours:z.f4,sixes:z.f6,sr:z.sr})),bowl:bowl_(i).map(z=>({name:z.n,overs:z.o,runs:z.r,wkts:z.w,econ:z.e})),
   ex:{total:x.t,wides:x.wd,noballs:x.nb,byes:x.b,legbyes:x.lb},fow:F.map(z=>z.n+'-'+z.s+' ('+z.p+', '+z.o+' ov)').join('  ·  ')}});
  const paused=m.status!=='completed';
- return{teams:[T(m.a).name,T(m.b).name],no:m.no,inns,result:paused?('⏸ Match '+(m.status==='live'?'live':'paused')+(m.pauseReason?' — '+m.pauseReason:'')+' · abhi tak ka scorecard'):m.result,title:'Scorecard',sub:cname(m)+' · Match #'+m.no+' · '+pdate(m.date)+' · '+m.overs+' overs',series:cname(m)}};
+ return{teams:[T(m.a).name,T(m.b).name],no:mno(m),inns,result:paused?('⏸ Match '+(m.status==='live'?'live':'paused')+(m.pauseReason?' — '+m.pauseReason:'')+' · abhi tak ka scorecard'):m.result,title:'Scorecard',sub:cname(m)+' · Match #'+mno(m)+' · '+pdate(m.date)+' · '+m.overs+' overs',series:cname(m)}};
 const ballLab=x=>x.wk?['W','#e5484d']:x.ex==='wd'?['Wd','#e8a51a']:x.ex==='nb'?['Nb','#e8a51a']:x.r===0?['•','#5b6b82']:x.r===4?[4,'#2f7bf0']:x.r===6?[6,'#8a4be0']:[x.r,'#2fa866'];
 ECS_PK.paused.data=async sp=>{const m=db.matches.find(x=>x.id===sp.mid);if(!m||!m.inns.some(i=>i.balls.length)){alert('Match abhi shuru nahi hua.');return null}
  const ai=m.inns.length-1,inn=m.inns[ai],tk=inn.bat,pr_=id=>{if(!id)return null;const f=bf(inn,id);return{name:PN(tk,id),runs:f.r,balls:f.b,sr:f.sr}};
@@ -4387,7 +4389,7 @@ ECS_PK.summary.data=async sp=>{const m=db.matches.find(x=>x.id===sp.mid);if(!m||
  const inns=m.inns.filter(i=>i.balls.length).map((i,n)=>{const bt=bat_(i),bo=bowl_(i),x=ext(i);return{label:(n?'2nd':'1st')+' Innings',team:T(i.bat).name,color:tcolor(i.bat),score:i.runs,wk:i.wk,ov:ov(i.lb),
   bat:bt.slice().sort((a,b)=>b.r-a.r||a.b-b.b).slice(0,3).map(z=>({name:z.n,runs:z.r,balls:z.b})),bowl:bo.slice().sort((a,b)=>b.w-a.w||a.r-b.r).slice(0,3).map(z=>({name:z.n,wkts:z.w,runs:z.r,overs:z.o})),
   ex:x.t,f4:bt.reduce((a,z)=>a+z.f4,0),f6:bt.reduce((a,z)=>a+z.f6,0),rr:i.lb?(i.runs/(i.lb/6)).toFixed(2):'0.00'}});
- const done=m.status==='completed';return{teams:[T(m.a).name,T(m.b).name],no:m.no,inns,result:done?m.result:('⏸ Match paused'+(m.pauseReason?' — '+m.pauseReason:'')),done,sub:cname(m)+' · Match #'+m.no+' · '+pdate(m.date)+' · '+m.overs+' overs'}};
+ const done=m.status==='completed';return{teams:[T(m.a).name,T(m.b).name],no:mno(m),inns,result:done?m.result:('⏸ Match paused'+(m.pauseReason?' — '+m.pauseReason:'')),done,sub:cname(m)+' · Match #'+mno(m)+' · '+pdate(m.date)+' · '+m.overs+' overs'}};
 function pStat(m,x){let r=0,b=0,w=0,rc=0,l=0;m.inns.forEach(i=>{if(i.bat===x.tk)i.balls.forEach(()=>0);
   [...new Set(i.balls.map(z=>z.b).filter(p=>p&&i.bat===x.tk&&rk(PN(i.bat,p))===rk(x.n)))].forEach(p=>{const f=bf(i,p);r+=f.r;b+=f.b});
   [...new Set(i.balls.map(z=>z.w).filter(p=>p&&i.bowl===x.tk&&rk(PN(i.bowl,p))===rk(x.n)))].forEach(p=>{const f=wf2(i,p);w+=f.w;rc+=f.r;l+=f.l})});return{r,b,w,rc,l}}
@@ -4398,7 +4400,7 @@ ECS_PK.pom.data=async sp=>{const m=db.matches.find(x=>x.id===sp.mid),x=m&&mom(m)
  let tiles=(bowlFirst?B.concat(A):A.concat(B)).slice(0,4);while(tiles.length<4)tiles.push(['MATCH','#'+m.no]);
  const l1=[];if(hasBat)l1.push(s.r+'('+s.b+')');if(s.w>0||hasBowl)l1.push(s.w+'/'+s.rc);
  const scores=m.inns.filter(i=>i.balls.length).map(i=>({team:T(i.bat).name,color:tcolor(i.bat),big:i.runs+'/'+i.wk,small:ov(i.lb)+' OVERS'}));
- return awPhotos({title:'PLAYER OF THE MATCH',word:'MATCH',no:m.no,name:x.n,team:T(x.tk).name,color:tcolor(x.tk),sub:cname(m)+' · Match #'+m.no,tiles,line1:l1.join(' · '),scores,line:String(m.result||'Match complete').toUpperCase()})};
+ return awPhotos({title:'PLAYER OF THE MATCH',word:'MATCH',no:m.no,name:x.n,team:T(x.tk).name,color:tcolor(x.tk),sub:cname(m)+' · Match #'+mno(m),tiles,line1:l1.join(' · '),scores,line:String(m.result||'Match complete').toUpperCase()})};
 ECS_PK.pos.data=async sp=>{const z=findc(sp.cid).c,ms=db.matches.filter(m=>m.comp===sp.cid&&m.status==='completed');if(!ms.length){alert('Abhi koi match complete nahi hua.');return null}
  const P=lbAgg(ms).filter(p=>p.r+p.w>0).sort((a,b)=>(b.r+b.w*20)-(a.r+a.w*20));if(!P.length){alert('Abhi koi performer nahi mila.');return null}
  const p=P[0],tk=[...p.teams][0],sr=p.b?(p.r*100/p.b).toFixed(1):'-',eco=p.l?(p.rc*6/p.l).toFixed(2):'-',batFirst=p.r>=p.w*20;
@@ -4844,7 +4846,7 @@ setTimeout(()=>{try{if(canV())scan();else refresh()}catch(x){}},4500);
   const squadsOf=(k,id)=>{ let ids=[]; if(k==='i'){ const s={}; db.matches.filter(m=>m.cat==='i').forEach(m=>{s[m.a]=1;s[m.b]=1}); ids=Object.keys(s); } else { const c=comps(k).find(x=>x.id===id); ids=((c&&c.teams)||[]).map(idOf); if(!ids.length){ const s={}; mOf(k,id).forEach(m=>{s[m.a]=1;s[m.b]=1}); ids=Object.keys(s); } }
     return ids.map(i=>db.teams.find(t=>t.id===i)).filter(Boolean).map(t=>({name:t.name,color:/^#[0-9a-f]{6}$/i.test(t.color||'')?t.color:'#2d7ff9',cap:t.captain||null,vc:t.vc||null,players:(t.players||[]).map(p=>({id:p.id,name:p.name})),open:()=>pOpenEcs({kind:'team',tid:t.id})})); };
 
-  const rjDoneInfo=m=>{ const tm=id=>{ const x=(m.inns||[]).find(q=>q.bat===id); return {name:T_(id),score:x?((x.runs||0)+'/'+(x.wk||0)):'-',ovs:x?('('+Math.floor((x.lb||0)/6)+'.'+((x.lb||0)%6)+' ov)'):''}; }; let info=''; try{ info=minfo(m).txt.replace(/^(Tournament|Series): /,'').replace(/\s*\|\s*Match.*$/,''); }catch(e){} return {id:m.id,title:T_(m.a)+' vs '+T_(m.b),series:info,no:m.no||'',date:m.date||'',a:tm(m.a),b:tm(m.b),win:m.win?T_(m.win):'',res:m.result||''}; };
+  const rjDoneInfo=m=>{ const tm=id=>{ const x=(m.inns||[]).find(q=>q.bat===id); return {name:T_(id),score:x?((x.runs||0)+'/'+(x.wk||0)):'-',ovs:x?('('+Math.floor((x.lb||0)/6)+'.'+((x.lb||0)%6)+' ov)'):''}; }; let info=''; try{ info=minfo(m).txt.replace(/^(Tournament|Series): /,'').replace(/\s*\|\s*Match.*$/,''); }catch(e){} return {id:m.id,title:T_(m.a)+' vs '+T_(m.b),series:info,no:mno(m)||'',date:m.date||'',a:tm(m.a),b:tm(m.b),win:m.win?T_(m.win):'',res:m.result||''}; };
   window.__W104={ p:P_,
     AD:()=>AD, setAD:a=>{AD=a;_tok=null;try{localStorage.setItem(AK,JSON.stringify(a))}catch(e){}},
     isAdm:()=>isAdm(), name:()=>(ROLE&&ROLE.name)||(AD&&AD.email), roleWord:()=>window.roleWord?window.roleWord():'Admin', dev:()=>devN(), ua:()=>(function(){const u=navigator.userAgent||'';const os=/Android/.test(u)?'Android':/iPhone|iPad/.test(u)?'iOS':/Windows/.test(u)?'Windows':/Mac/.test(u)?'Mac':'Other';const br=/Edg\//.test(u)?'Edge':/Chrome\//.test(u)?'Chrome':/Safari\//.test(u)?'Safari':/Firefox\//.test(u)?'Firefox':'Browser';return os+' '+br})(),
@@ -5429,12 +5431,12 @@ window.__prevMatchTs=function(list){ let mx=0; (list||[]).forEach(x=>{ if(!x) re
   function rjShInfo(c,k,f){
     const capR=id=>{ const q=T(id)||{}; const x=(q.players||[]).find(y=>y.id===q.captain); return x?x.name:''; };
     const tk=id=>({n:T(id).name,c:T(id).color,cap:capR(id),ph:(db.photos&&db.photos[String(capR(id)||'').trim().toLowerCase()])||''});
-    return {key:c.id+'.'+f.id,app:'JSL',k:k==='t'?'Tournament':k==='i'?'Individual':'Series',sr:c.type==='ind'?(f.icomp||f.iname||''):c.name,no:f.no,of:(c.type==='bi'&&c.total)?c.total:'',rd:(f.rd&&!['Match','League'].includes(f.rd))?f.rd:'',a:tk(f.a),b:tk(f.b),at:f.at||0,gr:f.gr||'',ov:c.ov||c.overs||'',st:(()=>{ const q=db.matches.find(x=>x.id===f.mid); return q?(q.status==='completed'?'done':q.status==='live'?'live':'paused'):'pending'; })(),mid:f.mid||''};
+    return {key:c.id+'.'+f.id,app:'JSL',k:k==='t'?'Tournament':k==='i'?'Individual Match':'Series',sr:c.type==='ind'?indT(f):c.name,no:(c.type==='ind'&&f.ino)||f.no,of:(c.type==='bi'&&c.total)?c.total:'',rd:(f.rd&&!['Match','League'].includes(f.rd))?f.rd:'',a:tk(f.a),b:tk(f.b),at:f.at||0,gr:f.gr||'',ov:c.ov||c.overs||'',st:(()=>{ const q=db.matches.find(x=>x.id===f.mid); return q?(q.status==='completed'?'done':q.status==='live'?'live':'paused'):'pending'; })(),mid:f.mid||''};
   }
   window.__share104.resolve=key=>{ const i=key.lastIndexOf('.'); if(i<0) return null; const cid=key.slice(0,i), fid=key.slice(i+1); const z=findc(cid); if(!z||!z.c) return null; const fx=(z.c.fx||[]).find(x=>x.id===fid); return (fx&&fx.b)?rjShInfo(z.c,z.k,fx):null; };
   function rjShFull(c,k,f){ const i=rjShInfo(c,k,f), SH=window.__share104;
-    i.squad=()=>pOpen('match',{a:f.a,b:f.b,no:f.no,rd:f.rd,title:c.type==='ind'?(f.icomp||'Individual Match'):c.name,venue:f.gr||db.grounds[db.grounds.length-1]||'',overs:f.ov||c.ov||c.overs||8,
-      date:f.at?(SH.fmtTime(f.at)+' · '+new Date(f.at).toLocaleDateString('en-GB',{day:'numeric',month:'short'})):today(),shareCap:()=>SH.caption(i)},'Match #'+f.no+' - Squads');
+    i.squad=()=>pOpen('match',{a:f.a,b:f.b,no:(c.type==='ind'&&f.ino)||f.no,rd:f.rd,title:c.type==='ind'?(indT(f)||'Individual Match'):c.name,venue:f.gr||db.grounds[db.grounds.length-1]||'',overs:f.ov||c.ov||c.overs||8,
+      date:f.at?(SH.fmtTime(f.at)+' · '+new Date(f.at).toLocaleDateString('en-GB',{day:'numeric',month:'short'})):today(),shareCap:()=>SH.caption(i)},'Match #'+((c.type==='ind'&&f.ino)||f.no)+' - Squads');
     return i; }
   const _psh=A.psh; A.psh=()=>{ if(PZ&&PZ.o&&PZ.o.shareCap){ const cap=PZ.o.shareCap(); $('#pcv').toBlob(b=>window.__share104.shareImage(b,cap,'Match_Poster'),'image/png'); } else _psh(); };
   const _fr=frow;
