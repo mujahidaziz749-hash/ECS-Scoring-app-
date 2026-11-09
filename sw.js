@@ -1,7 +1,7 @@
 /* Cricket Apps - offline support (service worker).
    Pehli dafa net ke saath khulne par saari apps phone mein save ho jati hain;
    uske baad bina internet ke bhi khulti hain. Firebase/login ki requests ko ye chhoota nahi. */
-const V = 'cricket-v29';
+const V = 'cricket-v30';
 const CORE = [
   'index.html',
   'RSL_Scoring_App_Connected.html', 'JSL_Scoring_App_Connected.html', 'ECS_System_Connected.html',
@@ -45,8 +45,9 @@ async function netFirst(req) {
   });
   if (!hit) { try { return await net; } catch (_) { const idx = await c.match(key('index.html')); return idx || Response.error(); } }
   net.catch(() => {});
-  // net slow ho to 2.5 second baad saved copy dikhao (aur naya aate hi page par "Refresh" ka banner aata hai)
-  return Promise.race([net.catch(() => hit), new Promise(r => setTimeout(() => { lost = true; r(hit); }, 2500))]);
+  // Saved copy ho to FORAN dikhao (app turant khulti hai); naya version peeche se aata hai aur "Refresh" ka banner dikhta hai
+  lost = true;
+  return hit;
 }
 async function cacheFirst(req) {
   const c = await caches.open(V), k = key(req.url);

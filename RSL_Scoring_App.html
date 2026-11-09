@@ -553,6 +553,20 @@ tr.unp td:nth-child(2){color:#ff8f8f;font-weight:700}
 .isch-l label{margin-top:8px}
 .card:has(>button[data-a="pcomp"]){display:grid;grid-template-columns:1fr 1fr;gap:7px}.card:has(>button[data-a="pcomp"])>.b{width:100%;margin:0;box-sizing:border-box;min-height:42px;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.2;font-size:.8rem;white-space:normal}
 </style>
+<style id="CSS134">
+/* v134: chhote square category boxes + aankhon ko aaram dene wale backgrounds */
+.ctg{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0 16px;max-width:460px;margin-left:auto;margin-right:auto}
+.ctg .tile.ct{aspect-ratio:1/1;min-height:0;width:100%;margin:0;padding:8px 6px;align-items:center;justify-content:center;text-align:center;border-radius:18px;gap:3px;box-shadow:0 4px 14px #0006;border:1px solid #ffffff40}
+.ctg .tile.ct .ti{font-size:1.9rem;margin:0 0 2px;line-height:1}
+.ctg .tile.ct b{font-size:.78rem;line-height:1.2;font-weight:800;color:#fff;text-shadow:0 1px 3px #000c;text-align:center;word-break:break-word}
+.ctg .tile.ct small{font-size:.62rem;line-height:1.2;font-weight:700;color:#fff;opacity:.95;text-align:center;text-shadow:0 1px 2px #000b;margin-top:1px}
+.ctg .tile.ct.c1{background:linear-gradient(145deg,#2b5fe0,#16307a)}.ctg .tile.ct.c2{background:linear-gradient(145deg,#17a860,#0b5330)}.ctg .tile.ct.c3{background:linear-gradient(145deg,#d99a1c,#7a4f08)}
+button.tile[data-a="ht"]{width:100%!important;min-height:64px!important;margin-bottom:9px!important;flex-direction:row!important;align-items:center!important;justify-content:flex-start!important;gap:12px;padding:10px 14px!important;border-radius:15px}
+button.tile[data-a="ht"] .ti{font-size:1.6rem;margin:0}button.tile[data-a="ht"] b{font-size:.92rem;text-shadow:0 1px 2px #000a}button.tile[data-a="ht"] small{margin:0 0 0 auto;text-align:right;font-weight:700;font-size:.66rem;color:#fff;opacity:.95}
+body.th-teams{--bg:#12161f;--p:#1b212e;--p2:#252d3e;--b:#7a5a66}
+body.th-indiv{--bg:#12171d;--p:#1a212a;--p2:#242e3a;--b:#8a7a45}
+body.th-rules{--bg:#13161f;--p:#1c202c;--p2:#262c3b;--b:#7e6270}
+</style>
 </head><body><div class="w" id="app"></div>
 <script>
 const K='rsl_v1';
@@ -998,7 +1012,7 @@ A.lbtab=v=>{ctx.lb.tab=v;ctx.lb.cat='';R()};
 A.lbback=()=>{const L=ctx.lb;if(L.k==='t')go('tour',{id:L.id});else if(L.k==='s')go('ser',{id:L.id});else go('ind')};
 /* ---------- PLAY: SETUP ---------- */
 V.play=()=>{const m=cur();return m?'<div class="'+(db.sTheme?'stheme':'light')+'">'+live(m)+'</div>':setup()};
-const catTile=(act,k,cl,ic,t,sub)=>`<button class="tile ${cl}" data-a="${act}" data-v="${k}" style="width:100%;margin-bottom:10px;min-height:150px"><span class="ti">${ic}</span><b>${t}</b><small>${sub}</small></button>`;
+const catTile=(act,k,cl,ic,t,sub)=>(k==='t'?'<div class="ctg">':'')+`<button class="tile ct ${cl}" data-a="${act}" data-v="${k}"><span class="ti">${ic}</span><b>${t}</b><small>${sub}</small></button>`+(k==='i'?'</div>':'');
 function setup(){const s=ctx.s=ctx.s||{};let h='<h2 style="margin-top:12px">🏏 Play Match</h2>';
  if(ctx.last){const m=db.matches.find(x=>x.id===ctx.last);if(m)h+=`<div class="card" style="border-color:var(--gold)"><div class="win">✅ ${e(m.result)}</div><button class="b sm" data-a="go" data-v="hist">Scorecard / PDF (History)</button></div>`}
  
@@ -5300,6 +5314,10 @@ window.__prevMatchTs=function(list){ let mx=0; (list||[]).forEach(x=>{ if(!x) re
 .cd104 .t{font-size:1.5rem;font-weight:900;margin:14px 0 4px;line-height:1.25}.cd104 .s{opacity:.8;font-size:.86rem;margin:2px 0}
 .cd104 .tm{display:flex;gap:8px;justify-content:center;margin:18px 0 8px}.cd104 .tm div{background:#ffffff18;border:1px solid #ffffff33;border-radius:14px;padding:10px 6px;min-width:66px}
 .cd104 .tm b{display:block;font-size:1.9rem;font-variant-numeric:tabular-nums}.cd104 .tm span{font-size:.62rem;letter-spacing:.1em;opacity:.7}
+.cd104 .ib{background:#ffffff12;border:1px solid #ffffff2a;border-radius:16px;padding:6px;margin:12px 0;text-align:left}.cd104 .ir{display:flex;gap:10px;align-items:center;padding:9px 11px;border-radius:11px;margin:4px 0;font-weight:700;font-size:.9rem;line-height:1.3}.cd104 .ir i{font-style:normal;font-size:1.15rem}.cd104 .ir.ia{background:#1e4fd860}.cd104 .ir.ib{background:#12a05760}.cd104 .ir.ic{background:#c98a1260}.cd104 .ir.id{background:#a0455f60}.cd104 .ir.ie{background:#6a3fb560}
+.cd104 .wt{margin:12px 0;padding:12px;border-radius:14px;font-weight:800;line-height:1.45;color:#fff;text-shadow:0 1px 3px #000b;background:linear-gradient(90deg,#d2452f,#e8b23a,#1f9d57,#3d7bf5,#d2452f);background-size:300% 100%;animation:cdbg 4s linear infinite,cdbk 1.1s ease-in-out infinite}.cd104 .mq{overflow:hidden;white-space:nowrap;font-weight:700;font-size:.82rem;margin-top:6px}.cd104 .mq span{display:inline-block;padding-left:100%;animation:cdmq 14s linear infinite}
+@keyframes cdbg{to{background-position:300% 0}}@keyframes cdbk{50%{opacity:.55}}@keyframes cdmq{to{transform:translateX(-100%)}}
+.cd104 .nmb{margin-top:6px}.cd104 .nmb button{width:100%;margin:6px 0 0;background:#2f4a8f;line-height:1.35}
 .cd104 .w{font-size:.95rem;margin:8px 0}.cd104 button{border:0;border-radius:12px;padding:12px 16px;font-weight:800;color:#fff;background:#34498f;margin:6px 4px;font-size:.92rem}.cd104 button.g{background:#1f9d57}
 `;
   const st=document.createElement('style'); st.textContent=css; document.head.appendChild(st);
@@ -5341,7 +5359,7 @@ window.__prevMatchTs=function(list){ let mx=0; (list||[]).forEach(x=>{ if(!x) re
     if(i.a.cap||i.b.cap) L.push('🧢 Captains: '+(i.a.cap||'-')+' vs '+(i.b.cap||'-'));
     if(i.gr) L.push('📍 '+i.gr); if(i.ov) L.push('🎯 '+i.ov+' overs a side');
     if(i.at) L.push('🕗 '+fmtDate(i.at)+' · '+fmtTime(i.at)); L.push('');
-    L.push('🔴 Live score + countdown:'); L.push(link(i)); return L.join('\n'); }
+    L.push('*🔴 To watch live match, click the link below 👇*'); L.push(link(i)); return L.join('\n'); }
   function link(i){ if(i.key) return base()+'#m='+encodeURIComponent(i.key)+(LS.g('sh104_tag')?'&s='+encodeURIComponent(LS.g('sh104_tag')):''); const o={a:i.a.n,b:i.b.n,ca:i.a.c,cb:i.b.c,k:i.k,sr:i.sr,n:i.no,of:i.of,rd:i.rd,t:i.at,g:i.gr,o:i.ov,p:i.app}; return base()+'#ev='+b64e(o); }
   /* ---------- result poster ---------- */
   function drawDone(x0){
@@ -5393,13 +5411,14 @@ window.__prevMatchTs=function(list){ let mx=0; (list||[]).forEach(x=>{ if(!x) re
   function countdown(o){
     const old=document.querySelector('.cd104'); if(old) old.remove();
     const c=document.createElement('div'); c.className='cd104';
-    c.innerHTML=`<div class="c"><span class="k">🏏 ${E(o.p||APP)} • MATCH DAY</span><div class="t">${E(o.a)} <span style="color:#ffd45f">vs</span> ${E(o.b)}</div><div class="s">${E(o.k==='Individual Match'?'Individual Match':(o.k||''))}${o.sr?' · '+E(o.sr):''}${o.n?' · Match '+E(o.n)+(o.of?'/'+E(o.of):''):''}${o.rd&&!/^match$/i.test(o.rd)?' · '+E(o.rd):''}</div>${o.t?`<div class="s">📅 ${E(fmtDate(o.t))} · 🕗 ${E(fmtTime(o.t))}</div>`:''}${o.g?`<div class="s">📍 ${E(o.g)}</div>`:''}${o.t?`<div class="tm"><div><b data-d>--</b><span>DAYS</span></div><div><b data-h>--</b><span>HOURS</span></div><div><b data-m>--</b><span>MIN</span></div><div><b data-s>--</b><span>SEC</span></div></div>`:''}<div class="w" data-w>${o.t?'Match starts in':'Time will be announced'}</div><div><button data-cl="1" class="g" data-b>🔔 Notify me when live</button><button data-cl="1" data-x>Close</button></div><div><button data-cl="1" data-j style="background:#2f4a8f">👤 Add my name / member code (optional)</button></div><div class="s" style="font-size:.72rem;margin-top:10px">When the scorer starts the match, the live score opens here automatically.</div></div>`;
+    {const kd=o.k==='Individual Match'?'Individual Match':(o.k||''),r1=[kd,o.sr].filter(Boolean).join(' · '),r2=[o.n?'Match '+o.n+(o.of?'/'+o.of:''):'',(o.rd&&!/^match$/i.test(o.rd))?o.rd:''].filter(Boolean).join(' · ');
+    c.innerHTML=`<div class="c"><span class="k">🏏 ${E(o.p||APP)} • MATCH DAY</span><div class="t">${E(o.a)} <span style="color:#ffd45f">vs</span> ${E(o.b)}</div><div class="ib">${r1?`<div class="ir ia"><i>🏆</i><span>${E(r1)}</span></div>`:''}${r2?`<div class="ir id"><i>🏷️</i><span>${E(r2)}</span></div>`:''}${o.t?`<div class="ir ib"><i>📅</i><span>${E(fmtDate(o.t))} · 🕗 ${E(fmtTime(o.t))}</span></div>`:''}${o.g?`<div class="ir ic"><i>📍</i><span>${E(o.g)}</span></div>`:''}${o.o?`<div class="ir ie"><i>🎯</i><span>${E(o.o)} overs a side</span></div>`:''}</div>${o.t?`<div class="tm"><div><b data-d>--</b><span>DAYS</span></div><div><b data-h>--</b><span>HOURS</span></div><div><b data-m>--</b><span>MIN</span></div><div><b data-s>--</b><span>SEC</span></div></div>`:''}<div class="w" data-w>${o.t?'⏳ Match starts in':'Time will be announced'}</div><div class="wt" data-wt style="display:none"><div>🏏 Match start hone wala hai — please wait!</div><div class="mq"><span>🔴 Jaise hi scorer match shuru karega live score yahin khul jayega &nbsp;•&nbsp; Is page ko band na karein &nbsp;•&nbsp; 🔴 Match starting soon, please wait &nbsp;•&nbsp;</span></div></div><div><button data-cl="1" class="g" data-b>🔔 Notify me when live</button><button data-cl="1" data-x>Close</button></div><div class="nmb"><button data-cl="1" data-j>👤 Add your name to watch live match or live chat (optional)</button><div class="s" style="font-size:.7rem;margin-top:4px">Naam likhoge to live chat me yehi naam nazar aayega.</div></div></div>`;}
     document.body.appendChild(c); const q=s=>c.querySelector(s); let iv=0;
     const close=()=>{ clearInterval(iv); c.remove(); try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} };
     q('[data-x]').onclick=close; q('[data-j]').onclick=()=>{ try{ window.__lv104&&window.__lv104.join&&window.__lv104.join(); }catch(e){} }; const bb=q('[data-b]'); const upd=on=>{ bb.textContent=on?'✅ Notifications ON (tap to turn off)':'🔔 Notify me when live'; bb.style.background=on?'#0b5d34':''; bb.style.outline=on?'2px solid #7dffb3':''; };
     try{ upd(window.__lv104&&window.__lv104.notifOn&&window.__lv104.notifOn()); }catch(e){}
     bb.onclick=async()=>{ try{ if(window.__lv104&&window.__lv104.bell){ upd(await window.__lv104.bell()); } else alert('Open the live popup and tap the bell to turn on notifications.'); }catch(e){} };
-    const tick=()=>{ if(document.getElementById('lv104')||document.querySelector('.dn104')){ close(); return; } if(!o.t) return; let ms=o.t-Date.now(); if(ms<=0){ q('[data-w]').textContent='It is match time! Waiting for the scorer to start — live score will open here.'; ['d','h','m','s'].forEach(k=>q('[data-'+k+']').textContent='00'); return; } const s=Math.floor(ms/1000), p=n=>String(n).padStart(2,'0'); q('[data-d]').textContent=p(Math.floor(s/86400)); q('[data-h]').textContent=p(Math.floor(s%86400/3600)); q('[data-m]').textContent=p(Math.floor(s%3600/60)); q('[data-s]').textContent=p(s%60); };
+    const tick=()=>{ if(document.getElementById('lv104')||document.querySelector('.dn104')){ close(); return; } if(!o.t) return; let ms=o.t-Date.now(); if(ms<=0){ q('[data-w]').style.display='none';q('[data-wt]').style.display='block'; ['d','h','m','s'].forEach(k=>q('[data-'+k+']').textContent='00'); return; } const s=Math.floor(ms/1000), p=n=>String(n).padStart(2,'0'); q('[data-d]').textContent=p(Math.floor(s/86400)); q('[data-h]').textContent=p(Math.floor(s%86400/3600)); q('[data-m]').textContent=p(Math.floor(s%3600/60)); q('[data-s]').textContent=p(s%60); };
     tick(); iv=setInterval(tick,1000); }
   function doneCard(r){
     const old=document.querySelector('.cd104'); if(old) old.remove();
@@ -5864,7 +5883,7 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
   function lvJoin(){
     if(document.getElementById('lvjoin')) return; const cur=myNm();
     const o=document.createElement('div'); o.id='lvjoin'; o.style.cssText='position:fixed;inset:0;z-index:2147483300;background:rgba(3,8,22,.88);display:flex;align-items:center;justify-content:center;padding:12px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif';
-    o.innerHTML='<div style="width:100%;max-width:400px;background:#101c33;color:#eef3ff;border-radius:18px;padding:16px"><h3 style="margin:0 0 6px">👤 Join the viewers list</h3><div style="font-size:.78rem;opacity:.8;margin-bottom:8px">Optional. Only the organisers can see this. You can watch live without filling anything.</div><label style="font-size:.78rem;opacity:.85">Member code (if the organiser gave you one)</label><input id="lvj1" autocomplete="off" autocapitalize="characters" placeholder="e.g. K7M2" style="'+inp+'"><label style="font-size:.78rem;opacity:.85">…or just type your name</label><input id="lvj2" autocomplete="off" maxlength="30" placeholder="Your name" value="'+E(cur.vf?'':cur.n)+'" style="'+inp+'"><div id="lvjm" style="font-size:.82rem;min-height:1.2em;margin-bottom:4px"></div>'+(cur.n?'<div style="font-size:.8rem;opacity:.85;margin-bottom:6px">Now saved: <b>'+E(cur.n)+'</b> '+(cur.vf?'✅ member':'✍ self-typed')+'</div>':'')+'<div><button data-cl="1" id="lvjs" style="'+btn('#1f9d57')+'">Save</button><button data-cl="1" id="lvjc" style="'+btn('#34498f')+'">Cancel</button>'+(cur.n?'<button data-cl="1" id="lvjx" style="'+btn('#8a2a2a')+'">Remove my name</button>':'')+'</div></div>';
+    o.innerHTML='<div style="width:100%;max-width:400px;background:#101c33;color:#eef3ff;border-radius:18px;padding:16px"><h3 style="margin:0 0 6px">👤 Add your name</h3><div style="font-size:.82rem;opacity:.9;margin-bottom:8px">Live match dekhne aur live chat ke liye apna naam likho (optional). Chat me message karoge to yehi naam sab ko nazar aayega. Naam likhe baghair bhi match dekh sakte ho.</div><label style="font-size:.78rem;opacity:.85">Member code (if the organiser gave you one)</label><input id="lvj1" autocomplete="off" autocapitalize="characters" placeholder="e.g. K7M2" style="'+inp+'"><label style="font-size:.78rem;opacity:.85">…or just type your name</label><input id="lvj2" autocomplete="off" maxlength="30" placeholder="Your name" value="'+E(cur.vf?'':cur.n)+'" style="'+inp+'"><div id="lvjm" style="font-size:.82rem;min-height:1.2em;margin-bottom:4px"></div>'+(cur.n?'<div style="font-size:.8rem;opacity:.85;margin-bottom:6px">Now saved: <b>'+E(cur.n)+'</b> '+(cur.vf?'✅ member':'✍ self-typed')+'</div>':'')+'<div><button data-cl="1" id="lvjs" style="'+btn('#1f9d57')+'">Save</button><button data-cl="1" id="lvjc" style="'+btn('#34498f')+'">Cancel</button>'+(cur.n?'<button data-cl="1" id="lvjx" style="'+btn('#8a2a2a')+'">Remove my name</button>':'')+'</div></div>';
     document.body.appendChild(o); const q=s=>o.querySelector(s), msg=(t,ok)=>{ const m=q('#lvjm'); m.textContent=t; m.style.color=ok?'#7dffb3':'#ff9a9a'; };
     const done=()=>{ o.remove(); document.querySelectorAll('#lvj').forEach(b=>{ b.textContent=myNm().n?'👤✓':'👤'; }); vwLast=0; };
     q('#lvjc').onclick=()=>o.remove(); const x=q('#lvjx'); if(x) x.onclick=()=>{ ls.s('lv_vname',''); ls.s('lv_name',''); done(); lvToast('Name removed'); };
