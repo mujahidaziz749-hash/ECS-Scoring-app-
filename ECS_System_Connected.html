@@ -11174,9 +11174,11 @@ function renderPlayersList(){
     else if(ecsProfTab==='tournament'){ gid = ecsProfGroup || (groups[0]&&groups[0].key) || ''; const g = groups.find(x=>x.key===gid); D = g ? ecsDetail(r.name, new Set(g.items.map(x=>x.id))) : {m:0,inn:0,no:0,runs:0,hs:0,hsNo:false,b:0,f4:0,f6:0,n50:0,n100:0,bm:0,sp:0,lb:0,mdn:0,rc:0,w:0,bbW:0,bbR:0,n3:0,n5:0,teams:[],series:[]}; }
     const back = el(`<button class="btn secondary" style="margin-bottom:10px;">← Players list</button>`); back.onclick = ()=>{ ecsPlayerOpen = null; render(); }; wrap.appendChild(back);
     const row = (k,v)=>`<tr><td style="padding:9px 8px;color:var(--muted);border-bottom:1px solid var(--border);">${k}</td><td style="padding:9px 8px;font-weight:700;border-bottom:1px solid var(--border);">${v||'-'}</td></tr>`;
-    const head = el(`<div class="card"><h2 style="margin:0 0 6px;">🧢 ${ecsEsc(r.name)} - Player Profile</h2><table style="width:100%;border-collapse:collapse;">${row('Player name',ecsEsc(r.name))}${row('Age',ecsEsc(r.age))}${row('Player type',ecsEsc(r.type))}${row('Batting hand',ecsEsc(r.hand))}${row('Bowling style',ecsEsc(r.bowl))}${row('Batting position',ecsEsc(r.pos))}${row('Teams',all.teams.map(ecsEsc).join(', '))}${row('Matches played',all.m)}${row('Note',ecsEsc(r.note))}</table>
+    const head = el(`<div class="card"><h2 style="margin:0 0 6px;">🧢 ${ecsEsc(r.name)} - Player Profile</h2><div style="display:flex;gap:12px;align-items:center;margin:8px 0;"><div style="flex:0 0 110px;height:140px;border-radius:14px;overflow:hidden;background:#0b1d33;display:flex;align-items:center;justify-content:center;font-size:3rem;">${(r.photoFull||r.photo)?`<img src="${r.photoFull||r.photo}" style="width:100%;height:100%;object-fit:cover;">`:'🧢'}</div><div style="flex:1"><button class="btn gold" id="phset" style="width:100%">📷 ${(r.photoFull||r.photo)?'Photo badlo':'Photo lagao'}</button>${(r.photoFull||r.photo)?'<button class="btn secondary" id="phdel" style="width:100%;margin-top:6px">🗑 Photo hatao</button>':''}<p class="muted" style="font-size:.72rem;margin:6px 0 0">Ek baar photo lagane se wo har poster me nazar aayegi.</p></div></div><table style="width:100%;border-collapse:collapse;">${row('Player name',ecsEsc(r.name))}${row('Age',ecsEsc(r.age))}${row('Player type',ecsEsc(r.type))}${row('Batting hand',ecsEsc(r.hand))}${row('Bowling style',ecsEsc(r.bowl))}${row('Batting position',ecsEsc(r.pos))}${row('Teams',all.teams.map(ecsEsc).join(', '))}${row('Matches played',all.m)}${row('Note',ecsEsc(r.note))}</table>
       <div class="row" style="margin-top:10px;"><button class="btn gold" id="pe">✏️ Profile edit</button><button class="btn secondary" id="pp">🖨 Profile + Career PDF</button><button class="btn gold" id="ppo">🖼 Poster</button></div></div>`);
     head.querySelector('#pe').onclick = ()=> ecsPlayerForm(r);
+    head.querySelector('#phset').onclick = ()=> ecsPickPortrait(async (url, mask)=>{ try{ const q = ecsRegAdd(r.name); q.photoFull = url; q.photo = url; q.photoMask = mask||''; q.photoNoCut = mask ? 0 : 1; q.photoAdj = null; saveState(); render(); }catch(e){ alert('Photo save nahi hui.'); } });
+    { const d = head.querySelector('#phdel'); if(d) d.onclick = ()=>{ if(confirm('Photo hata dein?')){ ['photoFull','photo','photoMask','photoAdj'].forEach(k=>{ delete r[k]; }); saveState(); render(); } }; }
     head.querySelector('#pp').onclick = ()=> ecsPlayerCareerPdf(r, all, groups);
     head.querySelector('#ppo').onclick = ()=> ecsPosterOpen({kind:'player', name:r.name});
     wrap.appendChild(head);
@@ -11225,8 +11227,8 @@ function renderPlayersList(){
     const D = ecsDetail(r.name, null), full = r.age&&r.type&&r.hand&&r.pos;
     const card = el(`<div class="card"><div style="float:right;width:46px;height:46px;border-radius:50%;overflow:hidden;background:#0b1d33;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;">${r.photo?`<img src="${r.photo}" style="width:100%;height:100%;object-fit:cover;">`:`<span style="font-weight:800;color:var(--gold);">${ecsInitials(r.name)}</span>`}</div><b style="font-size:1.1rem;">${ecsEsc(r.name)}</b>${full?'':'<div class="muted" style="font-size:.78rem;">profile abhi adhura hai</div>'}
       <div class="muted" style="font-size:.78rem;">Teams: ${D.teams.map(ecsEsc).join(', ')||'-'} · M ${D.m} · Runs ${D.runs} · Wkts ${D.w}</div>
-      <div class="row" style="margin-top:8px;flex-wrap:nowrap;"><button class="btn gold small" data-c>📈 Career</button><button class="btn gold small" data-po style="flex:0">🖼</button><button class="btn secondary small" data-e>✏️ Edit</button><button class="btn danger small" data-x style="flex:0">✕</button></div></div>`);
-    card.querySelector('[data-c]').onclick = ()=>{ ecsPlayerOpen = r.id; ecsProfTab = 'overall'; ecsProfSeries = ''; render(); };
+      <div class="row" style="margin-top:8px;flex-wrap:nowrap;"><button class="btn gold small" data-c>👤 Open Player Profile</button><button class="btn gold small" data-po style="flex:0">🖼</button><button class="btn secondary small" data-e>✏️ Edit</button><button class="btn danger small" data-x style="flex:0">✕</button></div></div>`);
+    const _op = ()=>{ ecsPlayerOpen = r.id; ecsProfTab = 'overall'; ecsProfSeries = ''; render(); }; card.querySelector('[data-c]').onclick = _op; { const hd = card.firstElementChild; if(hd){ hd.style.cursor='pointer'; hd.onclick = _op; } const nb = card.querySelector('b,h3,strong'); if(nb){ nb.style.cursor='pointer'; nb.style.textDecoration='underline'; nb.onclick=_op; } }
     card.querySelector('[data-e]').onclick = ()=> ecsPlayerForm(r);
     card.querySelector('[data-po]').onclick = ()=> ecsPosterOpen({kind:'player', name:r.name});
     card.querySelector('[data-x]').onclick = ()=>{ if(confirm(r.name+' ko permanent list se hata dein? (Teams ke squad par asar nahi padega.)')){ root.playersReg = root.playersReg.filter(x=>x!==r); saveState(); render(); } };
@@ -13706,7 +13708,7 @@ function ecsSqRoster(d, th){
   const H = Math.max(1300, top+rows*rh+130), [cv, c] = ecsPCanvas(W, H, th);
   const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, ecsShade(t.color, .1)); g.addColorStop(1, ecsShade(t.color, -.6)); c.fillStyle = g; c.fillRect(0, 0, 470, H);
   c.save(); c.globalAlpha = .12; c.fillStyle = '#fff'; for(let i=0;i<5;i++){ ecsPara(c, i*100-40, 0, 36, H, 70); c.fill(); } c.restore();
-  ecsCapDraw(c, t.cap, t.color, 215, H-230, Math.min(1000, H*.72), true, 400);
+  ecsSqCap135(c, t.cap, t.color, 450, H);
   c.beginPath(); c.moveTo(450, 0); c.lineTo(W, 0); c.lineTo(W, H); c.lineTo(450, H); for(let y=H, k=0; y>0; y-=34, k++) c.lineTo(450+((k%2)?-10:8)+((k*37)%9), y-17); c.closePath(); c.fillStyle = '#f2f5fa'; c.fill();
   const L = ecsName2(t.name); ecsBig(c, L[0], 480, 120, 100, {al:'left', maxW:560, fill:'#101828', stroke:false}); if(L[1]) ecsBig(c, L[1], 480, 215, 100, {al:'left', maxW:560, fill:'#101828', stroke:false});
   c.fillStyle = '#1747b0'; c.fillRect(470, L[1]?250:160, 580, 62); ecsPT(c, ['SQUAD', n+' PLAYERS'].join('  ·  '), 490, (L[1]?250:160)+43, {size:32, col:'#fff', maxW:545});
@@ -13919,9 +13921,9 @@ ECS_PK.fixture.fields = [['title','Tournament / Series ka naam'],['kicker','Dusr
 /* ---- poster text fields (modal ke andar) ---- */
 function ecsFieldsUI(box, fields, redraw){
   const det = el(`<details style="margin:6px 0;"><summary style="cursor:pointer;color:var(--gold);font-weight:800;font-size:.85rem;">✏️ Text badlo (time, venue, title…)</summary><div class="pfl" style="margin-top:6px;"></div></details>`), L = det.querySelector('.pfl'); let tm = null;
-  root.posterMeta = root.posterMeta || {};
-  fields.forEach(([k,lab])=>{ const w = el(`<div style="margin:4px 0;"><label style="font-size:.75rem;opacity:.8;"></label><input type="text" style="width:100%;"></div>`); w.querySelector('label').textContent = lab; const inp = w.querySelector('input'); inp.value = root.posterMeta[k] || '';
-    inp.oninput = ()=>{ root.posterMeta[k] = inp.value; clearTimeout(tm); tm = setTimeout(()=>{ try{ saveState(); }catch(e){} redraw(); }, 500); }; L.appendChild(w); });
+  root.posterMetaBy = root.posterMetaBy || {}; const _pk = window.__pmKey||''; const _pst = (root.posterMetaBy[_pk] = root.posterMetaBy[_pk] || {});
+  fields.forEach(([k,lab])=>{ const w = el(`<div style="margin:4px 0;"><label style="font-size:.75rem;opacity:.8;"></label><input type="text" style="width:100%;"></div>`); w.querySelector('label').textContent = lab; const inp = w.querySelector('input'); inp.value = _pst[k] || '';
+    inp.oninput = ()=>{ _pst[k] = inp.value; clearTimeout(tm); tm = setTimeout(()=>{ try{ saveState(); }catch(e){} redraw(); }, 500); }; L.appendChild(w); });
   box.appendChild(det);
 }
 function ecsMatchPosterItems(s, m){ return [['🏆 Result summary poster', {kind:'result', s, m}], ['📋 Poora scorecard poster (dono innings)', {kind:'scorecard', s, m}]]; }
@@ -16246,7 +16248,7 @@ function clShare(){
     if(ok) showToast('📋 Cloud code copy ho gaya - ab paste kar do'); else prompt('Copy khud nahi hua. Is box ka poora text select karke copy karo:', c); };
   if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(c).then(()=>showToast('📋 Cloud code copy ho gaya - ab paste kar do')).catch(fb); else fb();
 }
-function clOff(){ if(!confirm('Cloud sync band karein? (Is device ka data yahin rahega, cloud wala bhi mehfooz rahega.)')) return; CL=null; AD=null; _lastJ=null; try{ localStorage.removeItem(ECK); localStorage.removeItem(EAK); localStorage.setItem('ecs_cloud_off','1'); }catch(x){} clSt='Off'; clBadge(); render(); }
+function clOff(){ if(!confirm('⚠ Kya aap sach me Cloud sync BAND karna chahte hain?\n\nBand karne par ye device cloud se alag ho jayega - naya data upar nahi jayega aur doosre devices ka naya data yahan nahi aayega. (Data delete nahi hota; dobara Cloud code se connect kar sakte ho.)')) return; CL=null; AD=null; _lastJ=null; try{ localStorage.removeItem(ECK); localStorage.removeItem(EAK); localStorage.setItem('ecs_cloud_off','1'); }catch(x){} clSt='Off'; clBadge(); render(); }
 function clCard(){
   const ad=isAdm();
   const c = el(`<div class="card" id="clcard"><h3 style="margin:0 0 6px;">☁ Cloud Sync</h3>
@@ -16256,7 +16258,8 @@ function clCard(){
   const row=c.querySelector('.row');
   const add=(t,cls,fn)=>{ const b=el(`<button class="btn ${cls}" data-cl="1">${t}</button>`); b.onclick=fn; row.appendChild(b); };
   if(!CL) add('☁ Cloud connect karo','gold',clSet);
-  else { add(ad?'🚪 Admin logout':'🔐 Admin login', ad?'secondary':'gold', ad?clAdminLogout:clAdminLogin); if(ad) add('🔁 Sync tareeqa: '+(SM==='manual'?'✋ Manual (sirf Sync dabane par)':'⚡ Auto (khud)')+' - badlo','secondary',clMode); add('🔄 Abhi sync karo','secondary',()=>clPull(true)); add('📋 Cloud code copy (doosre device ke liye)','secondary',clShare); add('⏏ Cloud band karo','secondary',clOff); }
+  else { add(ad?'🚪 Admin logout':'🔐 Admin login', ad?'secondary':'gold', ad?clAdminLogout:clAdminLogin); if(ad) add('🔁 Sync tareeqa: '+(SM==='manual'?'✋ Manual (sirf Sync dabane par)':'⚡ Auto (khud)')+' - badlo','secondary',clMode); add('🔄 Abhi sync karo','secondary',()=>clPull(true)); add('📋 Cloud code copy (doosre device ke liye)','secondary',clShare); }
+  if(CL){ const z=el(`<div style="margin-top:34px;padding-top:14px;border-top:1px dashed #e0554a88"><div style="font-size:.8rem;margin-bottom:6px;color:#ff9d8f">⚠ Khatarnak option - galti se mat dabana</div></div>`); const b=el(`<button class="btn" data-cl="1" style="width:100%;background:#c0392b;color:#fff;font-weight:800">⏏ Cloud band karo</button>`); b.onclick=clOff; z.appendChild(b); c.appendChild(z); }
   return c;
 }
 
@@ -17224,6 +17227,189 @@ loadState();
 clBadge(); clPull();
 </script>
 <style id="ORG125">.iog{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 0}.iog>.b,.iog>.btn,.iog>label.btn{width:100%;margin:0!important;box-sizing:border-box;display:flex;align-items:center;justify-content:center;text-align:center;min-height:44px;line-height:1.25;white-space:normal}.iog>.wide2{grid-column:1/-1}.iog>.b.sm,.iog>.btn.small{min-height:40px}.iosec{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;opacity:.75;margin:12px 0 2px;font-weight:800}.iosec:first-child{margin-top:0}#clcard .row,.card .row:has(>#bx){display:grid!important;grid-template-columns:1fr 1fr;gap:8px}#clcard .row>.btn,.card .row>#bx,.card .row>label.btn,.card .row>#bpw{width:100%;margin:0!important;box-sizing:border-box;display:flex;align-items:center;justify-content:center;text-align:center;min-height:44px;line-height:1.25;white-space:normal}#clcard .row>.btn:last-child:nth-child(odd){grid-column:1/-1}.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.sgrid>.btn{width:100%;margin:0!important;box-sizing:border-box;display:flex;align-items:center;justify-content:center;text-align:center;min-height:54px;line-height:1.25;white-space:normal;font-size:.9rem}.sgrid>.wide{grid-column:1/-1;min-height:44px}</style>
+<script>/* NAV136: har jagah se peeche / home jane ka rasta */
+(function(){
+  if(window.__nav136)return; window.__nav136=1;
+  const stack=[];let last=null,restoring=false,skip=0,bar=null;
+  const CFG={
+    isHome:()=>activeTab==null,
+    blocked:()=>activeTab==='match'&&!!document.querySelector('.runbtns'),
+    sig:()=>String(activeTab)+'|'+String(ecsSub)+'|'+(ecsTeamOpen&&typeof ecsTeamOpen==='object'?(ecsTeamOpen.id||ecsTeamOpen.name||'o'):String(ecsTeamOpen))+'|'+String(editHubNum)+'|'+(ecsNewSeries?'n':'')+'|'+String(ecsPlayerOpen),
+    snap:()=>({activeTab:activeTab,ecsSub:ecsSub,ecsTeamOpen:ecsTeamOpen,editHubNum:editHubNum,ecsNewSeries:ecsNewSeries,pl:ecsPlayerOpen}),
+    restore:s=>{activeTab=s.activeTab;ecsSub=s.ecsSub;ecsTeamOpen=s.ecsTeamOpen;editHubNum=s.editHubNum;ecsNewSeries=s.ecsNewSeries;ecsPlayerOpen=s.pl===undefined?null:s.pl;render();try{scrollTo(0,0)}catch(e){}},
+    home:()=>{activeTab=null;ecsSub=null;ecsPlayerOpen=null;render();try{scrollTo(0,0)}catch(e){}},
+    closeTop:()=>{const m=[].slice.call(document.querySelectorAll('.modal-overlay')).pop();if(m){m.remove();return true}return false},
+    wrap:()=>{const o=render;render=function(){const r=o.apply(this,arguments);try{post()}catch(e){}return r}}
+  };
+  const toastN=m=>{try{let d=document.getElementById('nav136t');if(!d){d=document.createElement('div');d.id='nav136t';d.style.cssText='position:fixed;left:50%;bottom:76px;transform:translateX(-50%);background:#222c;color:#fff;padding:9px 14px;border-radius:12px;z-index:99999;font-size:.85rem;max-width:88vw;text-align:center';document.body.appendChild(d)}d.textContent=m;d.style.display='block';clearTimeout(d._t);d._t=setTimeout(()=>{d.style.display='none'},2600)}catch(e){}};
+  function vis(){ if(!bar)return; const show=!CFG.isHome()&&!CFG.blocked(); bar.style.display=show?'flex':'none'; document.body.classList.toggle('nav136on',show); const b=bar.querySelector('[data-n=b]'); if(b)b.style.opacity=stack.length?'1':'.55'; }
+  function unwind(){ const n=stack.length; stack.length=0; if(n){ skip++; try{history.go(-n)}catch(e){skip=Math.max(0,skip-1)} } }
+  function post(){
+    if(restoring)return;
+    const sg=CFG.sig();
+    if(last&&sg!==last.sg){
+      if(CFG.isHome()) unwind();
+      else{ stack.push(last.snap); try{history.pushState({n136:stack.length},'')}catch(e){} }
+    }
+    last={sg:sg,snap:CFG.snap()}; vis();
+  }
+  function doBack(fromPop){
+    const s=stack.pop(); if(!s) return false;
+    restoring=true; try{CFG.restore(s)}catch(e){} restoring=false;
+    last={sg:CFG.sig(),snap:CFG.snap()};
+    if(!fromPop){ skip++; try{history.back()}catch(e){skip=Math.max(0,skip-1)} }
+    vis(); return true;
+  }
+  function goBack(){ if(CFG.closeTop())return; if(CFG.blocked()){toastN('Match chal raha hai - bahar jane ke liye upar Home / Tools istemal karein');return;} if(!doBack(false)) CFG.home(); }
+  function goHome(){ if(CFG.closeTop()){} CFG.home(); }
+  window.addEventListener('popstate',()=>{
+    if(skip>0){skip--;return}
+    if(CFG.closeTop()){ try{history.pushState({n136:1},'')}catch(e){} return; }
+    if(!stack.length) return;
+    if(CFG.blocked()){ try{history.pushState({n136:1},'')}catch(e){} toastN('Match chal raha hai - bahar jane ke liye upar Home / Tools istemal karein'); return; }
+    doBack(true);
+  });
+  function mkBar(){
+    const st=document.createElement('style');
+    st.textContent='#nav136{position:fixed;left:50%;transform:translateX(-50%);bottom:max(10px,env(safe-area-inset-bottom));z-index:45;display:none;gap:8px;padding:6px;border-radius:30px;background:rgba(12,18,34,.88);border:1px solid rgba(255,255,255,.22);box-shadow:0 6px 22px rgba(0,0,0,.5);backdrop-filter:blur(6px)}#nav136 button{border:0;border-radius:24px;padding:11px 18px;font-weight:800;font-size:.95rem;color:#fff;background:#2f4a8f;cursor:pointer;min-width:104px;white-space:nowrap;line-height:1.2}#nav136 button[data-n=h]{background:#1f9d57}body.nav136on{padding-bottom:78px!important}';
+    document.head.appendChild(st);
+    bar=document.createElement('div'); bar.id='nav136';
+    bar.innerHTML='<button type="button" data-cl="1" data-n="b">◀ Back</button><button type="button" data-cl="1" data-n="h">🏠 Home</button>';
+    bar.querySelector('[data-n=b]').addEventListener('click',e=>{e.stopPropagation();goBack()});
+    bar.querySelector('[data-n=h]').addEventListener('click',e=>{e.stopPropagation();goHome()});
+    document.body.appendChild(bar);
+  }
+  /* left-edge swipe = peeche */
+  let sx=0,sy=0,sOn=false;
+  document.addEventListener('touchstart',e=>{const t0=e.touches[0];sOn=e.touches.length===1&&t0.clientX<26;sx=t0.clientX;sy=t0.clientY},{passive:true});
+  document.addEventListener('touchend',e=>{ if(!sOn)return; sOn=false; const t0=e.changedTouches[0]; const dx=t0.clientX-sx,dy=Math.abs(t0.clientY-sy); if(dx>85&&dy<60&&!CFG.isHome()) goBack(); },{passive:true});
+  function boot(){ mkBar(); CFG.wrap(); try{post()}catch(e){} }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+  window.__nav136api={back:goBack,home:goHome,depth:()=>stack.length};
+})();
+</script>
+<script>/* POSTERMETA139: har poster ka apna text, asli data se default */
+(function(){
+  const dk=s=>{try{ if(s&&s.cid&&typeof findc==='function'){const z=findc(s.cid);if(z)return z.k==='i'?'INDIVIDUAL MATCH':z.k==='t'?'TOURNAMENT':'SERIES';} }catch(e){} return 'MATCH DAY'};
+  try{
+    const o=ecsPosterOpen;
+    ecsPosterOpen=function(spec){
+      try{
+        const s=spec||{}; const id=s.fid||s.mid||s.cid||s.tid||s.id||s.no||s.num||(s.series&&s.series[0]&&s.series[0].id)||'';
+        if(s.kind==='fixture'){ window.__pmKey='fixture:'+(s.fid||id); } else { window.__pmKey=(s.kind||'')+':'+id+(s.series&&s.series[0]&&s.title?':'+s.title:''); }
+        if(s.kind!=='fixture'){ window.__fxPD=null; window.__pmDef={kicker:s.kicker||dk(s),stage:'MATCH DAY'}; }
+      }catch(e){}
+      return o.apply(this,arguments);
+    };
+  }catch(e){}
+  if(typeof ecsMeta==='function'&&String(ecsMeta).indexOf('__pmKey')<0){
+    ecsMeta=function(k,def){ const m=(root.posterMetaBy||{})[window.__pmKey||'']||{}; if(m[k]!=null&&String(m[k]).trim()!=='')return String(m[k]).trim(); const f=window.__fxPD; if(f&&f[k])return String(f[k]); const D=window.__pmDef; if(def==='CRICKET TOURNAMENT'||def==='BIG FINAL'){ return (D&&D[k])||'MATCH DAY'; } return def; };
+  }
+})();
+</script>
+<script>/* STATS140: har player poster ke neeche poora record (50s/100s/balls/overs...) */
+(function(){
+  if(typeof ecsMakePlayer!=='function'||typeof ecsPCanvas!=='function')return;
+  function addStats(cv,d,th){
+    const D=d&&d.D; if(!D||!cv||!cv.width) return cv;
+    const W=cv.width,H=cv.height,S=W/1080,f1=x=>Number.isInteger(x)?String(x):x.toFixed(1);
+    const inn=D.inn||0,no=D.no||0,runs=D.runs||0,b=D.b||0,lb=D.lb||0,rc=D.rc||0,w=D.w||0;
+    const ov=Math.floor(lb/6)+(lb%6?'.'+(lb%6):'');
+    const bat=[['INNINGS',inn],['NOT OUT',no],['BALLS FACED',b],['HIGH SCORE',(D.hs||0)+(D.hsNo?'*':'')],['50s / 100s',(D.n50||0)+' / '+(D.n100||0)],['4s / 6s',(D.f4||0)+' / '+(D.f6||0)],['STRIKE RATE',b?(runs*100/b).toFixed(1):'-']];
+    const bowl=[['OVERS',ov],['MAIDENS',D.mdn||0],['RUNS GIVEN',rc],['WICKETS',w],['BEST',w?(D.bbW+'/'+D.bbR):'-'],['ECONOMY',lb?(rc*6/lb).toFixed(2):'-'],['BOWL AVG',w?f1(rc/w):'-'],['3W / 5W',(D.n3||0)+' / '+(D.n5||0)]];
+    const M=40*S,gap=14*S,tw=(W-2*M-3*gap)/4,th_=128*S,hh=70*S;
+    const EH=Math.round(60*S+2*(hh+2*(th_+gap))+80*S);
+    const [nc,c]=ecsPCanvas(W,H+EH,th);
+    c.drawImage(cv,0,0);
+    let y=H+10*S;
+    const sec=(title,arr,col)=>{ ecsPT(c,title,M,y+46*S,{size:34*S,col:th.acc,w:800}); c.fillStyle=th.acc; c.fillRect(M,y+58*S,W-2*M,3*S); y+=hh;
+      arr.forEach(([k,v],i)=>{ const x=M+(i%4)*(tw+gap),yy=y+Math.floor(i/4)*(th_+gap); ecsPPanel(c,x,yy,tw,th_,th,col); ecsPT(c,String(v),x+tw/2,yy+th_*0.62,{size:54*S,col:th.tx,al:'center',maxW:tw-20*S}); ecsPT(c,k,x+tw/2,yy+th_*0.9,{size:19*S,col:th.mu,w:700,al:'center',maxW:tw-10*S}); });
+      y+=2*(th_+gap); };
+    sec('BATTING RECORD',bat,d.color||th.acc); sec('BOWLING RECORD',bowl,th.acc);
+    return nc;
+  }
+  const o=ecsMakePlayer;
+  ecsMakePlayer=function(d,th,v){ const cv=o(d,th,v); try{ return addStats(cv,d,th) }catch(e){ return cv } };
+  try{ if(typeof ECS_PK!=='undefined'&&ECS_PK.player) ECS_PK.player.make=ecsMakePlayer; }catch(e){}
+})();
+</script>
+<script>/* SQCAP142: squad poster me captain ki photo left panel me poori */
+function ecsSqCap135(c,p,col,W0,H){
+  const im=p&&p.full, H0=H-70;
+  if(!im){ ecsCapDraw(c,p,col,W0/2,H-230,Math.min(1000,H*.72),true,400); return; }
+  c.save(); c.beginPath(); c.rect(0,0,W0,H0); c.clip();
+  const ar=im.width/im.height;
+  if(im.cut){
+    let pw=W0*1.02, ph=pw/ar; if(ph>H0*.96){ ph=H0*.96; pw=ph*ar; }
+    const gl=c.createRadialGradient(W0/2,H0*.45,10,W0/2,H0*.45,H0*.6); gl.addColorStop(0,col+'88'); gl.addColorStop(1,col+'00'); c.fillStyle=gl; c.fillRect(0,0,W0,H0);
+    c.shadowColor='rgba(0,0,0,.45)'; c.shadowBlur=22; c.drawImage(im,(W0-pw)/2,H0-ph,pw,ph);
+  } else {
+    const fh=W0/ar;
+    if(fh>=H0*.8){
+      const sc=Math.max(W0/im.width,H0/im.height), sw=W0/sc, sh=H0/sc, sx=(im.width-sw)/2, sy=Math.max(0,(im.height-sh)*0.12);
+      c.drawImage(im,sx,sy,sw,sh,0,0,W0,H0);
+    } else {
+      /* poori photo (kuch cut nahi) bilkul upar; neeche saaf team-colour panel */
+      { const gt=c.createLinearGradient(0,0,0,H0); gt.addColorStop(0,col); gt.addColorStop(1,'#050b18'); c.fillStyle=gt; c.fillRect(0,0,W0,H0); }
+      c.save(); c.translate(W0*0.5,fh+(H0-fh)*0.5); c.rotate(-Math.PI/2); c.fillStyle='rgba(255,255,255,.10)'; c.textAlign='center'; c.textBaseline='middle'; const nm=String((p&&p.name)||'CAPTAIN').toUpperCase(); let fs=Math.min(190,(H0-fh)*0.9/Math.max(4,nm.length)*1.7); c.font='900 '+fs+'px Poppins, Arial, sans-serif'; c.fillText(nm,0,0,H0-fh-60); c.restore();
+      { const oc=document.createElement('canvas'); oc.width=W0; oc.height=Math.ceil(fh); const x=oc.getContext('2d'); x.drawImage(im,0,0,W0,fh); x.globalCompositeOperation='destination-in'; const gm=x.createLinearGradient(0,fh*.7,0,fh); gm.addColorStop(0,'#000'); gm.addColorStop(1,'rgba(0,0,0,0)'); x.fillStyle=gm; x.fillRect(0,0,W0,fh); c.drawImage(oc,0,0); }
+    }
+    const g=c.createLinearGradient(0,H0*.8,0,H0); g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,.5)'); c.fillStyle=g; c.fillRect(0,0,W0,H0);
+  }
+  c.restore();
+}
+</script>
+<script>/* CROP143: photo crop tool + player profile se photo */
+(function(){
+  function ecsCrop143(file,done){
+    const rd=new FileReader();
+    rd.onload=()=>{ const im=new Image(); im.onload=()=>open(im); im.onerror=()=>alert('Ye image khul nahi saki.'); im.src=rd.result; };
+    rd.readAsDataURL(file);
+    function open(im){
+      let ratio=3/4, z=1, ox=0, oy=0; const PWD=300;
+      const ov=document.createElement('div'); ov.id='crop143'; ov.setAttribute('data-cl','1');
+      ov.style.cssText='position:fixed;inset:0;z-index:2147483400;background:rgba(7,12,26,.97);display:flex;flex-direction:column;align-items:center;padding:12px;overflow:auto;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif';
+      const bs='border:0;border-radius:12px;padding:11px 14px;font-weight:800;font-size:.9rem;color:#fff;cursor:pointer;';
+      ov.innerHTML='<div style="font-weight:900;font-size:1.1rem;margin:2px 0">✂️ Photo set / crop</div><div style="font-size:.8rem;opacity:.8;text-align:center;max-width:320px;margin:2px 0 8px">Photo ko ungli se khainch kar position karein, slider ya do-ungli se zoom karein. Chehra frame ke andar rakhein - jo hissa frame me dikhega wahi poster me aayega.</div><canvas id="c143" style="touch-action:none;border-radius:14px;border:3px solid #ffd45f;background:#000"></canvas><input id="z143" type="range" min="100" max="450" value="100" style="width:300px;margin:12px 0 2px"><div style="font-size:.72rem;opacity:.7">zoom</div><div id="r143" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:8px 0"><button data-cl="1" data-k="fit" style="'+bs+'background:#2f4a8f">🔲 Poori photo</button><button data-cl="1" data-k="fill" style="'+bs+'background:#2f4a8f">🔍 Frame bhar do</button><button data-cl="1" data-k="r34" style="'+bs+'background:#6b3fa0">▯ 3:4</button><button data-cl="1" data-k="r11" style="'+bs+'background:#6b3fa0">◻ 1:1</button></div><div style="display:flex;gap:10px;margin:6px 0 14px"><button data-cl="1" data-k="ok" style="'+bs+'background:#1f9d57;min-width:130px">✅ Save</button><button data-cl="1" data-k="x" style="'+bs+'background:#8a2a2a;min-width:110px">Cancel</button></div>';
+      document.body.appendChild(ov);
+      const cv=ov.querySelector('#c143'), zs=ov.querySelector('#z143');
+      const dims=()=>({w:PWD,h:Math.round(PWD/ratio)});
+      function draw(c,w,h,k){
+        c.clearRect(0,0,w,h);
+        const cs=Math.max(w/im.width,h/im.height);
+        c.save(); try{ c.filter='blur('+Math.round(w*0.04)+'px) brightness(.75)'; }catch(e){} c.drawImage(im,(w-im.width*cs)/2,(h-im.height*cs)/2,im.width*cs,im.height*cs); c.restore();
+        const base=Math.min(w/im.width,h/im.height), sc=base*z, iw=im.width*sc, ih=im.height*sc;
+        const mx=Math.max(0,(iw-w)/2)+w*0.25, my=Math.max(0,(ih-h)/2)+h*0.25;
+        const cx=w/2+Math.max(-mx,Math.min(mx,ox*k)), cy=h/2+Math.max(-my,Math.min(my,oy*k));
+        c.drawImage(im,cx-iw/2,cy-ih/2,iw,ih);
+      }
+      function paint(){ const d=dims(); cv.width=d.w; cv.height=d.h; cv.style.width=d.w+'px'; cv.style.height=d.h+'px'; draw(cv.getContext('2d'),d.w,d.h,1); }
+      paint();
+      let pts=new Map(), lastD=0;
+      cv.addEventListener('pointerdown',e=>{ cv.setPointerCapture(e.pointerId); pts.set(e.pointerId,[e.clientX,e.clientY]); lastD=0; });
+      cv.addEventListener('pointermove',e=>{ if(!pts.has(e.pointerId))return; const p=pts.get(e.pointerId);
+        if(pts.size===1){ ox+=e.clientX-p[0]; oy+=e.clientY-p[1]; pts.set(e.pointerId,[e.clientX,e.clientY]); paint(); }
+        else if(pts.size>=2){ pts.set(e.pointerId,[e.clientX,e.clientY]); const a=[...pts.values()], d=Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1]); if(lastD){ z=Math.max(1,Math.min(4.5,z*d/lastD)); zs.value=Math.round(z*100); paint(); } lastD=d; } });
+      const up=e=>{ pts.delete(e.pointerId); lastD=0; }; cv.addEventListener('pointerup',up); cv.addEventListener('pointercancel',up);
+      cv.addEventListener('wheel',e=>{ e.preventDefault(); z=Math.max(1,Math.min(4.5,z*(e.deltaY<0?1.08:0.93))); zs.value=Math.round(z*100); paint(); },{passive:false});
+      zs.oninput=()=>{ z=zs.value/100; paint(); };
+      ov.addEventListener('click',e=>{ const b=e.target.closest('button[data-k]'); if(!b)return; const k=b.dataset.k;
+        if(k==='fit'){ z=1; ox=oy=0; zs.value=100; paint(); }
+        else if(k==='fill'){ const d=dims(); z=Math.max(d.w/im.width,d.h/im.height)/Math.min(d.w/im.width,d.h/im.height); z=Math.min(4.5,z); ox=oy=0; zs.value=Math.round(z*100); paint(); }
+        else if(k==='r34'){ ratio=3/4; paint(); } else if(k==='r11'){ ratio=1; paint(); }
+        else if(k==='x'){ ov.remove(); }
+        else if(k==='ok'){ const OW=600, OH=Math.round(OW/ratio), oc=document.createElement('canvas'); oc.width=OW; oc.height=OH; const d=dims(); draw(oc.getContext('2d'),OW,OH,OW/d.w);
+          oc.toBlob(bl=>{ ov.remove(); if(!bl){alert('Photo save nahi ho saki');return;} let fl; try{ fl=new File([bl],'photo.jpg',{type:'image/jpeg'}); }catch(er){ fl=bl; } done(fl); },'image/jpeg',0.9); }
+      });
+    }
+  }
+  window.ecsCrop143=ecsCrop143;
+  if(typeof ecsProcessPortrait==='function'){
+    const op=ecsProcessPortrait;
+    ecsProcessPortrait=function(file,cb){ ecsCrop143(file,fl=>op(fl,cb)); };
+  }
+})();
+</script>
 <script>/*offline install (service worker)*/if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol)){window.addEventListener("load",function(){var had=!!navigator.serviceWorker.controller;function bar(){if(document.getElementById("newver125"))return;var d=document.createElement("div");d.id="newver125";d.style.cssText="position:fixed;left:10px;right:10px;bottom:12px;z-index:2147483000;background:#1f7a4d;color:#fff;border-radius:14px;padding:12px 14px;font:700 14px system-ui,sans-serif;display:flex;gap:10px;align-items:center;box-shadow:0 6px 24px rgba(0,0,0,.45)";d.innerHTML='<span style="flex:1">\u{1F504} App ka naya version aa gaya hai</span><button style="border:0;border-radius:10px;padding:9px 14px;font-weight:800;background:#fff;color:#0b3d2e">Refresh</button><button style="border:0;background:transparent;color:#fff;font-size:18px">\u2715</button>';d.children[1].onclick=function(){location.reload()};d.children[2].onclick=function(){d.remove()};document.body.appendChild(d)}navigator.serviceWorker.addEventListener("message",function(e){if(e.data&&e.data.type==="newver")bar()});navigator.serviceWorker.addEventListener("controllerchange",function(){if(had)bar()});navigator.serviceWorker.register("sw.js").catch(function(){})})}</script>
 <script>
 /* v104 adapter — ECS */
@@ -17706,7 +17892,7 @@ window.__prevMatchTs=function(list){ let mx=0; (list||[]).forEach(x=>{ if(!x) re
     if(i.gr) L.push('📍 '+i.gr); if(i.ov) L.push('🎯 '+i.ov+' overs a side');
     if(i.at) L.push('🕗 '+fmtDate(i.at)+' · '+fmtTime(i.at)); L.push('');
     L.push('*🔴 To watch live match, click the link below 👇*'); L.push(link(i)); return L.join('\n'); }
-  function link(i){ if(i.key) return base()+'#m='+encodeURIComponent(i.key)+(LS.g('sh104_tag')?'&s='+encodeURIComponent(LS.g('sh104_tag')):''); const o={a:i.a.n,b:i.b.n,ca:i.a.c,cb:i.b.c,k:i.k,sr:i.sr,n:i.no,of:i.of,rd:i.rd,t:i.at,g:i.gr,o:i.ov,p:i.app}; return base()+'#ev='+b64e(o); }
+  function link(i){ if(i.key) return base()+'#m='+encodeURIComponent(i.key)+(LS.g('sh104_tag_'+APP)?'&s='+encodeURIComponent(LS.g('sh104_tag_'+APP)):''); const o={a:i.a.n,b:i.b.n,ca:i.a.c,cb:i.b.c,k:i.k,sr:i.sr,n:i.no,of:i.of,rd:i.rd,t:i.at,g:i.gr,o:i.ov,p:i.app}; return base()+'#ev='+b64e(o); }
   /* ---------- result poster ---------- */
   function drawDone(x0){
     const [cv,x]=canvasBase(['#7a2e0a','#1d0d03']); x.textAlign='center';
@@ -17720,16 +17906,16 @@ window.__prevMatchTs=function(list){ let mx=0; (list||[]).forEach(x=>{ if(!x) re
     x.font='600 34px system-ui,sans-serif'; x.fillStyle='#ffe9a8'; x.fillText([x0.date,x0.time].filter(Boolean).join(' · '),540,1110);
     x.fillStyle='#fff'; x.font='900 42px system-ui,sans-serif'; x.fillText('📋 Full scorecard on '+APP,540,1235); x.font='600 28px system-ui,sans-serif'; x.fillStyle='#ffd9b0'; x.fillText('Open the link to see the complete scorecard',540,1285);
     return cv; }
-  function captionDone(x0){ const L=['🏁 *'+APP+' — MATCH COMPLETE*']; if(x0.series) L.push('🏆 '+x0.series+(x0.no?' · Match '+x0.no:'')); [x0.a,x0.b].forEach(t=>{ if(t) L.push((x0.win&&x0.win===t.name?'🏆 ':'▫ ')+'*'+t.name+'* '+t.score+(t.ovs?' ('+t.ovs+')':'')); }); if(x0.res) L.push('✅ '+x0.res); if(x0.date) L.push('📅 '+x0.date); L.push(''); L.push('📋 Full scorecard:'); L.push(base()+'#sc='+encodeURIComponent(x0.id)+(LS.g('sh104_tag')?'&s='+encodeURIComponent(LS.g('sh104_tag')):'')); return L.join('\n'); }
+  function captionDone(x0){ const L=['🏁 *'+APP+' — MATCH COMPLETE*']; if(x0.series) L.push('🏆 '+x0.series+(x0.no?' · Match '+x0.no:'')); [x0.a,x0.b].forEach(t=>{ if(t) L.push((x0.win&&x0.win===t.name?'🏆 ':'▫ ')+'*'+t.name+'* '+t.score+(t.ovs?' ('+t.ovs+')':'')); }); if(x0.res) L.push('✅ '+x0.res); if(x0.date) L.push('📅 '+x0.date); L.push(''); L.push('📋 Full scorecard:'); L.push(base()+'#sc='+encodeURIComponent(x0.id)+(LS.g('sh104_tag_'+APP)?'&s='+encodeURIComponent(LS.g('sh104_tag_'+APP)):'')); return L.join('\n'); }
   /* ---------- preview / share modal ---------- */
   function toBlob(cv){ return new Promise(r=>cv.toBlob(r,'image/png')); }
   async function preview(cv,cap,name,title,rebuild,squad){
     const blob=await toBlob(cv), url=URL.createObjectURL(blob); const file=new File([blob],name+'.png',{type:'image/png'});
-    const o=document.createElement('div'); o.className='sh104'; o.innerHTML=`<div class="bx"><h3>${E(title)}</h3><img src="${url}" alt="poster"><label>Group tag for the link (optional, e.g. daily)</label><input data-cl="1" data-t placeholder="daily" maxlength="20" value="${E(LS.g('sh104_tag')||'')}"><label>Message (you can edit it)</label><textarea>${E(cap)}</textarea><div class="row"><button data-cl="1" class="g" data-s>📤 Share (WhatsApp)</button><button data-cl="1" data-c>📋 Copy message</button><button data-cl="1" data-d>⬇ Save image</button><button data-cl="1" data-l>🔗 Set app link</button>${squad?'<button data-cl="1" class="o" data-q style="flex-basis:100%">👥 Squad poster — full squads, designs &amp; styles</button>':''}<button data-cl="1" class="r" data-x>Close</button></div><div style="font-size:.7rem;opacity:.65;margin-top:8px">Tap Share, choose your WhatsApp group, and send. WhatsApp does not allow apps to post in a group automatically.</div></div>`;
+    const o=document.createElement('div'); o.className='sh104'; o.innerHTML=`<div class="bx"><h3>${E(title)}</h3><img src="${url}" alt="poster"><label>Group tag for the link (optional, e.g. daily)</label><input data-cl="1" data-t placeholder="daily" maxlength="20" value="${E(LS.g('sh104_tag_'+APP)||'')}"><label>Message (you can edit it)</label><textarea>${E(cap)}</textarea><div class="row"><button data-cl="1" class="g" data-s>📤 Share (WhatsApp)</button><button data-cl="1" data-c>📋 Copy message</button><button data-cl="1" data-d>⬇ Save image</button><button data-cl="1" data-l>🔗 Set app link</button>${squad?'<button data-cl="1" class="o" data-q style="flex-basis:100%">👥 Squad poster — full squads, designs &amp; styles</button>':''}<button data-cl="1" class="r" data-x>Close</button></div><div style="font-size:.7rem;opacity:.65;margin-top:8px">Tap Share, choose your WhatsApp group, and send. WhatsApp does not allow apps to post in a group automatically.</div></div>`;
     const ta=o.querySelector('textarea'); const close=()=>{ o.remove(); setTimeout(()=>URL.revokeObjectURL(url),2000); };
     o.onclick=e=>{ if(e.target===o) close(); }; o.querySelector('[data-x]').onclick=close;
     o.querySelector('[data-c]').onclick=async()=>{ try{ await navigator.clipboard.writeText(ta.value); }catch(e){ ta.select(); try{ document.execCommand('copy'); }catch(x){} } o.querySelector('[data-c]').textContent='✅ Copied'; };
-    o.querySelector('[data-t]').oninput=ev=>{ LS.s('sh104_tag',ev.target.value.trim().replace(/[^A-Za-z0-9_-]/g,'').slice(0,20)); if(rebuild) ta.value=rebuild(); };
+    o.querySelector('[data-t]').oninput=ev=>{ LS.s('sh104_tag_'+APP,ev.target.value.trim().replace(/[^A-Za-z0-9_-]/g,'').slice(0,20)); if(rebuild) ta.value=rebuild(); };
     const qb=o.querySelector('[data-q]'); if(qb) qb.onclick=()=>{ close(); try{ squad(); }catch(e){ alert('Could not open squad poster: '+e.message); } };
     o.querySelector('[data-l]').onclick=()=>{ if(askBase(true)&&rebuild) ta.value=rebuild(); };
     o.querySelector('[data-d]').onclick=()=>{ const a=document.createElement('a'); a.href=url; a.download=name+'.png'; document.body.appendChild(a); a.click(); a.remove(); };
@@ -17745,9 +17931,9 @@ window.__prevMatchTs=function(list){ let mx=0; (list||[]).forEach(x=>{ if(!x) re
     else{ tv=DT; const p=prev?new Date(prev):null; if(p){ d=new Date(p.getFullYear(),p.getMonth(),p.getDate()+1,12); } else { d=new Date(); if(d.getHours()*60+d.getMinutes()>=(+DT.slice(0,2))*60+(+DT.slice(3))) d.setDate(d.getDate()+1); } }
     const dv=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
     const o=document.createElement('div'); o.className='sh104';
-    o.innerHTML=`<div class="bx"><h3>🕒 Match date & time</h3><label>Date</label><input type="date" value="${dv}" data-d><label>Start time</label><input type="time" value="${tv}" data-t><label>Ground (optional)</label><input type="text" placeholder="e.g. SPG Ground" value="${E((cur&&cur.g)||LS.g('sh104_ground')||'')}" data-g><div class="row"><button data-cl="1" class="g" data-ok>✅ Save</button>${cur&&cur.t?'<button data-cl="1" class="o" data-clr>Clear time</button>':''}<button data-cl="1" class="r" data-x>Cancel</button></div></div>`;
+    o.innerHTML=`<div class="bx"><h3>🕒 Match date & time</h3><label>Date</label><input type="date" value="${dv}" data-d><label>Start time</label><input type="time" value="${tv}" data-t><label>Ground (optional)</label><input type="text" placeholder="e.g. SPG Ground" value="${E((cur&&cur.g)||LS.g('sh104_ground_'+APP)||'')}" data-g><div class="row"><button data-cl="1" class="g" data-ok>✅ Save</button>${cur&&cur.t?'<button data-cl="1" class="o" data-clr>Clear time</button>':''}<button data-cl="1" class="r" data-x>Cancel</button></div></div>`;
     o.onclick=e=>{ if(e.target===o) o.remove(); }; o.querySelector('[data-x]').onclick=()=>o.remove();
-    o.querySelector('[data-ok]').onclick=()=>{ const dd=o.querySelector('[data-d]').value, tt=o.querySelector('[data-t]').value, g=o.querySelector('[data-g]').value.trim(); if(!dd||!tt){ alert('Please choose date and time.'); return; } const ts=new Date(dd+'T'+tt).getTime(); if(g) LS.s('sh104_ground',g); o.remove(); cb({t:ts,g}); };
+    o.querySelector('[data-ok]').onclick=()=>{ const dd=o.querySelector('[data-d]').value, tt=o.querySelector('[data-t]').value, g=o.querySelector('[data-g]').value.trim(); if(!dd||!tt){ alert('Please choose date and time.'); return; } const ts=new Date(dd+'T'+tt).getTime(); if(g) LS.s('sh104_ground_'+APP,g); o.remove(); cb({t:ts,g}); };
     const cl=o.querySelector('[data-clr]'); if(cl) cl.onclick=()=>{ o.remove(); cb(null); };
     document.body.appendChild(o); }
   /* ---------- public ---------- */
@@ -17844,7 +18030,7 @@ window.__prevMatchTs=function(list){ let mx=0; (list||[]).forEach(x=>{ if(!x) re
       if(j.bw&&j.bw.n){ x.fillStyle='#9fe3b5'; x.fillText('⚾ '+String(j.bw.n).slice(0,22),80,y+40+bt.length*46); x.textAlign='right'; x.fillText(j.bw.fig||'',1000,y+40+bt.length*46); x.textAlign='left'; } }
     x.textAlign='center'; x.fillStyle='#fff'; x.font='900 44px system-ui,sans-serif'; x.fillText('▶  Watch LIVE ball-by-ball',540,1245); x.font='600 28px system-ui,sans-serif'; x.fillStyle='#9fc4ff'; x.fillText('Open the link shared with this picture',540,1292);
     return cv; }
-  function liveLink(j){ return base()+'#m='+encodeURIComponent(j.id)+(LS.g('sh104_tag')?'&s='+encodeURIComponent(LS.g('sh104_tag')):''); }
+  function liveLink(j){ return base()+'#m='+encodeURIComponent(j.id)+(LS.g('sh104_tag_'+APP)?'&s='+encodeURIComponent(LS.g('sh104_tag_'+APP)):''); }
   function captionLive(j){
     const L=['🔴 *MATCH IS LIVE NOW!*','','🏏 *'+(j.title||'')+'*'];
     const ser=[j.series,j.no?('Match '+j.no+(j.of?'/'+j.of:'')):'',j.rd].filter(Boolean).join(' · '); if(ser) L.push('🏆 '+ser);
