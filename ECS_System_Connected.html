@@ -17521,7 +17521,7 @@ const fillRules = ()=>window.__v104rules(fillRules0());
           const kdv=s.kind||'bi', tourO=(root.tours||[]).find(x=>x.id===s.tourId); const capN=k=>{ const T=s.teams[k]; const c=(T.players||[]).find(x=>x.id===T.captainId); return c?c.name:''; };
           const outs=inn.outBatters||[], lo=outs.length?outs[outs.length-1]:null, rl=inn.retireLog||[], lr=rl.length?rl[rl.length-1]:null;
           const retWhy=r=>{ const w=r.why; if(w==='quota') return 'Quota / limit completed'; if(w==='daycap') return 'Today\'s limit completed ('+(r.dayTotal||0)+' balls, limit '+(r.cap||'')+')'; if(w==='voluntary') return 'Captain ka faisla'; if(w==='emergency') return 'Emergency retire'+((r.emergency&&r.emergency.reason)?' — '+r.emergency.reason:''); if(w==='edit') return 'Edit se retired'; return 'Retired'; };
-          return {id:m.uid||(s.id+'#'+m.number),v:2,status:'live',title:ecsMNm(s,'A')+' vs '+ecsMNm(s,'B'),series:kdv==='ind'?'':(kdv==='tour'?(s.groupName||(tourO&&tourO.name)||''):sName(s)),
+          return {id:m.uid||(s.id+'#'+m.number),v:2,status:'live',title:ecsMNm(s,'A')+' vs '+ecsMNm(s,'B'),mn:kdv==='ind'?((s.iinfo&&s.iinfo.mn)||''):'',tn:kdv==='ind'?((s.iinfo&&s.iinfo.tn)||''):'',series:kdv==='ind'?'':(kdv==='tour'?(s.groupName||(tourO&&tourO.name)||''):sName(s)),
             cat:kdv==='tour'?'Tournament':kdv==='ind'?'Individual Match':'Series',rd:kdv==='tour'?(s.fixRd||''):'',of:kdv==='bi'?(s.totalMatches||''):'',date:m.date||'',ground:m.ground||'',caps:(capN('A')&&capN('B'))?(capN('A')+' · '+capN('B')):'',sid:s.id,tk:tk,ib:balls.length,
             out:lo?{i:ai*100+outs.length,n:playerName(tk,lo),how:dismissalTextFor(inn,lo)}:null,rt:lr?{i:ai*100+rl.length,n:playerName(tk,lr.pid),why:retWhy(lr),sb:lr.stintBalls||0}:null,
             no:kdv==='tour'?(s.fixNo||m.number):m.number,
@@ -18160,8 +18160,8 @@ window.ecsShareBtns=function(s,no,d,host){
 #lv104 .L4pc .L4sc{max-height:86vh;overflow:auto;width:100%;color:#eef3ff}#lv104 .L4pc .L4hd{font-weight:900;letter-spacing:.08em;font-size:.82rem;color:#ffd48a;margin-bottom:7px;text-align:center}#lv104 .L4pc .L4tap{font-size:.62rem;opacity:.55;margin-top:6px;text-align:center}
 #lv104 .L4ic{width:100%;text-align:center;padding:8px 6px;animation:lvup .5s cubic-bezier(.2,1.2,.4,1)}#lv104 .L4ic .L4e{font-size:2.4rem}#lv104 .L4ic .L4n{font-size:1.4rem;font-weight:900;margin:4px 0}#lv104 .L4ic .L4rs{font-size:.88rem;line-height:1.5;color:#ffd48a;font-weight:700}
 #lv104 .L4hc{margin-top:8px;padding:8px 9px 7px;border-radius:14px;background:#ffffff10;border:1px solid #ffffff1a;text-align:center}
-#lv104 .L4vs{display:flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap}#lv104 .L4vs b{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:.98rem;font-weight:900}#lv104 .L4vs i{font-style:normal;font-size:.66rem;font-weight:900;color:#ffd48a;flex:none}
-#lv104 .L4cp{display:flex;justify-content:center;gap:12px;margin-top:3px;font-size:.68rem;opacity:.85;white-space:nowrap}#lv104 .L4cp span{overflow:hidden;text-overflow:ellipsis;max-width:48%}#lv104 .L4cp small{opacity:.7}
+#lv104 .L4vs{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;justify-content:center;gap:7px;white-space:normal}#lv104 .L4vs b{min-width:0;overflow:visible;font-size:.95rem;line-height:1.2;font-weight:900;word-break:break-word;text-align:center}#lv104 .L4cat.L4mn{font-size:.86rem;padding:3px 14px;background:linear-gradient(180deg,#ffe38a,#e8a81c)}#lv104 .L4vs i{font-style:normal;font-size:.66rem;font-weight:900;color:#ffd48a;flex:none}
+#lv104 .L4cp{display:flex;justify-content:center;gap:12px;margin-top:3px;font-size:.68rem;opacity:.85;white-space:normal}#lv104 .L4cp span{max-width:48%;word-break:break-word}#lv104 .L4cp small{opacity:.7}
 #lv104 .L4hc .L4mt{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:6px;flex-wrap:wrap}#lv104 .L4hc .L4sn{font-size:.72rem;font-weight:800;opacity:.92}
 #lv104 .L4hc .L4mi{margin-top:4px;font-size:.68rem;opacity:.78;font-weight:600}
 #lv104 .L4ac{display:flex;gap:8px;margin-top:8px}#lv104 .L4ac button{flex:1;border:0;border-radius:12px;padding:9px 6px;font-weight:800;font-size:.78rem;color:#fff;background:#26376e;cursor:pointer;position:relative}#lv104 .L4ac #lvc.lvun{background:#1f7a4d}#lv104 .L4ac #lvc b{position:absolute;top:-6px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:#ff3b3b;color:#fff;font-size:.68rem;line-height:18px;text-align:center;padding:0 4px}#lv104 .L4ac #lvc b:empty{display:none}
@@ -18237,7 +18237,7 @@ window.ecsShareBtns=function(s,no,d,host){
   }
   const E=x=>esc(x==null?'':String(x));
   const pvOpenNow=()=>{ const q=document.querySelector('.pv104'); return !!(q&&q.style.display!=='none'); };
-  const stale=j=>j&&j.status==='live'&&((lastChange&&(Date.now()-lastChange>300000))||(()=>{ try{ return !!(LV&&LV.stat&&LV.stat(j.id)==='done'); }catch(e){ return false; } })());
+  const stale=j=>j&&j.status==='live'&&((lastChange&&(Date.now()-lastChange>300000))||(typeof j.t==='number'&&Date.now()-j.t>900000)||(()=>{ try{ return !!(LV&&LV.stat&&LV.stat(j.id)==='done'); }catch(e){ return false; } })());
   const evText={'4':['FOUR!','#2f7bf0'],'6':['SIX!','#8a4be0'],'W':['WICKET!','#e5484d'],'Wd':['WIDE BALL','#e8a51a'],'Nb':['NO BALL','#e8a51a']};
 
   function bell(){ return typeof Notification!=='undefined'?`<button data-cl="1" id="lvb" title="Notifications on/off">${bellTxt()}</button>`:''; }
@@ -18410,11 +18410,11 @@ async function chPdf(mid,obj){
     if(!box) return; const keep=box.querySelector('.L4fx, .L4pc'); 
     const cd=box.querySelector('.L4cd'); const fx=cd.querySelectorAll('.L4fx,.L4pc'); 
     const ths='<tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr>';
-    const body=`<div class="L4h"><span class="L4lv"><i></i>LIVE</span><span class="lvw">${vwHtml()}</span><span style="flex:1"></span><button data-cl="1" id="lvj" title="Add my name / member code">${myNm().n?'👤✓':'👤'}</button>${bell()}<button data-cl="1" id="lvx" title="Band">✕</button></div>
+    const body=`<div class="L4h"><span class="L4lv"><i></i>LIVE</span><span class="lvw">${vwHtml()}</span><span style="flex:1"></span><button data-cl="1" id="lvj" title="Add my name / member code">${myNm().n?'👤✓':'👤'}</button>${bell()}${(W.isAdm()&&LV.stat&&LV.stat(j.id)!=='live')?'<button data-cl="1" id="lvgone" title="Ye live match band karo (cloud se hatao)">🧹</button>':''}<button data-cl="1" id="lvx" title="Band">✕</button></div>
 <div class="L4hc"><div class="L4vs"><b>${E((j.title||'').split(' vs ')[0])}</b><i>vs</i><b>${E((j.title||'').split(' vs ').slice(1).join(' vs '))}</b></div>
 ${j.caps?`<div class="L4cp">${j.caps.split(' · ').map(x=>'<span>🧢 '+E(x)+' <small>(C)</small></span>').join('')}</div>`:''}
-<div class="L4mt"><span class="L4cat">${j.cat==='Tournament'?'🏆 TOURNAMENT':j.cat==='Individual Match'?'⚡ INDIVIDUAL':'📅 SERIES'}</span>${j.series?'<span class="L4sn">'+E(j.series)+'</span>':''}</div>
-<div class="L4mi">${[j.no?('Match '+E(j.no)+(j.of?'/'+E(j.of):'')):'',j.rd?E(j.rd):'',j.date?('📅 '+E(j.date)):'',j.ground?('📍 '+E(j.ground)):''].filter(Boolean).join(' · ')}</div></div>
+<div class="L4mt"><span class="L4cat${j.cat==='Individual Match'&&j.mn?' L4mn':''}">${j.cat==='Individual Match'&&j.mn?'🎯 '+E(j.mn):(j.cat==='Tournament'?'🏆 TOURNAMENT':j.cat==='Individual Match'?'⚡ INDIVIDUAL':'📅 SERIES')}</span>${(j.cat==='Individual Match'&&j.tn?j.tn:j.series)?'<span class="L4sn">'+E(j.cat==='Individual Match'&&j.tn?j.tn:j.series)+'</span>':''}</div>
+<div class="L4mi">${[j.no?((j.cat==='Individual Match'?'':'Match ')+E(j.no)+(j.of?'/'+E(j.of):'')):'',j.rd?E(j.rd):'',j.date?('📅 '+E(j.date)):'',j.ground?('📍 '+E(j.ground)):''].filter(Boolean).join(' · ')}</div></div>
 <div class="L4ac"><button data-cl="1" id="lvs">📋 Full scorecard</button>${chBtn()}<button data-cl="1" id="lvsh" title="Live match share karein">📤 Share</button></div>
 ${j.toss?`<div class="L4toss">🪙 ${E(j.toss)}</div>`:''}
 <div class="L4tm"><div><div class="L4lb">${E(j.innL||'')}</div><div class="L4nm">${E(j.bat)}</div></div><div class="L4big">${E(j.r)}/${E(j.w)}<small>(${E(j.ovs)}/${E(j.max)})</small></div></div>
@@ -18426,6 +18426,7 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
 <div class="L4ov"><div class="L4ol">THIS OVER</div><div class="L4bl">${(j.last||[]).map(x=>`<b style="background:${E(x[1]||'#5b6b82')}">${E(x[0])}</b>`).join('')}</div></div>`;
     cd.innerHTML=body; fx.forEach(f=>cd.appendChild(f));
     cd.querySelector('#lvx').onclick=()=>{ dismissed[j.id]=1; closeBox(); drawChip(j); };
+    { const g=cd.querySelector('#lvgone'); if(g) g.onclick=()=>{ dismissed[j.id]=1; closeBox(); forceGone(j); }; }
     const bb=cd.querySelector('#lvb'); if(bb) bb.onclick=toggleBell;
     const jb=cd.querySelector('#lvj'); if(jb) jb.onclick=lvJoin; const shb=cd.querySelector('#lvsh'); if(shb) shb.onclick=()=>{ try{ window.__share104.live(j); }catch(e){ alert('Share nahi khul saka'); } }; try{ chBind(cd,j); }catch(e){}
     if(W.isAdm()) cd.querySelectorAll('.lvw').forEach(x=>{ x.classList.add('lva'); x.onclick=lvPanel; });
@@ -18658,6 +18659,7 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
   const knAdd=id=>{ try{ const a=knRead().filter(x=>x!==id); a.push(id); ls.s(KNK,JSON.stringify(a.slice(-8))); }catch(e){} };
   const knHas=id=>{ try{ return knRead().includes(id); }catch(e){ return false; } };
   const tmo=(pr,ms)=>Promise.race([pr,new Promise((_,rj)=>setTimeout(()=>rj(new Error('timeout')),ms))]);
+  async function forceGone(j){ if(!CL||!W.isAdm()){ return; } try{ const t=await tmo(clToken(),12000); const b=Object.assign({},j,{status:'gone',res:'',t:{'.sv':'timestamp'}}); const r=await fetch(liveUrl()+'?auth='+encodeURIComponent(t),{method:'PUT',body:JSON.stringify(b)}); try{ lvToast(r.ok?'🧹 Live band ho gaya':'Live band nahi hua — dobara try karein',!!r.ok); }catch(e){} }catch(e){ try{ lvToast('Net slow hai — dobara try karein',false); }catch(x){} } }
   async function livePush(){
     if(!CL||!W.isAdm()) return;
     if(busy){ if(Date.now()-busyAt>25000) busy=false; else return; }
@@ -18669,14 +18671,14 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
       /* peeche wala phone aage wale ka score na mitaye */
       if(lastJ&&lastJ.id===p.id&&lastJ.status==='live'&&liveKey(lastJ)!==myPushKey){ const cn=(lastJ.ev&&lastJ.ev.n)||0, pn=(p.ev&&p.ev.n)||0; if(cn>pn){ lastSig=null; if(Date.now()-staleWarn>60000){ staleWarn=Date.now(); try{ lvToast('⚠️ Doosre device par is match ka naya score hai — aapka phone peeche hai, isliye live score nahi bhej raha. Sync dabayein.',false); }catch(e){} } return; } }
       lastSig=sig; lastP=p; pushed[p.id]=1; known[p.id]=1; knAdd(p.id); body=Object.assign({},p,{t:{'.sv':'timestamp'},th:{p:TH().p||0,c:TH().c||0}}); }
-    else if(lastJ&&lastJ.status==='live'&&LV.stat&&(!lastP||lastP.id!==lastJ.id)){ const st=LV.stat(lastJ.id); if(st==='live'){ known[lastJ.id]=1; return; } if(!(known[lastJ.id]||knHas(lastJ.id)||stale(lastJ))) return; const d=st==='done'&&LV.doneOf?LV.doneOf(lastJ.id):null; body=Object.assign({},lastJ,{status:st==='none'?'gone':(d?'done':'paused'),res:d?d.res:'',t:{'.sv':'timestamp'}}); lastSig='x'+Math.random(); }
+    else if(lastJ&&lastJ.status==='live'&&LV.stat&&(!lastP||lastP.id!==lastJ.id)){ const st=LV.stat(lastJ.id); if(st==='live'){ known[lastJ.id]=1; return; } if(!(known[lastJ.id]||knHas(lastJ.id)||stale(lastJ)||(lastChange&&Date.now()-lastChange>120000))) return; const d=st==='done'&&LV.doneOf?LV.doneOf(lastJ.id):null; body=Object.assign({},lastJ,{status:st==='none'?'gone':(d?'done':'paused'),res:d?d.res:'',t:{'.sv':'timestamp'}}); lastSig='x'+Math.random(); }
     else if(lastP&&lastP.status==='live'){ const d=LV.doneOf?LV.doneOf(lastP.id):null; body=Object.assign({},lastP,{status:d?'done':'paused',res:d?d.res:'',t:{'.sv':'timestamp'}}); lastP=Object.assign({},body,{t:0}); lastSig='x'+Math.random(); }
     else return;
     busy=true; busyAt=Date.now(); let ok=false;
     const ac=(typeof AbortController!=='undefined')?new AbortController():null; const to=setTimeout(()=>{ try{ ac&&ac.abort(); }catch(e){} },12000);
     try{ const t=await tmo(clToken(),12000); const rr_=await fetch(liveUrl()+'?auth='+encodeURIComponent(t),{method:'PUT',body:JSON.stringify(body),signal:ac?ac.signal:undefined}); lastPushAt=Date.now(); ok=!!(rr_&&rr_.ok); }catch(e){ ok=false; }
     clearTimeout(to);
-    if(ok){ myPushKey=liveKey(body); fails=0; retryAt=0; if(body.status!=='live') pend=null; if(body.status==='done') vcAutoClean(body); }
+    if(ok){ myPushKey=liveKey(body); fails=0; retryAt=(body.status!=='live')?Date.now()+4000:0; if(body.status!=='live') pend=null; if(body.status==='done') vcAutoClean(body); }
     else{ fails++; retryAt=Date.now()+Math.min(20000,1500*fails); if(body.status!=='live') pend=body; else lastSig=null; }
     busy=false;
   }
