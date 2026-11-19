@@ -1,7 +1,7 @@
 /* Cricket Apps - offline support (service worker).
    Pehli dafa net ke saath khulne par saari apps phone mein save ho jati hain;
    uske baad bina internet ke bhi khulti hain. Firebase/login ki requests ko ye chhoota nahi. */
-const V = 'cricket-v35';
+const V = 'cricket-v36';
 const CORE = [
   'index.html',
   'RSL_Scoring_App_Connected.html', 'JSL_Scoring_App_Connected.html', 'ECS_System_Connected.html',
@@ -33,14 +33,25 @@ self.addEventListener('activate', e => {
 });
 
 const sig = r => (r.headers.get('etag') || '') + '|' + (r.headers.get('last-modified') || '') + '|' + (r.headers.get('content-length') || '');
-async function tell() { for (const c of await self.clients.matchAll({ includeUncontrolled: true })) c.postMessage({ type: 'newver' }); }
+async function tell() { await new Promise(r => setTimeout(r, 2500)); for (const c of await self.clients.matchAll({ includeUncontrolled: true })) c.postMessage({ type: 'newver' }); }
+async function digest(r) { const h = await crypto.subtle.digest('SHA-1', await r.arrayBuffer()); return Array.from(new Uint8Array(h)).map(x => x.toString(16).padStart(2, '0')).join(''); }
+async function same(a, b) { return (await digest(a)) === (await digest(b)); }
 async function netFirst(req) {
   const c = await caches.open(V), k = key(req.url);
   const hit = await c.match(k);
+  const old = hit ? hit.clone() : null;   // hit page ko de diya jata hai, compare ke liye alag copy
   let lost = false;   // net slow tha aur purani copy dikha di gayi
   // 'no-cache': browser/GitHub ki 10-minute purani HTTP cache nahi, har dafa server se poochta hai
-  const net = fetch(req.url, { cache: 'no-cache' }).then(res => {
-    if (res && res.ok) { c.put(k, res.clone()); if (lost && hit && sig(hit) !== sig(res)) tell(); }
+  const net = fetch(req.url, { cache: 'no-cache' }).then(async res => {
+    if (res && res.ok) {
+      const copy = res.clone();
+      // Headers (etag/size) CDN par badalte rehte hain -> baar baar jhoota "naya version" banner aata tha.
+      // Ab asal file ka content compare hota hai: sirf sach mein badli hui file par banner aayega.
+      let changed = false;
+      if (lost && old) { try { changed = !(await same(old, res.clone())); } catch (_) { changed = false; } }
+      c.put(k, copy);
+      if (changed) tell();
+    }
     return res;
   });
   if (!hit) { try { return await net; } catch (_) { const idx = await c.match(key('index.html')); return idx || Response.error(); } }

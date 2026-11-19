@@ -15796,7 +15796,7 @@ ECS_PK.pom = { file:d=>'POM_'+String(d.name).replace(/\W+/g,'_')+'_M'+d.no, lay:
       const sr = mm.balls ? (mm.runs*100/mm.balls).toFixed(1) : '-', eco = mm.legal ? (mm.rc*6/mm.legal).toFixed(2) : '-';
       const hasBat = mm.balls>0 || mm.runs>0, hasBowl = mm.legal>0, bowlFirst = mm.wkts*20 > mm.runs;
       const A = hasBat ? [['RUNS',mm.runs],['BALLS',mm.balls],['STRIKE RATE',sr]] : [], B = hasBowl ? [['WICKETS',mm.wkts],['OVERS',fmtOvers(mm.legal)],['RUNS GIVEN',mm.rc],['ECONOMY',eco]] : [];
-      let tiles = (bowlFirst ? B.concat(A) : A.concat(B)).slice(0,4); while(tiles.length<4) tiles.push(['MATCH','#'+m.number]);
+      let tiles; if(hasBat&&hasBowl){ const AB=[['RUNS',mm.runs],['BALLS',mm.balls]], BB=[['WICKETS',mm.wkts],['ECONOMY',eco]]; tiles = bowlFirst ? BB.concat(AB) : AB.concat(BB); } else tiles = (bowlFirst ? B.concat(A) : A.concat(B)).slice(0,4); while(tiles.length<4) tiles.push(['MATCH','#'+m.number]);
       const l1 = []; if(hasBat) l1.push(`${mm.runs}(${mm.balls})`); if(mm.wkts>0 || hasBowl) l1.push(`${mm.wkts}/${mm.rc}`);
       let scores;
       if(m.manual && m.manualScore) scores = ['A','B'].map(tk=>({team:ecsMNm(s,tk), color:ecsMCol(s,tk), big:`${m.manualScore[tk].runs}/${m.manualScore[tk].wickets}`, small:'MANUAL ENTRY'}));
@@ -18067,7 +18067,7 @@ window.__prevMatchTs=function(list){ let mx=0; (list||[]).forEach(x=>{ if(!x) re
     const [cv,x]=canvasBase(['#0b2a4a','#050d18']); x.textAlign='center';
     pill(x,'🔴  LIVE NOW  •  '+APP,540,52,'#e5484d','#fff',36);
     let y=196;
-    const info=[j.cat==='Tournament'?'Tournament':j.cat==='Individual Match'?'Individual Match':'Series',j.series,j.no?('Match '+j.no+(j.of?'/'+j.of:'')):'',j.rd].filter(Boolean).join('  ·  ');
+    const info=[j.cat==='Tournament'?'Tournament':j.cat==='Individual Match'?'Individual Match':'Series',j.series,j.no?((j.cat==='Individual Match'?'':'Match ')+j.no+(j.of?'/'+j.of:'')):'',j.rd].filter(Boolean).join('  ·  ');
     x.fillStyle='#9fc4ff'; x.font='800 30px system-ui,sans-serif'; const il=wrapText(x,info.toUpperCase(),960).slice(0,2); il.forEach((l,k)=>x.fillText(l,540,y+k*38)); y+=il.length*38+26;
     x.fillStyle='#fff'; x.font='900 60px system-ui,sans-serif'; const tl=wrapText(x,j.title||'',960).slice(0,2); tl.forEach((l,k)=>x.fillText(l,540,y+48+k*68)); y+=tl.length*68+52;
     // score box
@@ -18097,7 +18097,7 @@ window.__prevMatchTs=function(list){ let mx=0; (list||[]).forEach(x=>{ if(!x) re
   function liveLink(j){ return base()+'#m='+encodeURIComponent(j.id)+(LS.g('sh104_tag_'+APP)?'&s='+encodeURIComponent(LS.g('sh104_tag_'+APP)):''); }
   function captionLive(j){
     const L=['🔴 *MATCH IS LIVE NOW!*','','🏏 *'+(j.title||'')+'*'];
-    const ser=[j.series,j.no?('Match '+j.no+(j.of?'/'+j.of:'')):'',j.rd].filter(Boolean).join(' · '); if(ser) L.push('🏆 '+ser);
+    const ser=[j.series,j.no?((j.cat==='Individual Match'?'':'Match ')+j.no+(j.of?'/'+j.of:'')):'',j.rd].filter(Boolean).join(' · '); if(ser) L.push('🏆 '+ser);
     if(j.ground) L.push('📍 '+j.ground);
     L.push('📊 *'+(j.bat||'')+' '+j.r+'/'+j.w+'* ('+j.ovs+'/'+j.max+' ov)'+(j.innL?' · '+j.innL:''));
     if(j.tgt) L.push('🎯 Target '+j.tgt+(j.need>0?' · need '+j.need+' from '+j.left+' balls':' · target paar!')); else if(j.f1) L.push('📌 '+j.f1);
@@ -18125,7 +18125,7 @@ function ecsShInfo(s,no){
     at:fx.t||0, gr:fx.g||(m&&m.ground)||'', ov:s.standardOvers||'', st:(m&&m.status==='completed')?'done':(m&&m.status==='live')?'live':(m&&m.status==='paused')?'paused':'pending', mid:(m&&m.uid)||''};
 }
 function ecsShInfoFull(s,no){ const i=ecsShInfo(s,no); const SH=window.__share104;
-  i.squad=()=>ecsPosterOpen({kind:'teams',series:[s],kicker:'MATCH DAY',title:(i.sr?i.sr+' · ':'')+(i.no?'Match '+i.no:i.k),
+  i.squad=()=>ecsPosterOpen({kind:'teams',series:[s],kicker:'MATCH DAY',title:(i.sr?i.sr+' · ':'')+(i.no?(i.k==='Individual Match'?'':'Match ')+i.no:i.k),
     sub:[i.at?SH.fmtTime(i.at)+' · '+SH.fmtDate(i.at):'Time TBA',i.gr||'',i.ov?i.ov+' overs':''].filter(Boolean).join('  •  '),
     share:{cap:()=>SH.caption(i)}});
   return i; }
@@ -18237,7 +18237,7 @@ window.ecsShareBtns=function(s,no,d,host){
   }
   const E=x=>esc(x==null?'':String(x));
   const pvOpenNow=()=>{ const q=document.querySelector('.pv104'); return !!(q&&q.style.display!=='none'); };
-  const stale=j=>j&&j.status==='live'&&((lastChange&&(Date.now()-lastChange>300000))||(typeof j.t==='number'&&Date.now()-j.t>900000)||(()=>{ try{ return !!(LV&&LV.stat&&LV.stat(j.id)==='done'); }catch(e){ return false; } })());
+  const stale=j=>j&&j.status==='live'&&((lastChange&&(Date.now()-lastChange>1200000))||(typeof j.t==='number'&&Date.now()-j.t>2700000)||(()=>{ try{ return !!(LV&&LV.stat&&LV.stat(j.id)==='done'); }catch(e){ return false; } })());
   const evText={'4':['FOUR!','#2f7bf0'],'6':['SIX!','#8a4be0'],'W':['WICKET!','#e5484d'],'Wd':['WIDE BALL','#e8a51a'],'Nb':['NO BALL','#e8a51a']};
 
   function bell(){ return typeof Notification!=='undefined'?`<button data-cl="1" id="lvb" title="Notifications on/off">${bellTxt()}</button>`:''; }
@@ -18627,12 +18627,15 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
     if(!prev&&!firstSeen[j.id]){ firstSeen[j.id]=1; if(document.hidden) notify('🔴 Match started: '+j.title,(j.series||'')+(j.toss?'\n'+j.toss:''),'lv-start',true); }
     refresh(); detectFx(j,!!box); backgroundAlerts(j,prev);
   }
+  function slowBadge(){ const cd=box&&box.querySelector('.L4cd'); if(!cd) return; let s=cd.querySelector('#lvslow'); const age=(lastJ&&lastJ.status==='live'&&lastChange)?Date.now()-lastChange:0;
+    if(age>90000&&!(LV.scoring&&LV.scoring())){ const m=Math.floor(age/60000); const txt='⏳ Scorer ka internet kamzor hai — score '+(m>=1?m+' min':'kuch der')+' se update nahi hua. Net aate hi khud update ho jayega.';
+      if(!s){ s=document.createElement('div'); s.id='lvslow'; s.style.cssText='background:#5a3b00;color:#ffe2a0;border:1px solid #c98a1b;border-radius:10px;padding:6px 10px;margin:6px 0;font-size:.74rem;font-weight:700;text-align:center'; cd.insertBefore(s,cd.firstChild); } s.textContent=txt; } else if(s) s.remove(); }
   function refresh(){
     const j=lastJ; if(!j||j.status!=='live') return;
     if(dismissed[j.id]||pvOpenNow()||(LV.scoring&&LV.scoring())){ if(box&&(pvOpenNow())){ closeBox(); } if(!box) drawChip(j); return; }
     if(box){ render(j); } else showBox(j);
   }
-  setInterval(()=>{ try{ if(lastJ&&stale(lastJ)){ closeBox(); hideChip(); return; } if(lastJ&&lastJ.status==='live'&&!stale(lastJ)){ if(!box&&!dismissed[lastJ.id]&&!pvOpenNow()&&!(LV.scoring&&LV.scoring())) refresh(); else if(!box&&!chipEl) drawChip(lastJ); } }catch(e){} },1500);
+  setInterval(()=>{ try{ slowBadge(); if(lastJ&&stale(lastJ)){ closeBox(); hideChip(); return; } if(lastJ&&lastJ.status==='live'&&!stale(lastJ)){ if(!box&&!dismissed[lastJ.id]&&!pvOpenNow()&&!(LV.scoring&&LV.scoring())) refresh(); else if(!box&&!chipEl) drawChip(lastJ); } }catch(e){} },1500);
 
   /* ---- transport: Firebase streaming (real-time) + backup poll ---- */
   let es=null, esOk=0, cache=null;
@@ -18652,7 +18655,7 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
   document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&CL){ if(!es) openStream(); livePoll(); } });
 
   /* ---- scorer side ---- */
-  let myPushKey='', staleWarn=0, pend=null, busyAt=0, retryAt=0, fails=0; const liveKey=j=>[j.id,(j.ev&&j.ev.n)||0,j.r,j.w,j.ovs,j.innL].join('/');
+  let myPushKey='', staleWarn=0, slowWarn=0, pend=null, busyAt=0, retryAt=0, fails=0; const liveKey=j=>[j.id,(j.ev&&j.ev.n)||0,j.r,j.w,j.ovs,j.innL].join('/');
   /* LIVE150: network slow/atak jaye to bhi live node saaf ho (retry + timeout), match khatam/delete ki final state kabhi na khoye */
   const KNK='lv_kn';
   const knRead=()=>{ try{ return JSON.parse(ls.g(KNK)||'[]'); }catch(e){ return []; } };
@@ -18662,7 +18665,7 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
   async function forceGone(j){ if(!CL||!W.isAdm()){ return; } try{ const t=await tmo(clToken(),12000); const b=Object.assign({},j,{status:'gone',res:'',t:{'.sv':'timestamp'}}); const r=await fetch(liveUrl()+'?auth='+encodeURIComponent(t),{method:'PUT',body:JSON.stringify(b)}); try{ lvToast(r.ok?'🧹 Live band ho gaya':'Live band nahi hua — dobara try karein',!!r.ok); }catch(e){} }catch(e){ try{ lvToast('Net slow hai — dobara try karein',false); }catch(x){} } }
   async function livePush(){
     if(!CL||!W.isAdm()) return;
-    if(busy){ if(Date.now()-busyAt>25000) busy=false; else return; }
+    if(busy){ if(Date.now()-busyAt>40000) busy=false; else return; }
     if(Date.now()<retryAt) return;
     const p=LV.cur?LV.cur():null; let body=null;
     if(p&&pend) pend=null;
@@ -18671,15 +18674,15 @@ ${j.f1?`<div class="L4f1">${E(j.f1)}</div>`:''}
       /* peeche wala phone aage wale ka score na mitaye */
       if(lastJ&&lastJ.id===p.id&&lastJ.status==='live'&&liveKey(lastJ)!==myPushKey){ const cn=(lastJ.ev&&lastJ.ev.n)||0, pn=(p.ev&&p.ev.n)||0; if(cn>pn){ lastSig=null; if(Date.now()-staleWarn>60000){ staleWarn=Date.now(); try{ lvToast('⚠️ Doosre device par is match ka naya score hai — aapka phone peeche hai, isliye live score nahi bhej raha. Sync dabayein.',false); }catch(e){} } return; } }
       lastSig=sig; lastP=p; pushed[p.id]=1; known[p.id]=1; knAdd(p.id); body=Object.assign({},p,{t:{'.sv':'timestamp'},th:{p:TH().p||0,c:TH().c||0}}); }
-    else if(lastJ&&lastJ.status==='live'&&LV.stat&&(!lastP||lastP.id!==lastJ.id)){ const st=LV.stat(lastJ.id); if(st==='live'){ known[lastJ.id]=1; return; } if(!(known[lastJ.id]||knHas(lastJ.id)||stale(lastJ)||(lastChange&&Date.now()-lastChange>120000))) return; const d=st==='done'&&LV.doneOf?LV.doneOf(lastJ.id):null; body=Object.assign({},lastJ,{status:st==='none'?'gone':(d?'done':'paused'),res:d?d.res:'',t:{'.sv':'timestamp'}}); lastSig='x'+Math.random(); }
+    else if(lastJ&&lastJ.status==='live'&&LV.stat&&(!lastP||lastP.id!==lastJ.id)){ const st=LV.stat(lastJ.id); if(st==='live'){ known[lastJ.id]=1; return; } if(!(known[lastJ.id]||knHas(lastJ.id)||stale(lastJ)||(lastChange&&Date.now()-lastChange>600000))) return; const d=st==='done'&&LV.doneOf?LV.doneOf(lastJ.id):null; body=Object.assign({},lastJ,{status:st==='none'?'gone':(d?'done':'paused'),res:d?d.res:'',t:{'.sv':'timestamp'}}); lastSig='x'+Math.random(); }
     else if(lastP&&lastP.status==='live'){ const d=LV.doneOf?LV.doneOf(lastP.id):null; body=Object.assign({},lastP,{status:d?'done':'paused',res:d?d.res:'',t:{'.sv':'timestamp'}}); lastP=Object.assign({},body,{t:0}); lastSig='x'+Math.random(); }
     else return;
     busy=true; busyAt=Date.now(); let ok=false;
-    const ac=(typeof AbortController!=='undefined')?new AbortController():null; const to=setTimeout(()=>{ try{ ac&&ac.abort(); }catch(e){} },12000);
-    try{ const t=await tmo(clToken(),12000); const rr_=await fetch(liveUrl()+'?auth='+encodeURIComponent(t),{method:'PUT',body:JSON.stringify(body),signal:ac?ac.signal:undefined}); lastPushAt=Date.now(); ok=!!(rr_&&rr_.ok); }catch(e){ ok=false; }
+    const ac=(typeof AbortController!=='undefined')?new AbortController():null; const to=setTimeout(()=>{ try{ ac&&ac.abort(); }catch(e){} },20000);
+    try{ const t=await tmo(clToken(),20000); const rr_=await fetch(liveUrl()+'?auth='+encodeURIComponent(t),{method:'PUT',body:JSON.stringify(body),signal:ac?ac.signal:undefined}); lastPushAt=Date.now(); ok=!!(rr_&&rr_.ok); }catch(e){ ok=false; }
     clearTimeout(to);
     if(ok){ myPushKey=liveKey(body); fails=0; retryAt=(body.status!=='live')?Date.now()+4000:0; if(body.status!=='live') pend=null; if(body.status==='done') vcAutoClean(body); }
-    else{ fails++; retryAt=Date.now()+Math.min(20000,1500*fails); if(body.status!=='live') pend=body; else lastSig=null; }
+    else{ fails++; retryAt=Date.now()+Math.min(20000,1500*fails); if(body.status!=='live') pend=body; else lastSig=null; if(body.status==='live'&&fails>=3&&Date.now()-slowWarn>90000){ slowWarn=Date.now(); try{ lvToast('📶 Net kamzor hai — live score abhi viewers tak nahi ja raha. Scoring chalti rahegi, net aate hi khud update ho jayega.',false); }catch(e){} } }
     busy=false;
   }
   setInterval(()=>{ if(!document.hidden) livePush(); },1000);
