@@ -1237,7 +1237,7 @@ A.ht=v=>{ctx.h=v;ctx.hc='';R()};
 A.hsc=v=>{ctx.o=ctx.o||{};ctx.o[v]=ctx.o[v]===false;R()};
 A.hpdf=v=>{const m=db.matches.find(x=>x.id===v);pdf(minfo(m).txt,mlines(m),'JSL_Match'+m.no+'_'+T(m.a).name+'_vs_'+T(m.b).name,mpay(m))};
 A.hx=v=>{const m=db.matches.find(x=>x.id===v);dl('JSL_match_'+m.no+'.json',{type:'jsl_match',match:m,teams:[T(m.a),T(m.b)]})};
-A.hdel=v=>cf('Match permanently delete karein?',()=>{const m=db.matches.find(x=>x.id===v),z=m.comp&&findc(m.comp);if(z){const f=z.c.fx.find(x=>x.mid===v);if(f)f.mid=null}if(db.cur===v)db.cur=null;db.matches=db.matches.filter(x=>x.id!==v);R()});
+A.hdel=v=>cf((()=>{try{const m=db.matches.find(x=>x.id===v);return '"'+T(m.a).name+' vs '+T(m.b).name+(m.date?' ('+m.date+')':'')+'"\n\n'}catch(z){return ''}})()+'Match permanently delete karein? (Galti se ho to Matches Recovery se wapas aa sakta hai)',()=>{const m=db.matches.find(x=>x.id===v),z=m.comp&&findc(m.comp);if(z){const f=z.c.fx.find(x=>x.mid===v);if(f)f.mid=null}if(db.cur===v)db.cur=null;db.matches=db.matches.filter(x=>x.id!==v);R()});
 /* ---------- ENTRY MANAGEMENT ---------- */
 const rs_=n=>'Rs '+(Math.round(+n||0)).toString().replace(/\B(?=(\d{3})+(?!\d))/g,',');
 function compOf(cat,id){if(cat==='i'){const m=db.matches.find(x=>x.id===id);return m?{head:'Individual Match: Match '+m.no+' - '+T(m.a).name+' vs '+T(m.b).name,teams:[m.a,m.b]}:null}const z=findc(id);return z?{head:(cat==='t'?'Tournament: ':'Series: ')+z.c.name,teams:z.c.teams}:null}
@@ -4611,6 +4611,7 @@ async function refresh(){try{_VC=await vAll();const tomb=db.delIds||{};for(const
 function lostUI(){let b=document.getElementById('gLost');const n=_lost.length;if(!canV()||!n){if(b)b.remove();return}if(!b){b=document.createElement('div');b.id='gLost';b.style.cssText='position:fixed;top:34px;right:6px;z-index:61;font-size:11px;font-weight:800;padding:4px 10px;border-radius:12px;background:#b00020;color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.4)';b.onclick=()=>gVault();document.body.appendChild(b)}b.textContent='⚠ '+n+' match gayab — recover karo'}
 function ins(x,quiet){
   if(present(x))return 'pehle se maujood';
+  try{const u=x.uid||(x.match&&x.match.id);if(u&&db.delIds&&db.delIds[u]){delete db.delIds[u];db.revived=db.revived||{};db.revived[u]=Date.now()}}catch(z){}
   [['a','ta'],['b','tb']].forEach(([s,k])=>{const id=x.match[s];if(id&&!db.teams.some(t=>t.id===id)&&x[k]){db.teams.push(deep(x[k]));try{x[k].players.forEach(p=>regAdd(p.name))}catch(z){}}});
   if(x.match.comp){let z=findc(x.match.comp);if(!z&&x.cmp){const c=deep(x.cmp);(c.fx||[]).forEach(f=>{if(f.mid&&!db.matches.some(q=>q.id===f.mid))f.mid=null});(x.ck==='t'?db.tours:db.series).push(c);z=findc(c.id)}
    if(z&&x.fx){let f=z.c.fx.find(q=>q.id===x.fx.id);if(!f){z.c.fx.push(deep(x.fx));f=z.c.fx[z.c.fx.length-1];try{num(z.c)}catch(q){}}if(!f.mid||!db.matches.some(q=>q.id===f.mid))f.mid=x.uid}}
@@ -4882,7 +4883,7 @@ window.gGuard={vault:gVault,me:myRights};
 /* ---- MATCH-WISE AUTO MERGE (do phones ke alag matches DONO bachte hain) ---- */
 const midScore=()=>view==='play';
 function mergeCloud(p){
-  if(!p)return 0;let added=0;db.delIds=Object.assign({},p.delIds,db.delIds);const D=db.delIds;
+  if(!p)return 0;let added=0;db.delIds=Object.assign({},p.delIds,db.delIds);db.revived=Object.assign({},p.revived,db.revived);try{Object.keys(db.revived).forEach(k=>{if(db.delIds[k]&&db.delIds[k]<=db.revived[k])delete db.delIds[k]})}catch(z){}const D=db.delIds;
   (p.teams||[]).forEach(t=>{if(t&&t.id&&!D[t.id]&&!db.teams.some(x=>x.id===t.id)){db.teams.push(deep(t));try{t.players.forEach(q=>regAdd(q.name))}catch(z){}}});
   [['tours',db.tours],['series',db.series]].forEach(([k,arr])=>(p[k]||[]).forEach(c=>{if(c&&c.id&&!D[c.id]&&!arr.some(x=>x.id===c.id)){const cc=deep(c);(cc.fx||[]).forEach(f=>{if(f.mid&&!(p.matches||[]).some(m=>m.id===f.mid&&!D[m.id]))f.mid=null});arr.push(cc)}}));
   (p.matches||[]).forEach(m=>{if(!m||!m.id||D[m.id]||present({uid:m.id})||!KEEPST.has(m.status))return;const x=ent(m,'cloud',null,p);if(x&&ins(x,true)==='ok')added++});

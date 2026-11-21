@@ -16401,7 +16401,7 @@ function ecsDigest(){
     put('fo','Entry: opening balance/monthly fee',[f.openingBalance,f.monthlyFee]);
     (f.months||[]).forEach(mo=>{ put('fp:'+mo.key,'Entry: fees/payments '+mo.key,[mo.paid,mo.fee]); (mo.expenses||[]).forEach((e,i)=>put('fx:'+mo.key+':'+(e.id||i),'Kharcha '+mo.key+': '+(e.item||'')+' '+(e.amount||''),e)); });
   }
-  const skip = /^(activeSeriesId|poster.*|prof.*|photo.*|sTheme|sBg|_ts|delUids|delSer|seriesList|playersReg|teamsLib|tours|rules|finance|knownPlayers|ecsSeeded|dedupeV\d+)$/;
+  const skip = /^(activeSeriesId|poster.*|prof.*|photo.*|sTheme|sBg|_ts|delUids|revived|delSer|seriesList|playersReg|teamsLib|tours|rules|finance|knownPlayers|ecsSeeded|dedupeV\d+)$/;
   Object.keys(root).forEach(k=>{ if(!skip.test(k)) put('cfg:'+k,'Setting: '+k,root[k]); });
   put('kp','Known players list',root.knownPlayers||[]);
   return d;
@@ -16776,6 +16776,7 @@ async function ecsBackupPanel(){
     let s=root.seriesList.find(x=>x.id===e.sid);
     if(!s){ if(!e.ser) return 'series nahi mili'; s=deep(e.ser); s.matches=[]; root.seriesList.push(s); }
     if(present(e)) return 'pehle se maujood';
+    try{ if(root.delUids&&root.delUids[e.uid]){ delete root.delUids[e.uid]; root.revived=root.revived||{}; root.revived[e.uid]=Date.now(); } }catch(x){}
     const m=deep(e.match); m.uid=e.uid; m.undoStack=m.undoStack||[]; m.redoStack=m.redoStack||[];
     s.matches.push(m);
     s.matches.sort((a,b)=> (a.date||'').localeCompare(b.date||'') || ((a.number||0)-(b.number||0)) || (a===m?-1:(b===m?1:0)));
@@ -17036,7 +17037,7 @@ async function ecsBackupPanel(){
   function saveLocalNow(){ root._ts=Date.now(); try{ localStorage.setItem(STORAGE_KEY,JSON.stringify(root)); }catch(e){} }
   function mergeCloud(p){
     if(!p||!root||!p.seriesList) return 0; let added=0;
-    root.delUids=Object.assign({},p.delUids,root.delUids); root.delSer=Object.assign({},p.delSer,root.delSer);
+    root.delUids=Object.assign({},p.delUids,root.delUids); root.delSer=Object.assign({},p.delSer,root.delSer); root.revived=Object.assign({},p.revived,root.revived); try{ Object.keys(root.revived).forEach(k=>{ if(root.delUids[k]&&root.delUids[k]<=root.revived[k]) delete root.delUids[k]; }); }catch(x){}
     p.seriesList.forEach(s=>{
       if(root.delSer[s.id]) return;
       if(!root.seriesList.some(x=>x.id===s.id)){ const c=deep(s); c.matches=(c.matches||[]).filter(m=>!(m.uid&&root.delUids[m.uid])); root.seriesList.push(c); added+=c.matches.length; return; }
