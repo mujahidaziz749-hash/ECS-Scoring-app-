@@ -583,7 +583,14 @@ const isAdm=()=>!!(CL&&CL.key&&AD&&AD.rt);
 let clT=null,clSt=CL?'Connected':'Off',clBusy=false,_tok=null,_tokExp=0;
 const SMK='rsl_sync',DKK='rsl_dirty',BSK='rsl_base';let SM='auto',DIRTY=false,BASE=0;let SS=null;const sig=()=>JSON.stringify(db,(k,v)=>k==='_ts'?void 0:v);setTimeout(()=>{if(SS===null&&!DIRTY)try{SS=sig()}catch(x){}},0);try{SM=localStorage.getItem(SMK)==='manual'?'manual':'auto';DIRTY=localStorage.getItem(DKK)==='1';BASE=+localStorage.getItem(BSK)||0}catch(x){}
 function setDirty(v){DIRTY=!!v;try{v?localStorage.setItem(DKK,'1'):localStorage.removeItem(DKK)}catch(x){}clBadge()}
-const _lsave=()=>{try{localStorage.setItem(K,JSON.stringify(db))}catch(x){}};
+function slimDb(hard){let ch=0;try{(db.matches||[]).forEach(m=>{const done=m.status==='completed',keep=done?3:(hard?25:80);(m.inns||[]).forEach(i=>{if(i.hist&&i.hist.length>keep){i.hist=i.hist.slice(-keep);ch++}if(done&&i.redo&&i.redo.length){i.redo=[];ch++}})})}catch(x){}return ch}
+let _lsOk=true;
+function lsBanner(on){try{let b=document.getElementById('lsfail');if(!on){if(b)b.remove();return}if(b||!document.body)return;b=document.createElement('div');b.id='lsfail';b.style.cssText='position:fixed;left:8px;right:8px;top:8px;z-index:99999;background:#b00020;color:#fff;border-radius:12px;padding:10px 12px;font-size:.82rem;font-weight:700;box-shadow:0 4px 18px rgba(0,0,0,.5)';b.innerHTML='⚠ Phone ki memory bhar gayi — naya data is phone mein SAVE NAHI ho raha! App band mat karo. <button class="b g sm" style="margin-top:6px">💾 Abhi backup file lo</button>';b.querySelector('button').onclick=()=>{try{A.bx()}catch(x){}};document.body.appendChild(b)}catch(x){}}
+const _lsave=()=>{try{slimDb()}catch(x){}let s;try{s=JSON.stringify(db)}catch(x){return}
+ try{localStorage.setItem(K,s);if(!_lsOk){_lsOk=true;lsBanner(false)}return}catch(x){}
+ try{slimDb(true);s=JSON.stringify(db);localStorage.setItem(K,s);if(!_lsOk){_lsOk=true;lsBanner(false)}return}catch(x){}
+ _lsOk=false;lsBanner(true)};
+setTimeout(()=>{try{if(slimDb())_lsave()}catch(x){}},800);
 let _cs='';const save=()=>{if(CL&&!isAdm())return;db._ts=Date.now();_lsave();clSched()};
 function clUp(){const o=document.getElementById('clst');if(o)o.textContent=clSt;clBadge()}
 function clBadge(){let b=document.getElementById('clbd');if(!CL){if(b)b.remove();return}if(!b){b=document.createElement('div');b.id='clbd';b.style.cssText='position:fixed;top:6px;right:6px;z-index:60;font-size:11px;font-weight:700;padding:3px 9px;border-radius:12px;opacity:.95;cursor:pointer';b.onclick=()=>{clPull(true)};document.body.appendChild(b)}const ad=isAdm();let t,bg;if(!ad){t='👁 Viewer';bg='#5b4a00'}else if(SM==='manual'){t=DIRTY?'✋ '+(window.roleWord?window.roleWord():'Admin')+' · Sync baaqi - dabao':'✋ '+(window.roleWord?window.roleWord():'Admin')+' · Manual synced ✓';bg=DIRTY?'#b3541e':'#0a6b3f'}else{t=DIRTY?'☁ '+(window.roleWord?window.roleWord():'Admin')+' · ⏳':'☁ '+(window.roleWord?window.roleWord():'Admin');bg='#0a6b3f'}b.textContent=t;b.style.background=bg;b.style.color='#fff'}
@@ -792,9 +799,9 @@ const PT=['Batsman','Bowler','All-rounder','Wicketkeeper'],HD=['Right hand','Lef
 const teamsOf=n=>db.teams.filter(t=>t.players.some(p=>rk(p.name)===rk(n))).map(t=>t.name);
 function plq(q){q=q.toLowerCase();document.querySelectorAll('.plr').forEach(x=>x.style.display=x.dataset.n.includes(q)?'':'none')}
 function plf(q){q=q.toLowerCase();document.querySelectorAll('.pkr').forEach(x=>x.style.display=x.dataset.n.includes(q)?'flex':'none')}
-function career(name,cat){const k=rk(name),o={M:new Set(),bi:0,no:0,r:0,b:0,f4:0,f6:0,hs:0,hsNo:false,h:0,f50:0,dk:0,sp:0,l:0,rc:0,w:0,mdn:0,bbw:0,bbr:0,w3:0,w5:0,ct:0,st:0,ro:0,cp:{}};
+function career(name,cat,bt){const k=rk(name),o={M:new Set(),bi:0,no:0,r:0,b:0,f4:0,f6:0,hs:0,hsNo:false,h:0,f50:0,dk:0,sp:0,l:0,rc:0,w:0,mdn:0,bbw:0,bbr:0,w3:0,w5:0,ct:0,st:0,ro:0,cp:{}};
  const cp=m=>{const key=m.comp||'i';return o.cp[key]=o.cp[key]||{name:m.comp&&findc(m.comp)?findc(m.comp).c.name:'Individual',cat:m.cat,M:new Set(),r:0,w:0}};
- db.matches.filter(m=>m.status==='completed'&&(!cat||m.cat===cat)).forEach(m=>m.inns.forEach(i=>{
+ db.matches.filter(m=>m.status==='completed'&&(!cat||m.cat===cat)&&(!bt||btOf(m)===bt)).forEach(m=>m.inns.forEach(i=>{
   [...new Set(i.balls.map(x=>x.b).filter(p=>p&&rk(PN(i.bat,p))===k))].forEach(p=>{const f=bf(i,p),out=i.out.includes(p);o.M.add(m.id);cp(m).M.add(m.id);o.bi++;if(!out)o.no++;o.r+=f.r;o.b+=f.b;o.f4+=f.f4;o.f6+=f.f6;if(f.r>o.hs||(f.r===o.hs&&!out)){o.hs=f.r;o.hsNo=!out}if(f.r>=100)o.h++;else if(f.r>=50)o.f50++;if(out&&f.r===0)o.dk++;cp(m).r+=f.r});
   [...new Set(i.balls.map(x=>x.w).filter(p=>p&&rk(PN(i.bowl,p))===k))].forEach(p=>{const f=wf2(i,p);o.M.add(m.id);cp(m).M.add(m.id);o.sp++;o.l+=f.l;o.rc+=f.r;o.w+=f.w;o.mdn+=f.m;if(f.w>o.bbw||(f.w===o.bbw&&f.w>0&&f.r<o.bbr)){o.bbw=f.w;o.bbr=f.r}if(f.w>=5)o.w5++;else if(f.w>=3)o.w3++;cp(m).w+=f.w});
   i.balls.forEach(x=>{if(x.f&&x.wk&&rk(PN(i.bowl,x.f))===k){o.M.add(m.id);if(x.wk==='caught')o.ct++;else if(x.wk==='stumped')o.st++;else if(x.wk==='runout')o.ro++}})}));
@@ -810,13 +817,15 @@ V.plist=()=>{const st=nst(),L=db.reg.slice().sort((a,b)=>a.name.localeCompare(b.
  <button class="b g sm" data-a="plcr" data-v="${r.id}">👤 Open Player Profile</button><button class="b sm" data-a="pgo" data-v="prof|${r.id}">🖼 Poster</button><button class="b s sm" data-a="pled" data-v="${r.id}">✏️ Edit</button><button class="b d sm" data-a="pldel" data-v="${r.id}">✕</button></div>`}).join('')||'<div class="card m">Abhi koi player nahi. + Player dabao.</div>'}</div>
  <h2 style="margin-top:16px">📋 Participant Lists</h2><div class="m">Tournament ya series ke liye alag list - tournament chun kar uske sab players khud import ho jate hain, aur khud se bhi add kar sakte ho.</div><button class="b g" data-a="plnew">+ Nayi participant list</button>
  ${db.pl.map(l=>{const z=l.comp&&findc(l.comp);return `<div class="card"><b>${e(l.name)}</b> <span class="m">(${l.names.length} players)</span>${z?`<div><span class="chip">${z.k==='t'?'Tournament':'Series'}: ${e(z.c.name)}</span></div>`:''}<div class="m">${l.names.map(e).join(', ')||'khali'}</div><button class="b s sm" data-a="plsel" data-v="${l.id}">✏️ Select players</button><button class="b s sm" data-a="plsrc" data-v="${l.id}">📥 Tournament/Series se import</button><button class="b g sm" data-a="plpp" data-v="${l.id}">🖨 PDF</button><button class="b sm" data-a="pgo" data-v="pllist|${l.id}">🖼 Poster</button><button class="b s sm" data-a="plren" data-v="${l.id}">Naam</button><button class="b d sm" data-a="pldl" data-v="${l.id}">🗑</button></div>`}).join('')}`};
-V.pcareer=()=>{const r=db.reg.find(x=>x.id===ctx.pc);if(!r)return '<div class="card">Player nahi mila.</div>';const cat=ctx.cc||'',all=career(r.name,cat||null),o=crRows(all),cps=Object.values(all.cp).filter(x=>!cat||x.cat===cat);
+V.pcareer=()=>{const r=db.reg.find(x=>x.id===ctx.pc);if(!r)return '<div class="card">Player nahi mila.</div>';const cat=ctx.cc||'',cb=ctx.cb||'',all=career(r.name,cat||null,cb||null),o=crRows(all),cps=Object.values(all.cp).filter(x=>!cat||x.cat===cat);
  return `<button class="b s" data-a="plback">← Players list</button><div class="card" style="margin-top:10px"><h2 style="margin-bottom:6px">🧢 ${e(r.name)} - Player Profile</h2><div style="display:flex;gap:12px;align-items:center;margin:8px 0"><div style="flex:0 0 110px;height:140px;border-radius:14px;overflow:hidden;background:rgba(127,127,127,.25);display:flex;align-items:center;justify-content:center;font-size:3rem">${phOf(r.name)?`<img src="${phOf(r.name)}" style="width:100%;height:100%;object-fit:cover">`:'🧢'}</div><div style="flex:1"><button class="b g wide" data-a="plph" data-v="${r.id}">📷 ${phOf(r.name)?'Photo badlo':'Photo lagao'}</button>${phOf(r.name)?`<button class="b s wide" data-a="plphx" data-v="${r.id}">🗑 Photo hatao</button>`:''}<div class="m" style="margin-top:4px">Ek baar photo lagane se wo har poster, profile card aur live viewer me nazar aayegi.</div></div></div><div class="sc"><table>${profRows(r).map(([k,v])=>`<tr><td style="color:var(--m);width:42%">${k}</td><td style="text-align:left;font-weight:600">${e(v)}</td></tr>`).join('')}</table></div><button class="b g sm" data-a="pled" data-v="${r.id}">✏️ Profile edit</button><button class="b sm" data-a="pcpdf" data-v="${r.id}">🖨 Profile + Career PDF</button><button class="b sm" data-a="pgo" data-v="prof|${r.id}">🖼 Poster</button></div>
  <div class="tabs" style="flex-wrap:wrap">${[['','Overall'],['t','Tournament'],['s','Series'],['i','Individual']].map(([k,n])=>`<button class="b ${cat===k?'g':'s'}" data-a="pcc" data-v="${k}">${n}</button>`).join('')}</div>
+ <div class="tabs" style="flex-wrap:wrap;margin-top:6px">${[['','🏏 Sab ball'],['h','🔴 Hard Ball'],['t','🟢 Tape Ball']].map(([k,n])=>`<button class="b ${cb===k?'g':'s'}" data-a="pcb" data-v="${k}">${n}</button>`).join('')}</div>
+ <div class="card"><h3>🔴 Hard Ball vs 🟢 Tape Ball</h3>${ctab(['Ball','M','Runs','Wkts','HS','Avg','SR'],['h','t'].map(b=>{const q=career(r.name,cat||null,b),z=crRows(q);return [b==='h'?'🔴 Hard':'🟢 Tape',q.m,q.r,q.w,z.bat[4],z.bat[5],z.bat[6]]}))}</div>
  <div class="card"><h3>🏏 Batting</h3>${ctab(CBH,[o.bat])}</div><div class="card"><h3>⚾ Bowling</h3>${ctab(CWH,[o.bowl])}</div><div class="card"><h3>🧤 Fielding</h3>${ctab(['Catches','Stumpings','Run outs'],[o.fld])}</div>
  <div class="card"><h3>🏆 Competition-wise</h3>${cps.length?ctab(['Competition','Type','M','Runs','Wkts'],cps.map(x=>[e(x.name),{t:'Tournament',s:'Series',i:'Individual'}[x.cat],x.M.size,x.r,x.w])):'<div class="m">Abhi koi match record nahi.</div>'}</div>`};
-A.plcr=v=>go('pcareer',{pc:v,cc:''});A.plback=()=>go('plist');A.pcc=v=>{ctx.cc=v;R()};
-A.pcpdf=v=>{const r=db.reg.find(x=>x.id===v),cats=[['','Overall'],['t','Tournament'],['s','Series'],['i','Individual']],rs=cats.map(([k,n])=>[n,crRows(career(r.name,k||null))]);
+A.plcr=v=>go('pcareer',{pc:v,cc:''});A.plback=()=>go('plist');A.pcc=v=>{ctx.cc=v;R()};A.pcb=v=>{ctx.cb=v;R()};
+A.pcpdf=v=>{const r=db.reg.find(x=>x.id===v),cats=[['','Overall'],['t','Tournament'],['s','Series'],['i','Individual'],['@h','Hard Ball (all)'],['@t','Tape Ball (all)']],rs=cats.map(([k,n])=>[n,crRows(k[0]==='@'?career(r.name,null,k[1]):career(r.name,k||null))]);
  const L=['# '+r.name+' - Player Profile',{tbl:['Detail','Information'],w:[60,130],rows:profRows(r)},
   '# Batting',{tbl:['Category',...CBH],w:[30,12,12,12,16,16,16,16,12,12,12,12],rows:rs.map(([n,o])=>[n,...o.bat])},
   '# Bowling',{tbl:['Category',...CWH],w:[30,12,16,12,14,14,14,18,16,14,12,12],rows:rs.map(([n,o])=>[n,...o.bowl])},
@@ -1021,7 +1030,7 @@ function setup(){const s=ctx.s=ctx.s||{};let h='<h2 style="margin-top:12px">🏏
  let a,b,fl=[];
  if(s.cat==='i'){const o=x=>'<option value="">— Select team —</option>'+db.teams.map(t=>`<option value="${t.id}" ${t.id===x?'selected':''}>${e(t.name)}</option>`).join('');
   const IF=s.comp==='__ind'&&INDC().fx.find(x=>x.id===s.fix&&!x.mid);
-  if(IF){s.a=IF.a;s.b=IF.b;if(s.overs==null&&IF.ov)s.overs=IF.ov;if(s.venue==null&&IF.gr)s.venue=IF.gr;['iname','icomp','ird','ino'].forEach(k=>{if(s[k]==null&&IF[k]!=null)s[k]=IF[k]});h+=`<div class="m" style="margin-bottom:6px">📅 Schedule se: <b>#${IF.no}</b> ${e(T(IF.a).name)} vs ${e(T(IF.b).name)}</div>`}
+  if(IF){s.a=IF.a;s.b=IF.b;if(s.overs==null&&IF.ov)s.overs=IF.ov;if(s.venue==null&&IF.gr)s.venue=IF.gr;['iname','icomp','ird','ino','bt'].forEach(k=>{if(s[k]==null&&IF[k]!=null)s[k]=IF[k]});h+=`<div class="m" style="margin-bottom:6px">📅 Schedule se: <b>#${IF.no}</b> ${e(T(IF.a).name)} vs ${e(T(IF.b).name)}</div>`}
   else if(s.fix){delete s.fix;delete s.comp}
   h+=IF?'':`<label>Team A</label><select data-f="s.a.r">${o(s.a)}</select><label>Team B</label><select data-f="s.b.r">${o(s.b)}</select>`;a=s.a;b=s.b}
  else{const L=s.cat==='t'?db.tours:db.series,c=L.find(x=>x.id===s.comp);
@@ -1029,7 +1038,7 @@ function setup(){const s=ctx.s=ctx.s||{};let h='<h2 style="margin-top:12px">🏏
   if(c){fl=c.fx.filter(f=>!f.mid&&f.b);if(!fl.length)h+=`<div class="m" style="color:var(--r);margin-top:8px">⚠ Koi schedule shuda match nahi - pehle match schedule karo.</div>`;
    else{const f=fl.find(x=>x.id===s.fix)||fl[0];s.fix=f.id;a=f.a;b=f.b;h+=`<label>Match No / Fixture (${e(f.rd)})</label><select data-f="s.fix.r">${fl.map(x=>`<option value="${x.id}" ${x.id===f.id?'selected':''}>#${x.no} ${e(T(x.a).name)} vs ${e(T(x.b).name)} (${e(x.rd)})</option>`).join('')}</select>`}}}
  if(a&&b){const tw=[a,b].includes(s.toss)?s.toss:a;h+=`<div class="row"><div class="chip" style="border:1px solid ${T(a).color}">${e(T(a).name)}</div><div class="chip" style="border:1px solid ${T(b).color}">${e(T(b).name)}</div></div>
-  <label>Overs</label><input type="number" min="1" value="${s.overs||8}" data-f="s.overs"><label>Venue / Ground</label><input list="gr" value="${e(s.venue!=null?s.venue:(db.grounds[db.grounds.length-1]||''))}" data-f="s.venue"><datalist id="gr">${db.grounds.map(g=>`<option value="${e(g)}">`).join('')}</datalist>
+  <label>Overs</label><input type="number" min="1" value="${s.overs||8}" data-f="s.overs"><label>Ball type</label><select data-f="s.bt"><option value="t" ${(s.bt||db.lbt||'t')!=='h'?'selected':''}>🟢 Tape Ball</option><option value="h" ${(s.bt||db.lbt)==='h'?'selected':''}>🔴 Hard Ball</option></select><label>Venue / Ground</label><input list="gr" value="${e(s.venue!=null?s.venue:(db.grounds[db.grounds.length-1]||''))}" data-f="s.venue"><datalist id="gr">${db.grounds.map(g=>`<option value="${e(g)}">`).join('')}</datalist>
   ${s.cat==='i'?`<details class="card" style="margin:10px 0 0;padding:8px 10px" ${(s.iname||s.icomp||s.ird||s.ino)?'open':''}><summary style="margin:0;font-weight:700;color:var(--gold)">ℹ️ Match info (optional) — tournament / series / round</summary><label>Match ka naam (optional)</label><input value="${e(s.iname||'')}" data-f="s.iname" placeholder="jaise: Friendly, Practice Match"><label>Kis Tournament / Series ka match hai (optional)</label><input value="${e(s.icomp||'')}" data-f="s.icomp" placeholder="jaise: Peer Eessa Cup 2026"><label>Round / Stage (optional)</label><input list="rdl" value="${e(s.ird||'')}" data-f="s.ird" placeholder="Final, Semi Final, Quarter Final, Round 2 ..."><label>Match No (optional)</label><input value="${e(s.ino||'')}" data-f="s.ino" placeholder="jaise: 5 ya 5 of 7"><div class="m">Ye sab optional hai - khali chhodo to koi masla nahi. Bharne par ye live popup, scorecard, PDF aur posters mein dikhega.</div><datalist id="rdl"><option value="Final"><option value="Semi Final"><option value="Quarter Final"><option value="Pre-Quarter Final"><option value="Eliminator"><option value="Qualifier 1"><option value="Qualifier 2"><option value="3rd Place Match"><option value="Group Match"><option value="League Match"><option value="Super 4"><option value="Round 1"><option value="Round 2"><option value="Round 3"><option value="Exhibition"></datalist></details>`:''}
   <label>Toss winner</label><select data-f="s.toss">${[a,b].map(t=>`<option value="${t}" ${t===tw?'selected':''}>${e(T(t).name)}</option>`).join('')}</select>
   <label>Toss decision</label><select data-f="s.dec"><option value="bat" ${s.dec!=='bowl'?'selected':''}>Bat first</option><option value="bowl" ${s.dec==='bowl'?'selected':''}>Bowl first</option></select>
@@ -1053,7 +1062,7 @@ A.start=()=>{const s=ctx.s;let a,b,fx=null,c=null,no;
  if(T(a).players.length<2||T(b).players.length<2)return msgBox('Har team mein kam az kam 2 players chahiye (Teams Manager).');
  const toss=[a,b].includes(s.toss)?s.toss:a,dec=s.dec==='bowl'?'bowl':'bat',bat=dec==='bat'?toss:(toss===a?b:a),venue=(s.venue!=null?s.venue:(db.grounds[db.grounds.length-1]||'')).trim();
  if(venue&&!db.grounds.includes(venue))db.grounds.push(venue);
- const m={id:uid(),cat:s.cat,comp:c?c.id:null,fix:fx?fx.id:null,rd:fx?fx.rd:'',no,a,b,overs:+s.overs||8,venue,toss,dec,date:new Date().toISOString().slice(0,10),status:'live',inns:[ninn(bat,bat===a?b:a)],result:'',win:null};
+ const m={id:uid(),cat:s.cat,comp:c?c.id:null,fix:fx?fx.id:null,rd:fx?fx.rd:'',no,a,b,overs:+s.overs||8,venue,toss,dec,date:new Date().toISOString().slice(0,10),status:'live',inns:[ninn(bat,bat===a?b:a)],result:'',win:null};m.bt=(s.bt==='h'||s.bt==='t')?s.bt:(db.lbt==='h'?'h':(fx&&fx.bt==='h'?'h':'t'));db.lbt=m.bt;
  if(s.cat==='i'){m.iname=String(s.iname||'').trim();m.icomp=String(s.icomp||'').trim();m.ird=String(s.ird||'').trim();m.ino=String(s.ino||'').trim();if(m.ird)m.rd=m.ird}
  if(s.ext){const f=m.inns[0];f.runs=s.ext.r;f.wk=s.ext.w;f.lb=s.ext.lb;f.done=true;f.ext=true;m.inns.push(ninn(f.bowl,f.bat));m.d2=1}
  if(fx)fx.mid=m.id;db.matches.push(m);db.cur=m.id;ctx={};R()};
@@ -1182,7 +1191,9 @@ function sc(m){return m.inns.filter(i=>i.balls.length).map((i,n)=>{const x=ext(i
 const mno=m=>m.cat==='i'?(m.ino||''):m.no;const fno=(c,f)=>c&&c.type==='ind'?(f.ino||''):f.no;
 const indT=o=>[o.icomp,o.iname].filter(Boolean).join(' · ');
 function cname(m){if(m.cat==='i')return [m.icomp,m.iname,(m.ird&&!/^(match|league)$/i.test(m.ird))?m.ird:''].filter(Boolean).join(' · ')||'Individual Match';const z=findc(m.comp);return z?z.c.name+(m.rd?' - '+m.rd:''):'?'}
-const mnl=x=>x.cat==='i'?String(x.ino||''):mnl(x);
+const mnl=x=>x.cat==='i'?String(x.ino||''):'Match '+x.no;
+const mnh=m=>{const n=mno(m);return n?(m.cat==='i'?String(n):'Match #'+n):''};
+const btOf=m=>{if(m&&(m.bt==='h'||m.bt==='t'))return m.bt;try{return /hard/i.test([m.icomp,m.iname,m.ird,m.comp&&findc(m.comp)?findc(m.comp).c.name:''].join(' '))?'h':'t'}catch(x){return 't'}};
 function minfo(m,skipNo){if(m.cat==='i'){const p=[m.icomp||'Individual Match'];if(m.iname)p.push(m.iname);if(m.ird)p.push(m.ird);if(m.ino&&!skipNo)p.push(m.ino);return{txt:p.join(' | ')}};const z=findc(m.comp),c=z?z.c:null,k=m.cat==='t'?'Tournament':'Series';return{txt:k+': '+(c?c.name:'?')+' | '+(m.rd&&!['Match','League'].includes(m.rd)?m.rd+' | ':'')+'Match '+m.no+(c&&c.type==='bi'?' of '+c.total:'')}}
 function mlines(m){const o=['# '+minfo(m).txt,T(m.a).name+' vs '+T(m.b).name+' | '+m.date+' | '+m.overs+' overs | '+(m.venue||'-')+' | Toss: '+T(m.toss).name+' ('+(m.dec==='bat'?'bat':'bowl')+')','Result: '+m.result];
  m.inns.filter(i=>i.balls.length).forEach((i,n)=>{const c=/^#[0-9a-fA-F]{6}$/.test(T(i.bat).color)?T(i.bat).color:null,x=ext(i),F=fow(i);
@@ -1230,11 +1241,11 @@ V.ind=()=>{const IND=INDC(),open=IND.fx.filter(f=>{const m=db.matches.find(x=>x.
  `<h3 style="margin:14px 0 2px">📋 Matches</h3>`+(ms.map(mcard).join('')||'<div class="card m">Abhi koi individual match nahi.</div>')};
 A.isch=()=>{const d=new Date();d.setHours(16,0,0,0);if(d<new Date())d.setDate(d.getDate()+1);const pad=n=>String(n).padStart(2,'0'),dv=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T16:00',o=x=>'<option value="">— Select team —</option>'+db.teams.map(t=>`<option value="${t.id}" ${t.id===x?'selected':''}>${e(t.name)}</option>`).join('');
  if(db.teams.length<2)return msgBox('Pehle kam az kam 2 teams banao (Teams Manager).');
- M(`<h2>📅 Schedule New Individual Match</h2><div class="isch-l"><label>Team A</label><select id="isa">${o('')}</select><label>Team B</label><select id="isb">${o('')}</select><label>Date &amp; time</label><input id="isat" type="datetime-local" value="${dv}"><label>Overs</label><input id="isov" type="number" min="1" value="8"><label>Venue / Ground</label><input id="isgr" list="gr" value="${e(db.grounds[db.grounds.length-1]||'')}"><datalist id="gr">${db.grounds.map(g=>`<option value="${e(g)}">`).join('')}</datalist>
+ M(`<h2>📅 Schedule New Individual Match</h2><div class="isch-l"><label>Team A</label><select id="isa">${o('')}</select><label>Team B</label><select id="isb">${o('')}</select><label>Date &amp; time</label><input id="isat" type="datetime-local" value="${dv}"><label>Overs</label><input id="isov" type="number" min="1" value="8"><label>Ball type</label><select id="isbt"><option value="t">🟢 Tape Ball</option><option value="h" ${db.lbt==='h'?'selected':''}>🔴 Hard Ball</option></select><label>Venue / Ground</label><input id="isgr" list="gr" value="${e(db.grounds[db.grounds.length-1]||'')}"><datalist id="gr">${db.grounds.map(g=>`<option value="${e(g)}">`).join('')}</datalist>
  <details class="card" style="margin:10px 0 0;padding:8px 10px"><summary style="margin:0;font-weight:700;color:var(--gold)">ℹ️ Match info (optional)</summary><label>Match ka naam</label><input id="isn" placeholder="jaise: Friendly"><label>Tournament / Series ka naam</label><input id="isc" placeholder="jaise: Peer Eessa Cup 2026"><label>Round / Stage</label><input id="isr" list="rdl" placeholder="Final, Semi Final, Quarter Final ..."><label>Match No</label><input id="isno" placeholder="jaise: 5"><datalist id="rdl">${['Final','Semi Final','Quarter Final','Pre-Quarter Final','Eliminator','Qualifier 1','Qualifier 2','3rd Place Match','Group Match','League Match','Super 4','Round 1','Round 2','Round 3','Exhibition'].map(x=>`<option value="${x}">`).join('')}</datalist></details></div>
  <button class="b g wide" data-a="ischs" style="margin-top:10px">💾 Schedule Save</button><button class="b s wide" data-a="x">Cancel</button>`)};
 A.ischs=()=>{const a=$('#isa').value,b=$('#isb').value;if(!a||!b)return msgBox('Dono teams chuno.');if(a===b)return msgBox('Dono teams alag hon.');const cl=clash([a,b]);if(cl)return msgBox(cl);const IND=INDC(),gr=$('#isgr').value.trim(),at=$('#isat').value?new Date($('#isat').value).getTime():0,nxt=Math.max(0,...IND.fx.map(f=>f.no||0),...db.matches.filter(m=>m.cat==='i').map(m=>m.no||0))+1;
- const f={id:uid(),a,b,rd:$('#isr').value.trim()||'Match',r:0,no:nxt,ov:+$('#isov').value||8,iname:$('#isn').value.trim(),icomp:$('#isc').value.trim(),ird:$('#isr').value.trim(),ino:$('#isno').value.trim()};if(at)f.at=at;if(gr){f.gr=gr;if(!db.grounds.includes(gr))db.grounds.push(gr)}
+ const f={id:uid(),a,b,rd:$('#isr').value.trim()||'Match',r:0,no:nxt,ov:+$('#isov').value||8,iname:$('#isn').value.trim(),icomp:$('#isc').value.trim(),ird:$('#isr').value.trim(),ino:$('#isno').value.trim(),bt:($('#isbt')&&$('#isbt').value==='h')?'h':'t'};if(at)f.at=at;if(gr){f.gr=gr;if(!db.grounds.includes(gr))db.grounds.push(gr)}
  IND.fx.push(f);X();save();R();toast('✅ Individual match schedule ho gaya')};
 A.newind=()=>go('play',{s:{cat:'i'}});
 A.ht=v=>{ctx.h=v;ctx.hc='';R()};
@@ -1366,6 +1377,12 @@ V.hist=()=>{
  let h=_vh();
  if(!ctx.h){const n=ORPHS().length;if(n)h+=`<button class="tile c5" data-a="ht" data-v="o" style="width:100%;margin-bottom:10px;min-height:92px"><span class="ti">🗂</span><b>Bina-tournament matches</b><small>${n} matches · tournament delete ho chuka</small></button>`}
  return h};
+let BFV='';
+const bfBar=()=>'<div class="tabs" style="flex-wrap:wrap;margin:8px 0">'+[['','🏏 Sab ball'],['h','🔴 Hard Ball'],['t','🟢 Tape Ball']].map(([k,n])=>`<button class="b ${BFV===k?'g':'s'}" data-a="bfs" data-v="${k}">${n}</button>`).join('')+'</div>';
+A.bfs=v=>{BFV=v;R()};
+A.btg=v=>{const m=db.matches.find(x=>x.id===v);if(!m)return;if(CL&&!isAdm())return toast('🔒 Sirf admin badal sakta hai',false);m.bt=btOf(m)==='h'?'t':'h';save();R();toast(m.bt==='h'?'🔴 Ab ye Hard Ball match hai':'🟢 Ab ye Tape Ball match hai')};
+{const _mc=mcard;mcard=function(m){if(BFV&&btOf(m)!==BFV)return '';let h=_mc(m);try{h=h.replace('</b> <span class="m">','</b> <span class="chip">'+(btOf(m)==='h'?'🔴 Hard Ball':'🟢 Tape Ball')+'</span> <span class="m">');if(!CL||isAdm())h+='<div style="margin:-4px 0 8px;text-align:right"><button class="b s sm" data-a="btg" data-v="'+m.id+'">🔁 Ball type badlo (Hard / Tape)</button></div>'}catch(x){}return h}}
+{const _vh2=V.hist;V.hist=()=>(ctx.h==='o'?'':bfBar())+_vh2();const _vi=V.ind;V.ind=()=>_vi().replace(/(<h2[^>]*>⚡ Individual Match<\/h2>)/,'$1'+bfBar())}
 let ORP=null;
 const nxtInd=()=>{const s=new Set(db.matches.filter(x=>x.cat==='i').map(x=>+x.no));let n=1;while(s.has(n))n++;return n};
 const toInd=(m,n,ic,nm)=>{if(db.delIds&&db.delIds[m.id])m.id=uid();m.cat='i';m.comp=null;m.fix=null;m.no=n;m.ino='';m.ird=(m.rd&&!/^(match|league)$/i.test(m.rd))?m.rd:'';m.icomp=ic||'';m.iname=nm||''};
@@ -2056,7 +2073,7 @@ A.pfundo=()=>{X();if(PKP&&PKP.open&&OS)osShow();else autoSel(true)};
 function mstDecor(c){c.fillStyle='#d7263d';c.beginPath();c.arc(105,125,40,0,7);c.fill();c.strokeStyle='#fff';c.lineWidth=3;c.beginPath();c.arc(70,125,28,-.9,.9);c.stroke();c.beginPath();c.arc(140,125,28,Math.PI-.9,Math.PI+.9);c.stroke();c.save();c.translate(985,130);c.rotate(.5);c.fillStyle='#d9a45a';c.beginPath();c.roundRect(-20,-70,40,100,10);c.fill();c.fillStyle='#6b3e1b';c.fillRect(-7,30,14,50);c.restore()}
 PK.mstat=(c,s,o)=>{const m=db.matches.find(x=>x.id===o.mid);if(!m)return;const st=m.status,done=st==='completed',i=m.inns.filter(q=>q.balls.length||q.st).pop()||m.inns[m.inns.length-1],A=T(m.a),B=T(m.b);
  rb(c,18,18,1044,1314,40,null,s.c);tx(c,done?'MATCH RESULT':st==='paused'?'MATCH PAUSED':'LIVE MATCH',540,62,26,s.c,'center',700,600);mstDecor(c);
- tx(c,A.name+' vs '+B.name,540,128,54,'#f6e3a1','center',800,780,6);tx(c,cname(m)+(mno(m)?' · Match #'+mno(m):'')+' · '+m.overs+' overs',540,190,28,'#e9d49a','center',600,900);c.fillStyle=s.c;c.fillRect(445,222,190,4);
+ tx(c,A.name+' vs '+B.name,540,128,54,'#f6e3a1','center',800,780,6);tx(c,cname(m)+(mno(m)?' · '+mnh(m):'')+' · '+m.overs+' overs',540,190,28,'#e9d49a','center',600,900);c.fillStyle=s.c;c.fillRect(445,222,190,4);
  const l1=done?m.result:(st==='paused'?'PAUSED'+(o.reason?' — '+o.reason:''):'MATCH IN PROGRESS'),l2=done?[m.date,m.venue].filter(Boolean).join(' · '):(st==='paused'?'Resume baad mein hoga'+(m.pausedAt?' · '+m.pausedAt:''):m.date);
  rb(c,40,262,1000,104,24,s.c);tx(c,l1,540,300,Math.min(44,1900/Math.max(l1.length,1)*1.15),'#111','center',800,960);tx(c,l2,540,342,22,'#111','center',700,960);
  [[m.inns[0].bat,m.inns[0]],[m.inns[0].bowl,m.inns[1]||null]].forEach(([id,inn],k)=>{const y=388+k*184,col=_hx(T(id).color),bt=!done&&inn&&inn===m.inns[m.inns.length-1],lab=!inn?'YET TO BAT':bt?'BATTING':'BATTED';
@@ -4453,14 +4470,14 @@ function bestBat(m){let b=null;m.inns.forEach(i=>bat_(i).forEach(z=>{if(!b||z.r>
 function bestBowl(m){let b=null;m.inns.forEach(i=>bowl_(i).forEach(z=>{if(!b||z.w>b.w||(z.w===b.w&&z.r<b.r))b=z}));return b&&b.w>0?{name:b.n,line:b.w+' wkts / '+b.r+' runs'}:null}
 ECS_PK.result.data=async sp=>{const m=db.matches.find(x=>x.id===sp.mid);if(!m)return null;
  const out={A:{name:T(m.a).name,score:'-',color:tcolor(m.a)},B:{name:T(m.b).name,score:'-',color:tcolor(m.b)},winner:m.win?T(m.win).name:null,
-  result:m.status==='completed'?m.result:(m.status==='paused'?'⏸ Match paused — abhi jaari hai':'🔴 Match chal raha hai'),sub:(mno(m)?'Match #'+mno(m)+' · ':'')+pdate(m.date)+' · '+m.overs+' overs',series:cname(m),topBat:bestBat(m),topBowl:bestBowl(m)};
+  result:m.status==='completed'?m.result:(m.status==='paused'?'⏸ Match paused — abhi jaari hai':'🔴 Match chal raha hai'),sub:(mno(m)?mnh(m)+' · ':'')+pdate(m.date)+' · '+m.overs+' overs',series:cname(m),topBat:bestBat(m),topBowl:bestBowl(m)};
  m.inns.forEach(i=>{const o=i.bat===m.a?out.A:out.B;o.score=i.runs+'/'+i.wk;o.overs=ov(i.lb)+' ov';o.sub='Batting'});return out};
 ECS_PK.scorecard.data=async sp=>{const m=db.matches.find(x=>x.id===sp.mid);if(!m||!m.inns.some(i=>i.balls.length)){alert('Is match ka scorecard abhi nahi bana.');return null}
  const inns=m.inns.filter(i=>i.balls.length).map((i,n)=>{const x=ext(i),F=fow(i);return{label:(n?'2nd':'1st')+' Innings',team:T(i.bat).name,bowlTeam:T(i.bowl).name,color:tcolor(i.bat),score:i.runs,wk:i.wk,ov:ov(i.lb),
   bat:bat_(i).map(z=>({name:z.n,dismissal:z.d,runs:z.r,balls:z.b,fours:z.f4,sixes:z.f6,sr:z.sr})),bowl:bowl_(i).map(z=>({name:z.n,overs:z.o,runs:z.r,wkts:z.w,econ:z.e})),
   ex:{total:x.t,wides:x.wd,noballs:x.nb,byes:x.b,legbyes:x.lb},fow:F.map(z=>z.n+'-'+z.s+' ('+z.p+', '+z.o+' ov)').join('  ·  ')}});
  const paused=m.status!=='completed';
- return{teams:[T(m.a).name,T(m.b).name],no:mno(m),inns,result:paused?('⏸ Match '+(m.status==='live'?'live':'paused')+(m.pauseReason?' — '+m.pauseReason:'')+' · abhi tak ka scorecard'):m.result,title:'Scorecard',sub:cname(m)+(mno(m)?' · Match #'+mno(m):'')+' · '+pdate(m.date)+' · '+m.overs+' overs',series:cname(m)}};
+ return{teams:[T(m.a).name,T(m.b).name],no:mno(m),inns,result:paused?('⏸ Match '+(m.status==='live'?'live':'paused')+(m.pauseReason?' — '+m.pauseReason:'')+' · abhi tak ka scorecard'):m.result,title:'Scorecard',sub:cname(m)+(mno(m)?' · '+mnh(m):'')+' · '+pdate(m.date)+' · '+m.overs+' overs',series:cname(m)}};
 const ballLab=x=>x.wk?['W','#e5484d']:x.ex==='wd'?['Wd','#e8a51a']:x.ex==='nb'?['Nb','#e8a51a']:x.r===0?['•','#5b6b82']:x.r===4?[4,'#2f7bf0']:x.r===6?[6,'#8a4be0']:[x.r,'#2fa866'];
 ECS_PK.paused.data=async sp=>{const m=db.matches.find(x=>x.id===sp.mid);if(!m||!m.inns.some(i=>i.balls.length)){alert('Match abhi shuru nahi hua.');return null}
  const ai=m.inns.length-1,inn=m.inns[ai],tk=inn.bat,pr_=id=>{if(!id)return null;const f=bf(inn,id);return{name:PN(tk,id),runs:f.r,balls:f.b,sr:f.sr}};
@@ -4468,12 +4485,12 @@ ECS_PK.paused.data=async sp=>{const m=db.matches.find(x=>x.id===sp.mid);if(!m||!
  let target=null,need=null,rrr=null;if(ai>=1){target=m.inns[0].runs+1;need=Math.max(0,target-inn.runs);rrr=left?(need/(left/6)).toFixed(2):'-'}
  const team=k=>{const x=m.inns.find(z=>z.bat===k),cur=k===tk;return{name:T(k).name,color:tcolor(k),score:x?x.runs+'/'+x.wk:'-',overs:x?ov(x.lb)+' ov':'',state:cur?'BATTING':(x?'BATTED':'YET TO BAT'),cur}};
  return{no:m.no,A:team(m.a),B:team(m.b),cur:{team:T(tk).name,color:tcolor(tk),score:inn.runs,wk:inn.wk,ov:ov(inn.lb),of:m.overs,label:ai===0?'1st INNINGS':'2nd INNINGS'},crr,target,need,left,rrr,
-  striker:pr_(inn.st),non:pr_(inn.ns),bowler:bw?{name:PN(inn.bowl,bwid),line:ov(bw.l)+'-'+bw.m+'-'+bw.r+'-'+bw.w}:null,last:inn.balls.slice(-6).map(ballLab),reason:m.pauseReason||'',when:m.pausedAt||'',paused:m.status==='paused',series:cname(m),sub:cname(m)+(mno(m)?' · Match #'+mno(m):'')+' · '+m.overs+' overs'}};
+  striker:pr_(inn.st),non:pr_(inn.ns),bowler:bw?{name:PN(inn.bowl,bwid),line:ov(bw.l)+'-'+bw.m+'-'+bw.r+'-'+bw.w}:null,last:inn.balls.slice(-6).map(ballLab),reason:m.pauseReason||'',when:m.pausedAt||'',paused:m.status==='paused',series:cname(m),sub:cname(m)+(mno(m)?' · '+mnh(m):'')+' · '+m.overs+' overs'}};
 ECS_PK.summary.data=async sp=>{const m=db.matches.find(x=>x.id===sp.mid);if(!m||!m.inns.some(i=>i.balls.length)){alert('Is match ka summary abhi nahi bana.');return null}
  const inns=m.inns.filter(i=>i.balls.length).map((i,n)=>{const bt=bat_(i),bo=bowl_(i),x=ext(i);return{label:(n?'2nd':'1st')+' Innings',team:T(i.bat).name,color:tcolor(i.bat),score:i.runs,wk:i.wk,ov:ov(i.lb),
   bat:bt.slice().sort((a,b)=>b.r-a.r||a.b-b.b).slice(0,3).map(z=>({name:z.n,runs:z.r,balls:z.b})),bowl:bo.slice().sort((a,b)=>b.w-a.w||a.r-b.r).slice(0,3).map(z=>({name:z.n,wkts:z.w,runs:z.r,overs:z.o})),
   ex:x.t,f4:bt.reduce((a,z)=>a+z.f4,0),f6:bt.reduce((a,z)=>a+z.f6,0),rr:i.lb?(i.runs/(i.lb/6)).toFixed(2):'0.00'}});
- const done=m.status==='completed';return{teams:[T(m.a).name,T(m.b).name],no:mno(m),inns,result:done?m.result:('⏸ Match paused'+(m.pauseReason?' — '+m.pauseReason:'')),done,sub:cname(m)+(mno(m)?' · Match #'+mno(m):'')+' · '+pdate(m.date)+' · '+m.overs+' overs'}};
+ const done=m.status==='completed';return{teams:[T(m.a).name,T(m.b).name],no:mno(m),inns,result:done?m.result:('⏸ Match paused'+(m.pauseReason?' — '+m.pauseReason:'')),done,sub:cname(m)+(mno(m)?' · '+mnh(m):'')+' · '+pdate(m.date)+' · '+m.overs+' overs'}};
 function pStat(m,x){let r=0,b=0,w=0,rc=0,l=0;m.inns.forEach(i=>{if(i.bat===x.tk)i.balls.forEach(()=>0);
   [...new Set(i.balls.map(z=>z.b).filter(p=>p&&i.bat===x.tk&&rk(PN(i.bat,p))===rk(x.n)))].forEach(p=>{const f=bf(i,p);r+=f.r;b+=f.b});
   [...new Set(i.balls.map(z=>z.w).filter(p=>p&&i.bowl===x.tk&&rk(PN(i.bowl,p))===rk(x.n)))].forEach(p=>{const f=wf2(i,p);w+=f.w;rc+=f.r;l+=f.l})});return{r,b,w,rc,l}}
@@ -4484,7 +4501,7 @@ ECS_PK.pom.data=async sp=>{const m=db.matches.find(x=>x.id===sp.mid),x=m&&mom(m)
  let tiles;if(hasBat&&hasBowl){const AB=[['RUNS',s.r],['BALLS',s.b]],BB=[['WICKETS',s.w],['ECONOMY',eco]];tiles=bowlFirst?BB.concat(AB):AB.concat(BB)}else tiles=(bowlFirst?B.concat(A):A.concat(B)).slice(0,4);while(tiles.length<4)tiles.push(['MATCH','#'+m.no]);
  const l1=[];if(hasBat)l1.push(s.r+'('+s.b+')');if(s.w>0||hasBowl)l1.push(s.w+'/'+s.rc);
  const scores=m.inns.filter(i=>i.balls.length).map(i=>({team:T(i.bat).name,color:tcolor(i.bat),big:i.runs+'/'+i.wk,small:ov(i.lb)+' OVERS'}));
- return awPhotos({title:'PLAYER OF THE MATCH',word:'MATCH',no:m.no,name:x.n,team:T(x.tk).name,color:tcolor(x.tk),sub:cname(m)+(mno(m)?' · Match #'+mno(m):''),tiles,line1:l1.join(' · '),scores,line:String(m.result||'Match complete').toUpperCase()})};
+ return awPhotos({title:'PLAYER OF THE MATCH',word:'MATCH',no:m.no,name:x.n,team:T(x.tk).name,color:tcolor(x.tk),sub:cname(m)+(mno(m)?' · '+mnh(m):''),tiles,line1:l1.join(' · '),scores,line:String(m.result||'Match complete').toUpperCase()})};
 ECS_PK.pos.data=async sp=>{const z=findc(sp.cid).c,ms=db.matches.filter(m=>m.comp===sp.cid&&m.status==='completed');if(!ms.length){alert('Abhi koi match complete nahi hua.');return null}
  const P=lbAgg(ms).filter(p=>p.r+p.w>0).sort((a,b)=>(b.r+b.w*20)-(a.r+a.w*20));if(!P.length){alert('Abhi koi performer nahi mila.');return null}
  const p=P[0],tk=[...p.teams][0],sr=p.b?(p.r*100/p.b).toFixed(1):'-',eco=p.l?(p.rc*6/p.l).toFixed(2):'-',batFirst=p.r>=p.w*20;
@@ -4619,13 +4636,16 @@ function ent(m,src,old,D){
   return{uid:m.id,comp:m.comp||null,cat:m.cat||'i',status:m.status,fp,label:(ta?ta.name:'?')+' vs '+(tb?tb.name:'?')+' · '+(m.status==='completed'?(m.result||'complete'):m.status),cname:z?z.c.name:'',savedAt:now,src,
    doneAt:old?(old.doneAt||((old.status!=='completed'&&m.status==='completed')?now:0)):0,dismissed:!!(old&&old.dismissed),becameDone:!!(old&&old.status!=='completed'&&m.status==='completed'),
    match:deep(m),ta:ta?deep(ta):null,tb:tb?deep(tb):null,cmp:z?deep(z.c):null,ck:z?z.k:null,fx:fx?deep(fx):null}}
-function mkEnts(D,src,byUid){const out=[];byUid=byUid||{};(D.matches||[]).forEach(m=>{if(!m||!m.id||!KEEPST.has(m.status))return;const old=byUid[m.id];if(old&&src==='cloud')return;const x=ent(m,src,old,D);if(x)out.push(x)});return out}
+const bl=m=>{try{return (m.inns||[]).reduce((a,i)=>a+(i.balls||[]).length,0)}catch(x){return 0}};
+const nwr=(x,d,ball)=>!!(x&&d&&((x.status==='completed'&&d.status!=='completed')||(ball&&x.status===d.status&&bl(x.match)>bl(d))));
+let _stl={},_stale=[],_first=true;
+function mkEnts(D,src,byUid){const out=[];byUid=byUid||{};(D.matches||[]).forEach(m=>{if(!m||!m.id||!KEEPST.has(m.status))return;const old=byUid[m.id];if(old&&src==='cloud')return;if(old&&src!=='local'&&src!=='file'&&(nwr(old,m,true)))return;const x=ent(m,src,old,D);if(x)out.push(x)});return out}
 async function vFrom(D,src){const all=await vAll(),by={};all.forEach(x=>by[x.uid]=x);const L=mkEnts(D,src,by);for(const x of L)await vPut(x);return L}
 const present=x=>db.matches.some(m=>m.id===x.uid);
 const totalM=D=>{try{return (D.matches||[]).length}catch(x){return 0}};
 let _VC=[],_lost=[];
-async function refresh(){try{_VC=await vAll();const tomb=db.delIds||{};for(const x of _VC){if(!x.dismissed&&tomb[x.uid]){x.dismissed=true;await vPut(x)}}_lost=_VC.filter(x=>KEEPST.has(x.status)&&!x.dismissed&&!present(x)&&(!x.comp||fcD(db,x.comp)))}catch(x){_VC=[];_lost=[]}lostUI()}
-function lostUI(){let b=document.getElementById('gLost');const n=_lost.length;if(!canV()||!n){if(b)b.remove();return}if(!b){b=document.createElement('div');b.id='gLost';b.style.cssText='position:fixed;top:34px;right:6px;z-index:61;font-size:11px;font-weight:800;padding:4px 10px;border-radius:12px;background:#b00020;color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.4)';b.onclick=()=>gVault();document.body.appendChild(b)}b.textContent='⚠ '+n+' match gayab — recover karo'}
+async function refresh(){try{_VC=await vAll();const tomb=db.delIds||{};for(const x of _VC){if(!x.dismissed&&tomb[x.uid]){x.dismissed=true;await vPut(x)}}_lost=_VC.filter(x=>KEEPST.has(x.status)&&!x.dismissed&&!present(x)&&(!x.comp||fcD(db,x.comp)));_stale=_VC.filter(x=>!x.dismissed&&_stl[x.uid]&&present(x)&&nwr(x,db.matches.find(m=>m.id===x.uid),true))}catch(x){_VC=[];_lost=[];_stale=[]}lostUI()}
+function lostUI(){let b=document.getElementById('gLost');const n=_lost.length+_stale.length;if(!canV()||!n){if(b)b.remove();return}if(!b){b=document.createElement('div');b.id='gLost';b.style.cssText='position:fixed;top:34px;right:6px;z-index:61;font-size:11px;font-weight:800;padding:4px 10px;border-radius:12px;background:#b00020;color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.4)';b.onclick=()=>gVault();document.body.appendChild(b)}b.textContent='⚠ '+n+(_stale.length&&!_lost.length?' match ka naya version vault mein — recover karo':' match gayab / purana — recover karo')}
 function ins(x,quiet){
   if(present(x))return 'pehle se maujood';
   try{const u=x.uid||(x.match&&x.match.id);if(u&&db.delIds&&db.delIds[u]){delete db.delIds[u];db.revived=db.revived||{};db.revived[u]=Date.now()}}catch(z){}
@@ -4657,9 +4677,9 @@ async function scan(){
     if(_delSet&&Date.now()-_userDel>=120000)_delSet=null;
     const changed=db.matches.filter(m=>{if(!KEEPST.has(m.status))return false;const k=mkey(m);if(_kc[m.id]===k)return false;_kc[m.id]=k;return true});
     if(changed.length){const all=await vAll(),by={};all.forEach(x=>by[x.uid]=x);const done=[];
-      for(const m of changed){const x=ent(m,'local',by[m.id]);if(x){await vPut(x);if(x.becameDone)done.push(x)}}
+      for(const m of changed){const old=by[m.id];if(old){if(nwr(old,m,_first||_stl[m.id])){_stl[m.id]=1;continue}else delete _stl[m.id]}const x=ent(m,'local',old);if(x){await vPut(x);if(x.becameDone)done.push(x)}}
       if(done.length)offer(done[done.length-1])}
-    await refresh();
+    _first=false;await refresh();
   }catch(x){}
   _scanning=false}
 setInterval(()=>{try{if(canV()&&db&&db._ts!==_lts){_lts=db._ts;sched()}}catch(x){}},1000);
@@ -4700,12 +4720,14 @@ function gVault(){
         cf2(todo.length+' match file se jodein?\n\n'+todo.map(x=>'• '+x.label).join('\n'),async()=>{for(const x of todo){x.savedAt=Date.now();await vPut(x)}const n=insMany(todo);toast('✅ '+n+' match jud gaye');draw()})}catch(x){msgBox('Import nahi hua: '+x.message)}fi.value=''};
       row.appendChild(cbtn('📂 File se match jodo','s',()=>fi.click()));row.appendChild(fi);row.appendChild(cbtn('🔄 Dobara check','s',()=>draw()));b.appendChild(row);
       if(!all.length)b.appendChild(H('<div class="m">Abhi vault khali hai. Jaise hi koi match shuru/poora hoga yahan aa jayega.</div>'));
-      all.forEach(x=>{const here=present(x),tag=here?'✅ app mein maujood':(x.dismissed?'🗑 hataya gaya / chhupaya':(KEEPST.has(x.status)?'⚠ GAYAB':''));
-        const c=H('<div class="card" style="margin:6px 0;'+((!here&&!x.dismissed)?'border:2px solid #b00020;':'')+'"><div style="font-size:.8rem"><b>'+e(x.label)+'</b><br><span class="m">'+e(x.cname||'Individual')+' · '+tag+'<br>Vault mein save: '+fT(x.savedAt)+' · source: '+e(x.src||'')+'</span></div><div class="row" style="margin-top:6px"></div></div>');
+      all.forEach(x=>{const here=present(x),stl=_stale.some(q=>q.uid===x.uid),tag=stl?'⚠ App mein PURANA version hai — vault mein NAYA hai':here?'✅ app mein maujood':(x.dismissed?'🗑 hataya gaya / chhupaya':(KEEPST.has(x.status)?'⚠ GAYAB':''));
+        const c=H('<div class="card" style="margin:6px 0;'+(((!here||stl)&&!x.dismissed)?'border:2px solid #b00020;':'')+'"><div style="font-size:.8rem"><b>'+e(x.label)+'</b><br><span class="m">'+e(x.cname||'Individual')+' · '+tag+'<br>Vault mein save: '+fT(x.savedAt)+' · source: '+e(x.src||'')+'</span></div><div class="row" style="margin-top:6px"></div></div>');
         const r2=c.querySelector('.row');
+        if(stl)r2.appendChild(cbtn('📥 Naya version lagao','g',()=>{const i=db.matches.findIndex(m=>m.id===x.uid);if(i<0)return;db.matches[i]=deep(x.match);if(db.cur===x.uid&&x.match.status==='completed')db.cur=null;delete _stl[x.uid];save();try{R()}catch(z){}toast('✅ Naya version lag gaya');draw()}));
         if(!here)r2.appendChild(cbtn('📥 Wapas jodo','g',()=>{const res=ins(x);if(res==='ok')toast('✅ Match wapas aa gaya');else msgBox(res);draw()}));
         r2.appendChild(cbtn('📄 PDF','g',()=>sharePdf(x)));r2.appendChild(cbtn('📤 JSON','s',()=>shareEnt(x)));
         if(!here&&!x.dismissed)r2.appendChild(cbtn('🙈 Chhupao','s',async()=>{x.dismissed=true;await vPut(x);draw()}));
+        if(stl)r2.appendChild(cbtn('🙈 App wala rakho','s',async()=>{const d=db.matches.find(m=>m.id===x.uid);delete _stl[x.uid];if(d){x.match=deep(d);x.status=d.status;x.fp=''}await vPut(x);draw()}));
         b.appendChild(c)});
       const sn=(await sAll()).sort((a,c)=>c.id-a.id);b.appendChild(H('<h4 style="margin:14px 0 4px">📦 Phone ki poori safe copies ('+sn.length+')</h4>'));
       b.appendChild(H('<div class="m" style="margin-bottom:6px">Cloud se data aane, overwrite hone ya delete/reset se pehle ki poori copy. Zaroorat par file download karke Import mein kaam aa sakti hai.</div>'));
